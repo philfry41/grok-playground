@@ -212,11 +212,14 @@ def chat():
                 })
                 
             except Exception as e:
+                error_msg = str(e)
+                if "timeout" in error_msg.lower():
+                    error_msg = "AI response timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
                 return jsonify({
                     'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
                     'type': 'system',
                     'opener_content': opener,
-                    'error': f'Failed to get AI response: {str(e)}'
+                    'error': f'Failed to get AI response: {error_msg}'
                 })
                 
         except FileNotFoundError:
@@ -335,7 +338,10 @@ def chat():
         })
         
     except Exception as e:
-        return jsonify({'error': f'Request failed: {str(e)}'})
+        error_msg = str(e)
+        if "timeout" in error_msg.lower():
+            error_msg = "Request timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
+        return jsonify({'error': f'Request failed: {error_msg}'})
 
 @app.route('/api/voices', methods=['GET'])
 def get_voices():
