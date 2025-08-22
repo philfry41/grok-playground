@@ -507,16 +507,24 @@
             showLoading();
             
             try {
+                console.log('🔍 Debug: Starting loadOpener request');
+                console.log('🔍 Debug: Request URL:', '/api/chat');
+                console.log('🔍 Debug: Filename:', filename);
+                
+                const requestBody = {
+                    message: '',
+                    command: 'loadopener',
+                    filename: filename
+                };
+                console.log('🔍 Debug: Request payload:', JSON.stringify(requestBody));
+                
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        message: '',
-                        command: 'loadopener',
-                        filename: filename
-                    })
+                    body: JSON.stringify(requestBody),
+                    signal: AbortSignal.timeout(60000) // 60 second timeout
                 });
                 
                 console.log('🔍 Debug: Response status:', response.status);
