@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok Playground</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            height: 100vh;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.assistant {
+            background: white;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .message.system {
+            background: #ffc107;
+            color: #333;
+            text-align: center;
+            max-width: 100%;
+            font-weight: 500;
+        }
+
+        .message.edge-triggered {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-group button {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .input-group button:hover {
+            background: #5a6fd8;
+        }
+
+        .input-group button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .panel h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .command-buttons {
+            display: grid;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .word-count-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .word-count-input input {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .tts-status {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .audio-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h1>🎭 Grok Playground</h1>
+                <p>NSFW Storytelling with Edging Controls</p>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">
+                    Welcome to Grok Playground! Use the sidebar to control the story mode and send messages below.
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Generating response...</div>
+            </div>
+            
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text" id="messageInput" placeholder="Type your message or story prompt..." />
+                    <button onclick="sendMessage()" id="sendButton">Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="panel">
+                <h3>🎛️ Commands</h3>
+                <div class="command-buttons">
+                    <button class="btn btn-primary" onclick="sendCommand('new')">🧹 New Scene</button>
+                    <button class="btn btn-warning" onclick="sendCommand('raw')">🎛️ Raw Tone</button>
+                    <button class="btn btn-danger" onclick="sendCommand('edge')">⛓️ Edging Mode</button>
+                    <button class="btn btn-success" onclick="sendCommand('payoff')">✅ Payoff Mode</button>
+                    
+                    <div class="word-count-input">
+                        <label>Words:</label>
+                        <input type="number" id="wordCount" value="500" min="250" max="1500" />
+                        <button class="btn btn-primary" onclick="sendContinuation()">📝 Continue</button>
+                    </div>
+                    
+                    <div class="word-count-input">
+                        <label>File:</label>
+                        <input type="text" id="openerFile" value="opener.txt" placeholder="opener.txt" />
+                        <button class="btn btn-secondary" onclick="loadOpener()">📄 Load Opener</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>🎤 TTS Status</h3>
+                <div class="tts-status" id="ttsStatus">Loading...</div>
+                <div class="command-buttons">
+                    <button class="btn btn-secondary" onclick="loadVoices()">🎵 List Voices</button>
+                    <button class="btn btn-secondary" onclick="loadEdgeLog()">📋 Edge Log</button>
+                    <button class="btn btn-secondary" onclick="loadAudioFiles()">🎵 Audio Files</button>
+                </div>
+            </div>
+            
+            <div class="panel" id="audioPanel" style="display: none;">
+                <h3>🎵 Audio Files</h3>
+                <div id="audioFilesList">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Force cache refresh
+        if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
+            window.location.reload();
+        }
+        let currentMode = 'edge'; // Default mode
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTTSStatus();
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('sendButton').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('sendButton').disabled = false;
+        }
+
+        function addMessage(content, type, edgeTriggered = false) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            if (edgeTriggered) {
+                messageDiv.classList.add('edge-triggered');
+            }
+            messageDiv.textContent = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            addMessage(message, 'user');
+            input.value = '';
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        command: ''
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`Error: ${data.error}`, 'system');
+                } else {
+                    addMessage(data.message, data.type, data.edge_triggered);
+                    if (data.audio_file) {
+                        addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                    }
+                }
+            } catch (error) {
+                addMessage(`Error: ${error.message}`, 'system');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function sendCommand(command) {
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: '',
+                        command: command
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`Error: ${data.error}`, 'system');
+                } else {
+                    addMessage(data.message, data.type);
+                    if (command === 'edge') currentMode = 'edge';
+                    if (command === 'payoff') currentMode = 'payoff';
+                }
+            } catch (error) {
+                addMessage(`Error: ${error.message}`, 'system');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function sendContinuation() {
+            const wordCount = parseInt(document.getElementById('wordCount').value) || 500;
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: '',
+                        command: 'cont',
+                        word_count: wordCount
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`Error: ${data.error}`, 'system');
+                } else {
+                    addMessage(data.message, data.type, data.edge_triggered);
+                    if (data.audio_file) {
+                        addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                    }
+                }
+            } catch (error) {
+                addMessage(`Error: ${error.message}`, 'system');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadOpener() {
+            const filename = document.getElementById('openerFile').value.trim() || 'opener.txt';
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: '',
+                        command: 'loadopener',
+                        filename: filename
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('LoadOpener response:', data); // Debug logging
+                
+                if (data.error) {
+                    addMessage(`Error: ${data.error}`, 'system');
+                } else {
+                    addMessage(data.message, data.type);
+                    if (data.opener_content) {
+                        addMessage(`📄 Opener content: ${data.opener_content.substring(0, 200)}...`, 'system');
+                    }
+                    if (data.ai_response) {
+                        console.log('Adding AI response, length:', data.ai_response.length); // Debug logging
+                        addMessage(data.ai_response, data.response_type, data.edge_triggered);
+                        if (data.audio_file) {
+                            addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                        }
+                    } else {
+                        console.log('No AI response found in data'); // Debug logging
+                    }
+                }
+            } catch (error) {
+                console.error('LoadOpener error:', error); // Debug logging
+                addMessage(`Error: ${error.message}`, 'system');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadTTSStatus() {
+            try {
+                const response = await fetch('/api/tts-status');
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('ttsStatus');
+                if (data.enabled) {
+                    statusDiv.innerHTML = `
+                        ✅ TTS Enabled<br>
+                        Voice: ${data.voice_id}<br>
+                        Mode: ${data.auto_save ? 'Auto-save' : 'Auto-play'}
+                    `;
+                } else {
+                    statusDiv.innerHTML = '❌ TTS Disabled';
+                }
+            } catch (error) {
+                document.getElementById('ttsStatus').innerHTML = '❌ TTS Error';
+            }
+        }
+
+        async function loadVoices() {
+            try {
+                const response = await fetch('/api/voices');
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`TTS Error: ${data.error}`, 'system');
+                } else {
+                    let voiceList = '🎵 Available Voices:\n';
+                    data.voices.forEach(voice => {
+                        voiceList += `${voice[0]}: ${voice[1]}\n`;
+                    });
+                    addMessage(voiceList, 'system');
+                }
+            } catch (error) {
+                addMessage(`Error loading voices: ${error.message}`, 'system');
+            }
+        }
+
+        async function loadEdgeLog() {
+            try {
+                const response = await fetch('/api/edge-log');
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`Edge Log Error: ${data.error}`, 'system');
+                } else {
+                    addMessage(`📋 Recent Edge Triggers:\n${data.log}`, 'system');
+                }
+            } catch (error) {
+                addMessage(`Error loading edge log: ${error.message}`, 'system');
+            }
+        }
+
+        async function loadAudioFiles() {
+            try {
+                const response = await fetch('/api/audio-files');
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`Audio Files Error: ${data.error}`, 'system');
+                } else {
+                    const audioPanel = document.getElementById('audioPanel');
+                    const audioFilesList = document.getElementById('audioFilesList');
+                    
+                    if (data.files.length === 0) {
+                        audioFilesList.innerHTML = '<p>No audio files found</p>';
+                    } else {
+                        let html = '<div style="max-height: 300px; overflow-y: auto;">';
+                        data.files.forEach(file => {
+                            const sizeKB = Math.round(file.size / 1024);
+                            const date = new Date(file.created * 1000).toLocaleString();
+                            html += `
+                                <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                    <div style="font-weight: bold; margin-bottom: 5px;">${file.filename}</div>
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                                        Size: ${sizeKB}KB | Created: ${date}
+                                    </div>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button onclick="playAudio('${file.url}', this)" style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">▶️ Play</button>
+                                        <button onclick="downloadAudio('${file.url}', '${file.filename}')" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">⬇️ Download</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        audioFilesList.innerHTML = html;
+                    }
+                    
+                    audioPanel.style.display = 'block';
+                }
+            } catch (error) {
+                addMessage(`Error loading audio files: ${error.message}`, 'system');
+            }
+        }
+
+        let currentAudio = null;
+        let currentPlayButton = null;
+        let audioElements = new Map(); // Store audio elements by URL
+
+        function playAudio(url, button) {
+            console.log('playAudio called:', url, button);
+            console.log('Current audio:', currentAudio);
+            console.log('Current button:', currentPlayButton);
+            console.log('Button text:', button.innerHTML);
+            
+            // Get or create audio element for this URL
+            let audio = audioElements.get(url);
+            if (!audio) {
+                audio = new Audio(url);
+                audioElements.set(url, audio);
+                
+                audio.addEventListener('ended', () => {
+                    console.log('Audio ended');
+                    if (currentPlayButton) {
+                        currentPlayButton.innerHTML = '▶️ Play';
+                    }
+                    currentAudio = null;
+                    currentPlayButton = null;
+                });
+                
+                audio.addEventListener('pause', () => {
+                    console.log('Audio paused');
+                    if (currentPlayButton) {
+                        currentPlayButton.innerHTML = '▶️ Play';
+                    }
+                });
+                
+                audio.addEventListener('play', () => {
+                    console.log('Audio started playing');
+                    if (currentPlayButton) {
+                        currentPlayButton.innerHTML = '⏸️ Pause';
+                    }
+                });
+            }
+            
+            // If clicking the same button that's currently playing, pause it
+            if (currentAudio === audio && currentPlayButton === button && !audio.paused) {
+                console.log('Pausing current audio');
+                audio.pause();
+                return;
+            }
+            
+            // If clicking the same button that's currently paused, resume it
+            if (currentAudio === audio && currentPlayButton === button && audio.paused) {
+                console.log('Resuming paused audio');
+                audio.play().catch(error => {
+                    console.error('Audio resume error:', error);
+                    addMessage(`Error resuming audio: ${error.message}`, 'system');
+                });
+                return;
+            }
+            
+            // Stop any currently playing audio from different button
+            if (currentAudio && currentAudio !== audio) {
+                console.log('Stopping previous audio from different button');
+                currentAudio.pause();
+                if (currentPlayButton) {
+                    currentPlayButton.innerHTML = '▶️ Play';
+                }
+            }
+            
+            // Start new audio
+            console.log('Starting new audio');
+            currentAudio = audio;
+            currentPlayButton = button;
+            
+            audio.play().catch(error => {
+                console.error('Audio play error:', error);
+                addMessage(`Error playing audio: ${error.message}`, 'system');
+                button.innerHTML = '▶️ Play';
+                currentAudio = null;
+                currentPlayButton = null;
+            });
+        }
+
+        function downloadAudio(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

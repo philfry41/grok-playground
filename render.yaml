@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: grok-playground
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn web_app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: XAI_API_KEY
+        sync: false
+      - key: XAI_MODEL
+        value: grok-3
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        value: pNInz6obpgDQGcFmaJgB
+      - key: ELEVENLABS_AUTO_SAVE
+        value: true
+      - key: ELEVENLABS_MAX_LENGTH
+        value: 5000
