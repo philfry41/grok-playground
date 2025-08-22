@@ -54,3 +54,4 @@ Notes:
 - **Error Handling**: Detailed server error messages and automatic retry with minimal parameters on 400 errors
 - **Debug Mode**: Set `XAI_DEBUG=1` to print API request details and server responses
 - **Text-to-Speech**: ElevenLabs integration for audio playback or file saving of responses (saved to `audio/` directory)
+# Force new deployment
