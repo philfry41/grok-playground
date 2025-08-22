@@ -78,6 +78,9 @@ def chat():
         command = data.get('command', '')
         word_count = data.get('word_count', 500)
         print(f"🔍 Debug: user_input='{user_input}', command='{command}', word_count={word_count}")
+    except Exception as e:
+        print(f"🔍 Debug: Error parsing request data: {e}")
+        return jsonify({'error': f'Invalid request data: {str(e)}'})
     
     if not user_input and not command:
         return jsonify({'error': 'No message or command provided'})
