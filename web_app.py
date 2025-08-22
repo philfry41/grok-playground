@@ -70,10 +70,14 @@ def index():
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    data = request.get_json()
-    user_input = data.get('message', '').strip()
-    command = data.get('command', '')
-    word_count = data.get('word_count', 500)
+    print(f"🔍 Debug: /api/chat endpoint called")
+    try:
+        data = request.get_json()
+        print(f"🔍 Debug: Request data: {data}")
+        user_input = data.get('message', '').strip()
+        command = data.get('command', '')
+        word_count = data.get('word_count', 500)
+        print(f"🔍 Debug: user_input='{user_input}', command='{command}', word_count={word_count}")
     
     if not user_input and not command:
         return jsonify({'error': 'No message or command provided'})
@@ -117,11 +121,15 @@ def chat():
         return jsonify({'message': '✅ Payoff: both allowed.', 'type': 'system'})
     
     elif command == 'loadopener':
+        print(f"🔍 Debug: loadopener command detected")
         # Handle /loadopener command
         filename = data.get('filename', 'opener.txt')
+        print(f"🔍 Debug: filename='{filename}'")
         try:
             abs_path = os.path.abspath(filename)
+            print(f"🔍 Debug: abs_path='{abs_path}'")
             opener = open(filename, "r", encoding="utf-8").read()
+            print(f"🔍 Debug: opener length={len(opener)}")
             byte_len = len(opener.encode("utf-8"))
             if byte_len == 0 or not any(ch.strip() for ch in opener):
                 return jsonify({'error': f'{filename} looks empty. Path: {abs_path} (bytes={byte_len})'})
@@ -131,8 +139,10 @@ def chat():
             
             # Now automatically get a response from the AI
             try:
+                print(f"🔍 Debug: About to call chat_with_grok")
                 # Get model from environment
                 model_env = os.getenv("XAI_MODEL", "grok-3")
+                print(f"🔍 Debug: model_env='{model_env}'")
                 
                 # Send to Grok
                 reply = chat_with_grok(
@@ -201,6 +211,7 @@ def chat():
                     except Exception as e:
                         print(f"TTS error: {e}")
                 
+                print(f"🔍 Debug: About to return successful response")
                 return jsonify({
                     'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
                     'type': 'system',
@@ -216,6 +227,7 @@ def chat():
                 print(f"🔍 Debug: Exception in loadopener AI call: {error_msg}")
                 if "timeout" in error_msg.lower():
                     error_msg = "AI response timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
+                print(f"🔍 Debug: About to return error response")
                 return jsonify({
                     'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
                     'type': 'system',
@@ -343,6 +355,7 @@ def chat():
         print(f"🔍 Debug: Exception in chat: {error_msg}")
         if "timeout" in error_msg.lower():
             error_msg = "Request timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
+        print(f"🔍 Debug: About to return main error response")
         return jsonify({'error': f'Request failed: {error_msg}'})
 
 @app.route('/api/voices', methods=['GET'])
