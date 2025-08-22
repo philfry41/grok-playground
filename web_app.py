@@ -137,6 +137,10 @@ def chat():
             # Add the opener content as a user message
             session['history'].append({"role": "user", "content": opener})
             
+            # For Render free tier, use a simpler approach
+            simple_prompt = "Continue this story naturally with explicit, detailed writing. Use the vocabulary from the lexical contract. Write about 200-300 words."
+            session['history'].append({"role": "user", "content": simple_prompt})
+            
             # Now automatically get a response from the AI
             try:
                 print(f"🔍 Debug: About to call chat_with_grok")
@@ -144,15 +148,31 @@ def chat():
                 model_env = os.getenv("XAI_MODEL", "grok-3")
                 print(f"🔍 Debug: model_env='{model_env}'")
                 
-                # Send to Grok
-                reply = chat_with_grok(
-                    session['history'],
-                    model=model_env,
-                    temperature=1.2,
-                    max_tokens=session['max_tokens'],
-                    top_p=0.95,
-                    hide_thinking=True,
-                )
+                # Try with reduced complexity first
+                try:
+                    reply = chat_with_grok(
+                        session['history'],
+                        model=model_env,
+                        temperature=1.0,
+                        max_tokens=min(800, session['max_tokens']),  # Reduced tokens
+                        top_p=0.9,
+                        hide_thinking=True,
+                    )
+                except Exception as timeout_error:
+                    print(f"🔍 Debug: First attempt failed: {timeout_error}")
+                    # Try with even simpler request
+                    simple_history = [
+                        {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
+                        {"role": "user", "content": f"Continue this story: {opener[:200]}..."}
+                    ]
+                    reply = chat_with_grok(
+                        simple_history,
+                        model=model_env,
+                        temperature=0.8,
+                        max_tokens=400,  # Very short
+                        top_p=0.8,
+                        hide_thinking=True,
+                    )
                 
                 # Handle edging enforcement
                 edge_triggered = False
