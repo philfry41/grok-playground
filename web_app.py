@@ -140,19 +140,19 @@ def chat():
                 print(f"🔍 Debug: Using default opener, length={len(opener)}")
             else:
                 # Try to read file with better error handling
-            try:
-                with open(filename, "r", encoding="utf-8") as f:
-                    opener = f.read()
-                print(f"🔍 Debug: opener length={len(opener)}")
-            except UnicodeDecodeError as e:
-                print(f"🔍 Debug: Unicode decode error: {e}")
-                return jsonify({'error': f'File encoding error: {str(e)}'})
-            except PermissionError as e:
-                print(f"🔍 Debug: Permission error: {e}")
-                return jsonify({'error': f'Permission denied reading {filename}: {str(e)}'})
-            except Exception as e:
-                print(f"🔍 Debug: File read error: {e}")
-                return jsonify({'error': f'Error reading {filename}: {str(e)}'})
+                try:
+                    with open(filename, "r", encoding="utf-8") as f:
+                        opener = f.read()
+                    print(f"🔍 Debug: opener length={len(opener)}")
+                except UnicodeDecodeError as e:
+                    print(f"🔍 Debug: Unicode decode error: {e}")
+                    return jsonify({'error': f'File encoding error: {str(e)}'})
+                except PermissionError as e:
+                    print(f"🔍 Debug: Permission error: {e}")
+                    return jsonify({'error': f'Permission denied reading {filename}: {str(e)}'})
+                except Exception as e:
+                    print(f"🔍 Debug: File read error: {e}")
+                    return jsonify({'error': f'Error reading {filename}: {str(e)}'})
             
             byte_len = len(opener.encode("utf-8"))
             if byte_len == 0 or not any(ch.strip() for ch in opener):
