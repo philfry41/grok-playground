@@ -139,8 +139,7 @@ def chat():
                 opener = """Stephanie, a 56-year-old elementary reading teacher, sat at her desk after hours. She heard footsteps in the hall and her lips curled into a small smile. She'd been flirting with her principal, Dan all day and she knew he was taking her bait. The building's hum filled the quiet. She quickly removed her panties and shoved them in the drawer just before Dan entered her classroom. The smell of Dan's cologne signaled his impending entrance..."""
                 print(f"🔍 Debug: Using default opener, length={len(opener)}")
             else:
-            
-            # Try to read file with better error handling
+                # Try to read file with better error handling
             try:
                 with open(filename, "r", encoding="utf-8") as f:
                     opener = f.read()
