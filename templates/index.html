@@ -341,6 +341,7 @@
                     <button class="btn btn-secondary" onclick="loadVoices()">🎵 List Voices</button>
                     <button class="btn btn-secondary" onclick="loadEdgeLog()">📋 Edge Log</button>
                     <button class="btn btn-secondary" onclick="loadAudioFiles()">🎵 Audio Files</button>
+                    <button class="btn btn-warning" onclick="testAPI()">🧪 Test API</button>
                 </div>
             </div>
             
@@ -518,11 +519,23 @@
                     })
                 });
                 
+                console.log('🔍 Debug: Response status:', response.status);
+                console.log('🔍 Debug: Response headers:', response.headers);
+                
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                const responseText = await response.text();
+                console.log('🔍 Debug: Response text:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('🔍 Debug: JSON parse error:', parseError);
+                    throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
+                }
                 console.log('LoadOpener response:', data); // Debug logging
                 
                 if (data.error) {
@@ -601,6 +614,26 @@
                 }
             } catch (error) {
                 addMessage(`Error loading edge log: ${error.message}`, 'system');
+            }
+        }
+
+        async function testAPI() {
+            showLoading();
+            try {
+                const response = await fetch('/api/test-api');
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`API Test Error: ${data.error}`, 'system');
+                } else if (data.success) {
+                    addMessage(`✅ API Test Successful: ${data.response}`, 'system');
+                } else {
+                    addMessage(`❌ API Test Failed: ${data.error}`, 'system');
+                }
+            } catch (error) {
+                addMessage(`Error testing API: ${error.message}`, 'system');
+            } finally {
+                hideLoading();
             }
         }
 

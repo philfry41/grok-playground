@@ -213,6 +213,7 @@ def chat():
                 
             except Exception as e:
                 error_msg = str(e)
+                print(f"🔍 Debug: Exception in loadopener AI call: {error_msg}")
                 if "timeout" in error_msg.lower():
                     error_msg = "AI response timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
                 return jsonify({
@@ -339,6 +340,7 @@ def chat():
         
     except Exception as e:
         error_msg = str(e)
+        print(f"🔍 Debug: Exception in chat: {error_msg}")
         if "timeout" in error_msg.lower():
             error_msg = "Request timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
         return jsonify({'error': f'Request failed: {error_msg}'})
@@ -358,6 +360,36 @@ def tts_status():
         'voice_id': tts.voice_id,
         'auto_save': tts.auto_save
     })
+
+@app.route('/api/test-api', methods=['GET'])
+def test_api():
+    """Test endpoint to verify API key and basic connectivity"""
+    try:
+        api_key = os.getenv('XAI_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'XAI_API_KEY not set'})
+        
+        # Test with a simple message
+        test_messages = [
+            {"role": "user", "content": "Say 'Hello, API test successful!'"}
+        ]
+        
+        try:
+            response = chat_with_grok(test_messages, max_tokens=50)
+            return jsonify({
+                'success': True,
+                'response': response,
+                'api_key_set': True
+            })
+        except Exception as api_error:
+            return jsonify({
+                'success': False,
+                'error': str(api_error),
+                'api_key_set': True
+            })
+            
+    except Exception as e:
+        return jsonify({'error': f'Test failed: {str(e)}'})
 
 @app.route('/api/edge-log', methods=['GET'])
 def get_edge_log():
