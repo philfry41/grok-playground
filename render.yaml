@@ -6,7 +6,7 @@ services:
     startCommand: gunicorn web_app:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.12.0
       - key: XAI_API_KEY
         sync: false
       - key: XAI_MODEL
