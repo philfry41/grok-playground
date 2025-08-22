@@ -131,8 +131,30 @@ def chat():
         try:
             abs_path = os.path.abspath(filename)
             print(f"🔍 Debug: abs_path='{abs_path}'")
-            opener = open(filename, "r", encoding="utf-8").read()
-            print(f"🔍 Debug: opener length={len(opener)}")
+            
+            # Check if file exists
+            if not os.path.exists(filename):
+                print(f"🔍 Debug: File {filename} does not exist, creating default opener")
+                # Create a simple default opener
+                opener = """Stephanie, a 56-year-old elementary reading teacher, sat at her desk after hours. She heard footsteps in the hall and her lips curled into a small smile. She'd been flirting with her principal, Dan all day and she knew he was taking her bait. The building's hum filled the quiet. She quickly removed her panties and shoved them in the drawer just before Dan entered her classroom. The smell of Dan's cologne signaled his impending entrance..."""
+                print(f"🔍 Debug: Using default opener, length={len(opener)}")
+            else:
+            
+            # Try to read file with better error handling
+            try:
+                with open(filename, "r", encoding="utf-8") as f:
+                    opener = f.read()
+                print(f"🔍 Debug: opener length={len(opener)}")
+            except UnicodeDecodeError as e:
+                print(f"🔍 Debug: Unicode decode error: {e}")
+                return jsonify({'error': f'File encoding error: {str(e)}'})
+            except PermissionError as e:
+                print(f"🔍 Debug: Permission error: {e}")
+                return jsonify({'error': f'Permission denied reading {filename}: {str(e)}'})
+            except Exception as e:
+                print(f"🔍 Debug: File read error: {e}")
+                return jsonify({'error': f'Error reading {filename}: {str(e)}'})
+            
             byte_len = len(opener.encode("utf-8"))
             if byte_len == 0 or not any(ch.strip() for ch in opener):
                 return jsonify({'error': f'{filename} looks empty. Path: {abs_path} (bytes={byte_len})'})
