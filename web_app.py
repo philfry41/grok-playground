@@ -103,8 +103,8 @@ def chat():
         session['allow_male'] = False
         session['max_tokens'] = 1200
         session['scene_state'] = {
-            'stephanie_clothing': 'fully dressed',
-            'dan_clothing': 'fully dressed', 
+            'character1_clothing': 'fully dressed',
+            'character2_clothing': 'fully dressed', 
             'location': 'classroom',
             'positions': 'standing',
             'physical_contact': 'none'
@@ -144,7 +144,7 @@ def chat():
             if not os.path.exists(filename):
                 print(f"🔍 Debug: File {filename} does not exist, creating default opener")
                 # Create a simple default opener
-                opener = """Stephanie, a 56-year-old elementary reading teacher, sat at her desk after hours. She heard footsteps in the hall and her lips curled into a small smile. She'd been flirting with her principal, Dan all day and she knew he was taking her bait. The building's hum filled the quiet. She quickly removed her panties and shoved them in the drawer just before Dan entered her classroom. The smell of Dan's cologne signaled his impending entrance..."""
+                opener = """A woman sat at her desk after hours, hearing footsteps in the hall. Her lips curled into a small smile as she'd been flirting with her colleague all day and knew he was taking her bait. The building's hum filled the quiet. She quickly removed her panties and shoved them in the drawer just before he entered her office. The smell of his cologne signaled his impending entrance..."""
                 print(f"🔍 Debug: Using default opener, length={len(opener)}")
             else:
                 # Try to read file with better error handling
@@ -199,8 +199,8 @@ def chat():
     # Add scene state reminder to help maintain continuity
     scene_state_reminder = f"""
 CURRENT SCENE STATE (maintain this continuity):
-- Stephanie: {session.get('scene_state', {}).get('stephanie_clothing', 'unknown')}
-- Dan: {session.get('scene_state', {}).get('dan_clothing', 'unknown')}
+- Character 1: {session.get('scene_state', {}).get('character1_clothing', 'unknown')}
+- Character 2: {session.get('scene_state', {}).get('character2_clothing', 'unknown')}
 - Location: {session.get('scene_state', {}).get('location', 'unknown')}
 - Positions: {session.get('scene_state', {}).get('positions', 'unknown')}
 - Physical contact: {session.get('scene_state', {}).get('physical_contact', 'unknown')}
@@ -267,14 +267,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         scene_state = session.get('scene_state', {})
         reply_lower = reply.lower()
         
-        # Update clothing states
+        # Update clothing states (character-agnostic)
         if 'removed' in reply_lower or 'took off' in reply_lower or 'stripped' in reply_lower:
-            if 'panties' in reply_lower or 'underwear' in reply_lower:
-                scene_state['stephanie_clothing'] = 'panties removed'
-            if 'shirt' in reply_lower or 'blouse' in reply_lower:
-                scene_state['stephanie_clothing'] = 'top removed'
-            if 'pants' in reply_lower or 'slacks' in reply_lower:
-                scene_state['dan_clothing'] = 'pants removed'
+            if 'panties' in reply_lower or 'underwear' in reply_lower or 'bra' in reply_lower:
+                # Assume female character (character1) for intimate clothing
+                scene_state['character1_clothing'] = 'underwear removed'
+            if 'shirt' in reply_lower or 'blouse' in reply_lower or 'top' in reply_lower:
+                scene_state['character1_clothing'] = 'top removed'
+            if 'pants' in reply_lower or 'slacks' in reply_lower or 'trousers' in reply_lower:
+                scene_state['character2_clothing'] = 'pants removed'
+            if 'dress' in reply_lower or 'skirt' in reply_lower:
+                scene_state['character1_clothing'] = 'dress/skirt removed'
         
         # Update positions
         if 'sitting' in reply_lower or 'sat' in reply_lower:
