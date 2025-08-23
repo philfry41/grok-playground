@@ -214,14 +214,23 @@ def chat():
         # For Render free tier, use simplified approach
         print(f"🔍 Debug: Starting AI call with {len(session['history'])} messages")
         
+        # Limit history length for Render free tier
+        if len(session['history']) > 10:
+            print(f"🔍 Debug: Truncating history from {len(session['history'])} to 10 messages")
+            # Keep system messages and last 8 messages
+            system_messages = [m for m in session['history'] if m['role'] == 'system']
+            recent_messages = session['history'][-8:]
+            session['history'] = system_messages + recent_messages
+            print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
+        
         # Try with reduced complexity first
         try:
             reply = chat_with_grok(
                 session['history'],
                 model=model_env,
-                temperature=1.0,
-                max_tokens=min(600, session['max_tokens']),  # Reduced tokens for Render
-                top_p=0.9,
+                temperature=0.9,  # Slightly lower for stability
+                max_tokens=min(500, session['max_tokens']),  # Even more reduced tokens
+                top_p=0.8,
                 hide_thinking=True,
             )
             print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
@@ -235,9 +244,9 @@ def chat():
             reply = chat_with_grok(
                 simple_history,
                 model=model_env,
-                temperature=0.8,
-                max_tokens=400,  # Very short for Render
-                top_p=0.8,
+                temperature=0.7,  # Lower for stability
+                max_tokens=300,  # Very short for Render
+                top_p=0.7,
                 hide_thinking=True,
             )
             print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
@@ -245,12 +254,21 @@ def chat():
         # Add response to history
         session['history'].append({"role": "assistant", "content": reply})
         
+        # Clean up session if it gets too large (Render memory management)
+        if len(session['history']) > 12:
+            print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
+            # Keep system messages and last 6 messages
+            system_messages = [m for m in session['history'] if m['role'] == 'system']
+            recent_messages = session['history'][-6:]
+            session['history'] = system_messages + recent_messages
+            print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
+        
         # Handle TTS if enabled (simplified)
         audio_file = None
         if tts.enabled and reply.strip():
             try:
                 # Only generate TTS for shorter responses on Render
-                if len(reply) < 1000:
+                if len(reply) < 800:  # Even shorter for Render
                     audio_file = tts.speak(reply, save_audio=True)
                     print(f"🔍 Debug: TTS generated: {audio_file}")
             except Exception as e:
