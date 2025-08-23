@@ -226,14 +226,14 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: API Key set: {'Yes' if api_key else 'No'}")
         print(f"🔍 Debug: Starting AI call with {len(session['history'])} messages")
         
-        # Limit history length for Render free tier
-        if len(session['history']) > 10:
-            print(f"🔍 Debug: Truncating history from {len(session['history'])} to 10 messages")
-            # Keep system messages and last 8 messages
-            system_messages = [m for m in session['history'] if m['role'] == 'system']
-            recent_messages = session['history'][-8:]
-            session['history'] = system_messages + recent_messages
-            print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
+                    # Limit history length for Render free tier
+            if len(session['history']) > 8:  # Reduced from 10 to 8
+                print(f"🔍 Debug: Truncating history from {len(session['history'])} to 8 messages")
+                # Keep system messages and last 6 messages (reduced from 8)
+                system_messages = [m for m in session['history'] if m['role'] == 'system']
+                recent_messages = session['history'][-6:]
+                session['history'] = system_messages + recent_messages
+                print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
         
         # Try with reduced complexity first
         try:
@@ -329,14 +329,14 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         session['scene_state'] = scene_state
         print(f"🔍 Debug: Updated scene state: {scene_state}")
         
-        # Clean up session if it gets too large (Render memory management)
-        if len(session['history']) > 12:
-            print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
-            # Keep system messages and last 6 messages
-            system_messages = [m for m in session['history'] if m['role'] == 'system']
-            recent_messages = session['history'][-6:]
-            session['history'] = system_messages + recent_messages
-            print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
+                    # Clean up session if it gets too large (Render memory management)
+            if len(session['history']) > 8:  # Reduced from 12 to 8
+                print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
+                # Keep system messages and last 4 messages (reduced from 6)
+                system_messages = [m for m in session['history'] if m['role'] == 'system']
+                recent_messages = session['history'][-4:]
+                session['history'] = system_messages + recent_messages
+                print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
         
         # Handle TTS if enabled (simplified)
         audio_file = None
