@@ -182,26 +182,8 @@ def chat():
         max_tokens = int(target * 1.3)
         max_tokens = max(200, min(2000, max_tokens))
         
-        guidance = [
-            f"Continue the scene with a continuous, flowing narrative. Write approximately {target} words.",
-            "Maintain momentum without natural stopping points. Keep the scene moving forward with detailed actions and dialogue.",
-            "Use explicit anatomical language and realistic dialogue throughout.",
-            "Do not conclude or wrap up - keep the scene ongoing and unresolved.",
-            "Avoid sentence-level conclusions. Each sentence should flow into the next, building tension and detail."
-        ]
-        
-        if session['allow_female'] and not session['allow_male']:
-            guidance += [
-                "Stephanie may climax if it fits.",
-                "Dan must NOT climax; if he nears release, have him pull back, slow, change angle, breathe, or redirect to her pleasure so he stays on edge.",
-                "End with Dan still on edge and aching; do not depict his orgasm."
-            ]
-        elif session['allow_female'] and session['allow_male']:
-            guidance += ["Climax is allowed for both partners; resolve naturally and explicitly when it fits."]
-        else:
-            guidance += ["Do NOT depict orgasm for either partner; sustain tension and end on a poised edge."]
-        
-        user_input = " ".join(guidance)
+        # Create a proper continuation prompt
+        user_input = f"Continue the story naturally from where it left off. Write approximately {target} words with detailed, explicit content. Keep the scene flowing without natural stopping points."
         session['max_tokens'] = max_tokens
     
     # Add user message to history
