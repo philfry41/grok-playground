@@ -103,8 +103,7 @@ def chat():
         session['allow_male'] = False
         session['max_tokens'] = 1200
         session['scene_state'] = {
-            'character1_clothing': 'fully dressed',
-            'character2_clothing': 'fully dressed', 
+            'characters': {},  # Dynamic character tracking
             'location': 'classroom',
             'positions': 'standing',
             'physical_contact': 'none'
@@ -197,10 +196,17 @@ def chat():
     session['history'].append({"role": "user", "content": user_input})
     
     # Add scene state reminder to help maintain continuity
+    characters_state = session.get('scene_state', {}).get('characters', {})
+    character_list = []
+    for char_name, char_state in characters_state.items():
+        character_list.append(f"- {char_name}: {char_state.get('clothing', 'unknown')}")
+    
+    if not character_list:
+        character_list = ["- No characters tracked yet"]
+    
     scene_state_reminder = f"""
 CURRENT SCENE STATE (maintain this continuity):
-- Character 1: {session.get('scene_state', {}).get('character1_clothing', 'unknown')}
-- Character 2: {session.get('scene_state', {}).get('character2_clothing', 'unknown')}
+{chr(10).join(character_list)}
 - Location: {session.get('scene_state', {}).get('location', 'unknown')}
 - Positions: {session.get('scene_state', {}).get('positions', 'unknown')}
 - Physical contact: {session.get('scene_state', {}).get('physical_contact', 'unknown')}
@@ -267,17 +273,42 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         scene_state = session.get('scene_state', {})
         reply_lower = reply.lower()
         
-        # Update clothing states (character-agnostic)
+        # Update clothing states (dynamic character tracking)
         if 'removed' in reply_lower or 'took off' in reply_lower or 'stripped' in reply_lower:
-            if 'panties' in reply_lower or 'underwear' in reply_lower or 'bra' in reply_lower:
-                # Assume female character (character1) for intimate clothing
-                scene_state['character1_clothing'] = 'underwear removed'
-            if 'shirt' in reply_lower or 'blouse' in reply_lower or 'top' in reply_lower:
-                scene_state['character1_clothing'] = 'top removed'
-            if 'pants' in reply_lower or 'slacks' in reply_lower or 'trousers' in reply_lower:
-                scene_state['character2_clothing'] = 'pants removed'
-            if 'dress' in reply_lower or 'skirt' in reply_lower:
-                scene_state['character1_clothing'] = 'dress/skirt removed'
+            # Extract character names from the response
+            import re
+            
+            # Look for character names (capitalized words that could be names)
+            potential_names = re.findall(r'\b[A-Z][a-z]+\b', reply)
+            
+            # Common clothing items and their associations
+            clothing_items = {
+                'panties': 'underwear removed',
+                'underwear': 'underwear removed', 
+                'bra': 'bra removed',
+                'shirt': 'shirt removed',
+                'blouse': 'blouse removed',
+                'top': 'top removed',
+                'pants': 'pants removed',
+                'slacks': 'pants removed',
+                'trousers': 'pants removed',
+                'dress': 'dress removed',
+                'skirt': 'skirt removed'
+            }
+            
+            # Track characters mentioned in the response
+            for name in potential_names:
+                if name not in ['The', 'She', 'He', 'Her', 'His', 'They', 'Their']:
+                    if name not in scene_state['characters']:
+                        scene_state['characters'][name] = {'clothing': 'fully dressed'}
+                    
+                    # Check what clothing was removed for this character
+                    for item, state in clothing_items.items():
+                        if item in reply_lower:
+                            # Look for patterns like "Sarah removed her panties" or "Mike took off his shirt"
+                            if re.search(rf'\b{name}\b.*\b{item}\b', reply_lower):
+                                scene_state['characters'][name]['clothing'] = state
+                                print(f"🔍 Debug: Updated {name}'s clothing to {state}")
         
         # Update positions
         if 'sitting' in reply_lower or 'sat' in reply_lower:
