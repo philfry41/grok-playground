@@ -223,84 +223,88 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: API Key set: {'Yes' if api_key else 'No'}")
         print(f"🔍 Debug: Starting AI call with {len(session['history'])} messages")
         
-                    # Limit history length for Render free tier
-            if len(session['history']) > 8:  # Reduced from 10 to 8
-                print(f"🔍 Debug: Truncating history from {len(session['history'])} to 8 messages")
-                # Keep system messages and last 6 messages (reduced from 8)
-                system_messages = [m for m in session['history'] if m['role'] == 'system']
-                recent_messages = session['history'][-6:]
-                session['history'] = system_messages + recent_messages
-                print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
+                            # Limit history length for memory management
+        if len(session['history']) > 12:  # Increased for paid tier
+            print(f"🔍 Debug: Truncating history from {len(session['history'])} to 12 messages")
+            # Keep system messages and last 8 messages
+            system_messages = [m for m in session['history'] if m['role'] == 'system']
+            recent_messages = session['history'][-8:]
+            session['history'] = system_messages + recent_messages
+            print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
         
         # Try with reduced complexity first
-        try:
-            print(f"🔍 Debug: Attempting first AI call...")
-            reply = chat_with_grok(
-                session['history'],
-                model=model_env,
-                temperature=0.9,  # Slightly lower for stability
-                max_tokens=min(500, session['max_tokens']),  # Even more reduced tokens
-                top_p=0.8,
-                hide_thinking=True,
-            )
-            print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
-        except Exception as timeout_error:
-            print(f"🔍 Debug: First attempt failed: {timeout_error}")
-            print(f"🔍 Debug: Error type: {type(timeout_error)}")
-            # Try with even simpler request
-            simple_history = [
-                {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
-                {"role": "user", "content": f"Continue this story: {user_input}"}
-            ]
-            print(f"🔍 Debug: Attempting fallback AI call...")
-            reply = chat_with_grok(
-                simple_history,
-                model=model_env,
-                temperature=0.7,  # Lower for stability
-                max_tokens=300,  # Very short for Render
-                top_p=0.7,
-                hide_thinking=True,
-            )
-            print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
+                    try:
+                print(f"🔍 Debug: Attempting AI call...")
+                reply = chat_with_grok(
+                    session['history'],
+                    model=model_env,
+                    temperature=0.9,
+                    max_tokens=min(800, session['max_tokens']),  # Increased for paid tier
+                    top_p=0.8,
+                    hide_thinking=True,
+                )
+                print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
+            except Exception as timeout_error:
+                print(f"🔍 Debug: First attempt failed: {timeout_error}")
+                print(f"🔍 Debug: Error type: {type(timeout_error)}")
+                # Try with simpler request as fallback
+                simple_history = [
+                    {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
+                    {"role": "user", "content": f"Continue this story: {user_input}"}
+                ]
+                print(f"🔍 Debug: Attempting fallback AI call...")
+                reply = chat_with_grok(
+                    simple_history,
+                    model=model_env,
+                    temperature=0.7,
+                    max_tokens=500,  # Increased for paid tier
+                    top_p=0.7,
+                    hide_thinking=True,
+                )
+                print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
         
         # Add response to history
         session['history'].append({"role": "assistant", "content": reply})
         
-        # Update scene state using AI-powered extraction
-        state_manager = session.get('state_manager')
-        if state_manager:
-            # Add the AI response to history for state extraction
-            temp_history = session['history'] + [{"role": "assistant", "content": reply}]
-            
-            # Use AI to intelligently extract current state
-            updated_state = state_manager.extract_state_from_messages(temp_history)
-            
-            print(f"🔍 Debug: AI-powered state extraction completed")
-            print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
-            for char_name, char_data in updated_state['characters'].items():
-                print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
-        else:
-            print(f"🔍 Debug: No state manager found in session")
+        # Update scene state using AI-powered extraction (with fallback)
+        try:
+            state_manager = session.get('state_manager')
+            if state_manager:
+                # Add the AI response to history for state extraction
+                temp_history = session['history'] + [{"role": "assistant", "content": reply}]
+                
+                # Use AI to intelligently extract current state
+                updated_state = state_manager.extract_state_from_messages(temp_history)
+                
+                print(f"🔍 Debug: AI-powered state extraction completed")
+                print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
+                for char_name, char_data in updated_state['characters'].items():
+                    print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
+            else:
+                print(f"🔍 Debug: No state manager found in session")
+        except Exception as e:
+            print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
+            # Continue without state update if extraction fails
         
-                    # Clean up session if it gets too large (Render memory management)
-            if len(session['history']) > 8:  # Reduced from 12 to 8
+                    # Clean up session if it gets too large
+            if len(session['history']) > 12:  # Increased for paid tier
                 print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
-                # Keep system messages and last 4 messages (reduced from 6)
+                # Keep system messages and last 6 messages
                 system_messages = [m for m in session['history'] if m['role'] == 'system']
-                recent_messages = session['history'][-4:]
+                recent_messages = session['history'][-6:]
                 session['history'] = system_messages + recent_messages
                 print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
         
-        # Handle TTS if enabled (simplified)
-        audio_file = None
-        if tts.enabled and reply.strip():
-            try:
-                # Only generate TTS for shorter responses on Render
-                if len(reply) < 800:  # Even shorter for Render
-                    audio_file = tts.speak(reply, save_audio=True)
-                    print(f"🔍 Debug: TTS generated: {audio_file}")
-            except Exception as e:
-                print(f"🔍 Debug: TTS error: {e}")
+                    # Handle TTS if enabled
+            audio_file = None
+            if tts.enabled and reply.strip():
+                try:
+                    # Generate TTS for responses (increased limit for paid tier)
+                    if len(reply) < 1200:  # Increased for paid tier
+                        audio_file = tts.speak(reply, save_audio=True)
+                        print(f"🔍 Debug: TTS generated: {audio_file}")
+                except Exception as e:
+                    print(f"🔍 Debug: TTS error: {e}")
         
         return jsonify({
             'message': reply,

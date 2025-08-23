@@ -69,8 +69,6 @@ RULES:
             
             # Clean and parse the response
             response = response.strip()
-            
-            # Remove any markdown formatting if present
             if response.startswith("```json"):
                 response = response[7:]
             if response.endswith("```"):
