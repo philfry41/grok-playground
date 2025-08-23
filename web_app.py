@@ -275,11 +275,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         
         # Update clothing states (dynamic character tracking)
         if 'removed' in reply_lower or 'took off' in reply_lower or 'stripped' in reply_lower:
+            print(f"🔍 Debug: Clothing removal detected in response")
             # Extract character names from the response
             import re
             
             # Look for character names (capitalized words that could be names)
             potential_names = re.findall(r'\b[A-Z][a-z]+\b', reply)
+            print(f"🔍 Debug: Potential names found: {potential_names}")
             
             # Common clothing items and their associations
             clothing_items = {
@@ -299,16 +301,23 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Track characters mentioned in the response
             for name in potential_names:
                 if name not in ['The', 'She', 'He', 'Her', 'His', 'They', 'Their']:
+                    print(f"🔍 Debug: Processing character: {name}")
                     if name not in scene_state['characters']:
                         scene_state['characters'][name] = {'clothing': 'fully dressed'}
+                        print(f"🔍 Debug: Created new character entry for {name}")
                     
                     # Check what clothing was removed for this character
                     for item, state in clothing_items.items():
                         if item in reply_lower:
+                            print(f"🔍 Debug: Clothing item '{item}' found in response")
                             # Look for patterns like "Sarah removed her panties" or "Mike took off his shirt"
-                            if re.search(rf'\b{name}\b.*\b{item}\b', reply_lower):
+                            # Also check for simpler patterns like "Sarah's panties" or "Mike's shirt"
+                            pattern1 = rf'\b{name}\b.*\b{item}\b'
+                            pattern2 = rf'\b{name}\'s\s+{item}\b'
+                            if re.search(pattern1, reply_lower) or re.search(pattern2, reply_lower):
                                 scene_state['characters'][name]['clothing'] = state
                                 print(f"🔍 Debug: Updated {name}'s clothing to {state}")
+                                break
         
         # Update positions
         if 'sitting' in reply_lower or 'sat' in reply_lower:
