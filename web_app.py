@@ -211,78 +211,55 @@ def chat():
         # Get model from environment
         model_env = os.getenv("XAI_MODEL", "grok-3")
         
-        # Send to Grok
-        reply = chat_with_grok(
-            session['history'],
-            model=model_env,
-            temperature=1.2,
-            max_tokens=session['max_tokens'],
-            top_p=0.95,
-            hide_thinking=True,
-        )
+        # For Render free tier, use simplified approach
+        print(f"🔍 Debug: Starting AI call with {len(session['history'])} messages")
         
-        # Handle edging enforcement
-        edge_triggered = False
-        if session['allow_female'] and not session['allow_male']:
-            start, end = find_male_climax_span(reply)
-            if start is not None:
-                # Log the trigger
-                trigger_info = log_edge_trigger(reply, start, end)
-                
-                # Trim and repair
-                trimmed, tail = trim_before_sentence_with_index(reply, start, keep_tail_sentences=2)
-                
-                # Add trimmed response to history
-                session['history'].append({"role": "assistant", "content": trimmed})
-                
-                # Generate repair
-                repair = (
-                    f"Continue seamlessly from this point, but redirect Dan away from climax:\n"
-                    f"\"{trimmed[-200:] if len(trimmed) > 200 else trimmed}\"\n\n"
-                    "Write a detailed continuation where Dan pulls back, slows down, changes position, or focuses on Stephanie's pleasure. "
-                    "Use explicit language. Keep him on edge and fully in control of his arousal level. Write at least 100 words."
-                )
-                session['history'].append({"role": "user", "content": repair})
-                
-                repair_tokens = max(300, int(session['max_tokens'] * 0.6)) if command == 'cont' else 700
-                
-                try:
-                    repair_reply = chat_with_grok(
-                        session['history'],
-                        model=model_env,
-                        temperature=1.2,
-                        max_tokens=repair_tokens,
-                        top_p=0.95,
-                        hide_thinking=True,
-                    )
-                    
-                    if not repair_reply.strip() or len(repair_reply.split()) < 10:
-                        reply = trimmed
-                    else:
-                        reply = trimmed + " " + repair_reply
-                    
-                    edge_triggered = True
-                    
-                except Exception as e:
-                    reply = trimmed
-                    edge_triggered = True
+        # Try with reduced complexity first
+        try:
+            reply = chat_with_grok(
+                session['history'],
+                model=model_env,
+                temperature=1.0,
+                max_tokens=min(600, session['max_tokens']),  # Reduced tokens for Render
+                top_p=0.9,
+                hide_thinking=True,
+            )
+            print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
+        except Exception as timeout_error:
+            print(f"🔍 Debug: First attempt failed: {timeout_error}")
+            # Try with even simpler request
+            simple_history = [
+                {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
+                {"role": "user", "content": f"Continue this story: {user_input}"}
+            ]
+            reply = chat_with_grok(
+                simple_history,
+                model=model_env,
+                temperature=0.8,
+                max_tokens=400,  # Very short for Render
+                top_p=0.8,
+                hide_thinking=True,
+            )
+            print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
         
-        # Add final response to history
+        # Add response to history
         session['history'].append({"role": "assistant", "content": reply})
         
-        # Handle TTS if enabled
+        # Handle TTS if enabled (simplified)
         audio_file = None
         if tts.enabled and reply.strip():
             try:
-                audio_file = tts.speak(reply, save_audio=True)
+                # Only generate TTS for shorter responses on Render
+                if len(reply) < 1000:
+                    audio_file = tts.speak(reply, save_audio=True)
+                    print(f"🔍 Debug: TTS generated: {audio_file}")
             except Exception as e:
-                print(f"TTS error: {e}")
+                print(f"🔍 Debug: TTS error: {e}")
         
         return jsonify({
             'message': reply,
             'type': 'assistant',
-            'edge_triggered': edge_triggered,
-            'trigger_info': trigger_info if edge_triggered else None,
+            'edge_triggered': False,  # Simplified for Render
             'audio_file': audio_file
         })
         
