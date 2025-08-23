@@ -125,9 +125,10 @@ def chat():
     
     elif command == 'loadopener':
         print(f"🔍 Debug: loadopener command detected")
-        # Handle /loadopener command
+        # Handle /loadopener command - SIMPLIFIED VERSION
         filename = data.get('filename', 'opener.txt')
         print(f"🔍 Debug: filename='{filename}'")
+        
         try:
             abs_path = os.path.abspath(filename)
             print(f"🔍 Debug: abs_path='{abs_path}'")
@@ -161,123 +162,14 @@ def chat():
             # Add the opener content as a user message
             session['history'].append({"role": "user", "content": opener})
             
-            # For Render free tier, use a simpler approach
-            simple_prompt = "Continue this story naturally with explicit, detailed writing. Use the vocabulary from the lexical contract. Write about 200-300 words."
-            session['history'].append({"role": "user", "content": simple_prompt})
-            
-            # Now automatically get a response from the AI
-            try:
-                print(f"🔍 Debug: About to call chat_with_grok")
-                # Get model from environment
-                model_env = os.getenv("XAI_MODEL", "grok-3")
-                print(f"🔍 Debug: model_env='{model_env}'")
-                
-                # Try with reduced complexity first
-                try:
-                    reply = chat_with_grok(
-                        session['history'],
-                        model=model_env,
-                        temperature=1.0,
-                        max_tokens=min(800, session['max_tokens']),  # Reduced tokens
-                        top_p=0.9,
-                        hide_thinking=True,
-                    )
-                except Exception as timeout_error:
-                    print(f"🔍 Debug: First attempt failed: {timeout_error}")
-                    # Try with even simpler request
-                    simple_history = [
-                        {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
-                        {"role": "user", "content": f"Continue this story: {opener[:200]}..."}
-                    ]
-                    reply = chat_with_grok(
-                        simple_history,
-                        model=model_env,
-                        temperature=0.8,
-                        max_tokens=400,  # Very short
-                        top_p=0.8,
-                        hide_thinking=True,
-                    )
-                
-                # Handle edging enforcement
-                edge_triggered = False
-                if session['allow_female'] and not session['allow_male']:
-                    start, end = find_male_climax_span(reply)
-                    if start is not None:
-                        # Log the trigger
-                        trigger_info = log_edge_trigger(reply, start, end)
-                        
-                        # Trim and repair
-                        trimmed, tail = trim_before_sentence_with_index(reply, start, keep_tail_sentences=2)
-                        
-                        # Add trimmed response to history
-                        session['history'].append({"role": "assistant", "content": trimmed})
-                        
-                        # Generate repair
-                        repair = (
-                            f"Continue seamlessly from this point, but redirect Dan away from climax:\n"
-                            f"\"{trimmed[-200:] if len(trimmed) > 200 else trimmed}\"\n\n"
-                            "Write a detailed continuation where Dan pulls back, slows down, changes position, or focuses on Stephanie's pleasure. "
-                            "Use explicit language. Keep him on edge and fully in control of his arousal level. Write at least 100 words."
-                        )
-                        session['history'].append({"role": "user", "content": repair})
-                        
-                        repair_tokens = max(300, int(session['max_tokens'] * 0.6))
-                        
-                        try:
-                            repair_reply = chat_with_grok(
-                                session['history'],
-                                model=model_env,
-                                temperature=1.2,
-                                max_tokens=repair_tokens,
-                                top_p=0.95,
-                                hide_thinking=True,
-                            )
-                            
-                            if not repair_reply.strip() or len(repair_reply.split()) < 10:
-                                reply = trimmed
-                            else:
-                                reply = trimmed + " " + repair_reply
-                            
-                            edge_triggered = True
-                            
-                        except Exception as e:
-                            reply = trimmed
-                            edge_triggered = True
-                
-                # Add final response to history
-                session['history'].append({"role": "assistant", "content": reply})
-                
-                # Handle TTS if enabled
-                audio_file = None
-                if tts.enabled and reply.strip():
-                    try:
-                        audio_file = tts.speak(reply, save_audio=True)
-                    except Exception as e:
-                        print(f"TTS error: {e}")
-                
-                print(f"🔍 Debug: About to return successful response")
-                return jsonify({
-                    'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
-                    'type': 'system',
-                    'opener_content': opener,
-                    'ai_response': reply,
-                    'response_type': 'assistant',
-                    'edge_triggered': edge_triggered,
-                    'audio_file': audio_file
-                })
-                
-            except Exception as e:
-                error_msg = str(e)
-                print(f"🔍 Debug: Exception in loadopener AI call: {error_msg}")
-                if "timeout" in error_msg.lower():
-                    error_msg = "AI response timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
-                print(f"🔍 Debug: About to return error response")
-                return jsonify({
-                    'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
-                    'type': 'system',
-                    'opener_content': opener,
-                    'error': f'Failed to get AI response: {error_msg}'
-                })
+            print(f"🔍 Debug: About to return simple response")
+            return jsonify({
+                'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
+                'type': 'system',
+                'opener_content': opener,
+                'ai_response': 'Click "Send" to continue the story...',
+                'response_type': 'system'
+            })
                 
         except FileNotFoundError:
             return jsonify({'error': f'File not found: {filename}'})
