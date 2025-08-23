@@ -362,11 +362,23 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadTTSStatus();
-            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            
+            // Handle Enter key
+            messageInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     sendMessage();
                 }
             });
+            
+            // Handle input changes to enable/disable send button
+            messageInput.addEventListener('input', function() {
+                sendButton.disabled = !messageInput.value.trim();
+            });
+            
+            // Initial state
+            sendButton.disabled = !messageInput.value.trim();
         });
 
         function showLoading() {
@@ -393,12 +405,14 @@
 
         async function sendMessage() {
             const input = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
             const message = input.value.trim();
             
             if (!message) return;
             
             addMessage(message, 'user');
             input.value = '';
+            sendButton.disabled = true; // Disable after sending
             
             showLoading();
             
