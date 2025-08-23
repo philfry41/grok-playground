@@ -102,6 +102,13 @@ def chat():
         session['allow_female'] = True
         session['allow_male'] = False
         session['max_tokens'] = 1200
+        session['scene_state'] = {
+            'stephanie_clothing': 'fully dressed',
+            'dan_clothing': 'fully dressed', 
+            'location': 'classroom',
+            'positions': 'standing',
+            'physical_contact': 'none'
+        }
     
     # Handle commands
     if command == 'new':
@@ -189,6 +196,21 @@ def chat():
     # Add user message to history
     session['history'].append({"role": "user", "content": user_input})
     
+    # Add scene state reminder to help maintain continuity
+    scene_state_reminder = f"""
+CURRENT SCENE STATE (maintain this continuity):
+- Stephanie: {session.get('scene_state', {}).get('stephanie_clothing', 'unknown')}
+- Dan: {session.get('scene_state', {}).get('dan_clothing', 'unknown')}
+- Location: {session.get('scene_state', {}).get('location', 'unknown')}
+- Positions: {session.get('scene_state', {}).get('positions', 'unknown')}
+- Physical contact: {session.get('scene_state', {}).get('physical_contact', 'unknown')}
+
+Continue the story while maintaining this physical state. Do not have clothes magically reappear or positions change without explicit action.
+"""
+    
+    # Add scene state reminder as a system message
+    session['history'].append({"role": "system", "content": scene_state_reminder})
+    
     try:
         # Get model from environment
         model_env = os.getenv("XAI_MODEL", "grok-3")
@@ -240,6 +262,38 @@ def chat():
         
         # Add response to history
         session['history'].append({"role": "assistant", "content": reply})
+        
+        # Update scene state based on the response (simple keyword detection)
+        scene_state = session.get('scene_state', {})
+        reply_lower = reply.lower()
+        
+        # Update clothing states
+        if 'removed' in reply_lower or 'took off' in reply_lower or 'stripped' in reply_lower:
+            if 'panties' in reply_lower or 'underwear' in reply_lower:
+                scene_state['stephanie_clothing'] = 'panties removed'
+            if 'shirt' in reply_lower or 'blouse' in reply_lower:
+                scene_state['stephanie_clothing'] = 'top removed'
+            if 'pants' in reply_lower or 'slacks' in reply_lower:
+                scene_state['dan_clothing'] = 'pants removed'
+        
+        # Update positions
+        if 'sitting' in reply_lower or 'sat' in reply_lower:
+            scene_state['positions'] = 'sitting'
+        elif 'lying' in reply_lower or 'laid' in reply_lower or 'on her back' in reply_lower:
+            scene_state['positions'] = 'lying down'
+        elif 'kneeling' in reply_lower or 'on her knees' in reply_lower:
+            scene_state['positions'] = 'kneeling'
+        
+        # Update physical contact
+        if 'kiss' in reply_lower or 'kissing' in reply_lower:
+            scene_state['physical_contact'] = 'kissing'
+        elif 'touch' in reply_lower or 'touching' in reply_lower:
+            scene_state['physical_contact'] = 'touching'
+        elif 'penetration' in reply_lower or 'inside' in reply_lower:
+            scene_state['physical_contact'] = 'penetration'
+        
+        session['scene_state'] = scene_state
+        print(f"🔍 Debug: Updated scene state: {scene_state}")
         
         # Clean up session if it gets too large (Render memory management)
         if len(session['history']) > 12:
