@@ -210,8 +210,10 @@ def chat():
     try:
         # Get model from environment
         model_env = os.getenv("XAI_MODEL", "grok-3")
+        api_key = os.getenv("XAI_API_KEY")
         
-        # For Render free tier, use simplified approach
+        print(f"🔍 Debug: Model: {model_env}")
+        print(f"🔍 Debug: API Key set: {'Yes' if api_key else 'No'}")
         print(f"🔍 Debug: Starting AI call with {len(session['history'])} messages")
         
         # Limit history length for Render free tier
@@ -225,6 +227,7 @@ def chat():
         
         # Try with reduced complexity first
         try:
+            print(f"🔍 Debug: Attempting first AI call...")
             reply = chat_with_grok(
                 session['history'],
                 model=model_env,
@@ -236,11 +239,13 @@ def chat():
             print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
         except Exception as timeout_error:
             print(f"🔍 Debug: First attempt failed: {timeout_error}")
+            print(f"🔍 Debug: Error type: {type(timeout_error)}")
             # Try with even simpler request
             simple_history = [
                 {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
                 {"role": "user", "content": f"Continue this story: {user_input}"}
             ]
+            print(f"🔍 Debug: Attempting fallback AI call...")
             reply = chat_with_grok(
                 simple_history,
                 model=model_env,
@@ -310,6 +315,11 @@ def test_api():
     """Test endpoint to verify API key and basic connectivity"""
     try:
         api_key = os.getenv('XAI_API_KEY')
+        model_env = os.getenv('XAI_MODEL', 'grok-3')
+        
+        print(f"🔍 Debug: Test API - Model: {model_env}")
+        print(f"🔍 Debug: Test API - API Key set: {'Yes' if api_key else 'No'}")
+        
         if not api_key:
             return jsonify({'error': 'XAI_API_KEY not set'})
         
@@ -319,20 +329,27 @@ def test_api():
         ]
         
         try:
+            print(f"🔍 Debug: Test API - Attempting simple call...")
             response = chat_with_grok(test_messages, max_tokens=50)
+            print(f"🔍 Debug: Test API - Success: {response}")
             return jsonify({
                 'success': True,
                 'response': response,
-                'api_key_set': True
+                'api_key_set': True,
+                'model': model_env
             })
         except Exception as api_error:
+            print(f"🔍 Debug: Test API - Error: {api_error}")
+            print(f"🔍 Debug: Test API - Error type: {type(api_error)}")
             return jsonify({
                 'success': False,
                 'error': str(api_error),
-                'api_key_set': True
+                'api_key_set': True,
+                'model': model_env
             })
             
     except Exception as e:
+        print(f"🔍 Debug: Test API - Outer error: {e}")
         return jsonify({'error': f'Test failed: {str(e)}'})
 
 @app.route('/api/edge-log', methods=['GET'])
