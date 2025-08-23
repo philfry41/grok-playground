@@ -2,6 +2,7 @@ import os
 import json
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from grok_remote import chat_with_grok
+from story_state_manager import StoryStateManager
 from tts_helper import tts
 import re
 from datetime import datetime
@@ -102,12 +103,12 @@ def chat():
         session['allow_female'] = True
         session['allow_male'] = False
         session['max_tokens'] = 1200
-        session['scene_state'] = {
-            'characters': {},  # Dynamic character tracking
-            'location': 'classroom',
-            'positions': 'standing',
-            'physical_contact': 'none'
-        }
+        # Initialize AI-powered story state manager
+        if 'state_manager' not in session:
+            session['state_manager'] = StoryStateManager()
+        else:
+            # Reset state for new story
+            session['state_manager'].reset_state()
     
     # Handle commands
     if command == 'new':
@@ -195,21 +196,17 @@ def chat():
     # Add user message to history
     session['history'].append({"role": "user", "content": user_input})
     
-    # Add scene state reminder to help maintain continuity
-    characters_state = session.get('scene_state', {}).get('characters', {})
-    character_list = []
-    for char_name, char_state in characters_state.items():
-        character_list.append(f"- {char_name}: {char_state.get('clothing', 'unknown')}")
-    
-    if not character_list:
-        character_list = ["- No characters tracked yet"]
-    
-    scene_state_reminder = f"""
+    # Get AI-powered scene state reminder
+    state_manager = session.get('state_manager')
+    if state_manager:
+        scene_state_reminder = state_manager.get_state_as_prompt()
+    else:
+        scene_state_reminder = """
 CURRENT SCENE STATE (maintain this continuity):
-{chr(10).join(character_list)}
-- Location: {session.get('scene_state', {}).get('location', 'unknown')}
-- Positions: {session.get('scene_state', {}).get('positions', 'unknown')}
-- Physical contact: {session.get('scene_state', {}).get('physical_contact', 'unknown')}
+- No characters tracked yet
+- Location: unknown
+- Positions: unknown
+- Physical contact: none
 
 Continue the story while maintaining this physical state. Do not have clothes magically reappear or positions change without explicit action.
 """
@@ -269,74 +266,21 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         # Add response to history
         session['history'].append({"role": "assistant", "content": reply})
         
-        # Update scene state based on the response (simple keyword detection)
-        scene_state = session.get('scene_state', {})
-        reply_lower = reply.lower()
-        
-        # Update clothing states (dynamic character tracking)
-        if 'removed' in reply_lower or 'took off' in reply_lower or 'stripped' in reply_lower:
-            print(f"🔍 Debug: Clothing removal detected in response")
-            # Extract character names from the response
-            import re
+        # Update scene state using AI-powered extraction
+        state_manager = session.get('state_manager')
+        if state_manager:
+            # Add the AI response to history for state extraction
+            temp_history = session['history'] + [{"role": "assistant", "content": reply}]
             
-            # Look for character names (capitalized words that could be names)
-            potential_names = re.findall(r'\b[A-Z][a-z]+\b', reply)
-            print(f"🔍 Debug: Potential names found: {potential_names}")
+            # Use AI to intelligently extract current state
+            updated_state = state_manager.extract_state_from_messages(temp_history)
             
-            # Common clothing items and their associations
-            clothing_items = {
-                'panties': 'underwear removed',
-                'underwear': 'underwear removed', 
-                'bra': 'bra removed',
-                'shirt': 'shirt removed',
-                'blouse': 'blouse removed',
-                'top': 'top removed',
-                'pants': 'pants removed',
-                'slacks': 'pants removed',
-                'trousers': 'pants removed',
-                'dress': 'dress removed',
-                'skirt': 'skirt removed'
-            }
-            
-            # Track characters mentioned in the response
-            for name in potential_names:
-                if name not in ['The', 'She', 'He', 'Her', 'His', 'They', 'Their']:
-                    print(f"🔍 Debug: Processing character: {name}")
-                    if name not in scene_state['characters']:
-                        scene_state['characters'][name] = {'clothing': 'fully dressed'}
-                        print(f"🔍 Debug: Created new character entry for {name}")
-                    
-                    # Check what clothing was removed for this character
-                    for item, state in clothing_items.items():
-                        if item in reply_lower:
-                            print(f"🔍 Debug: Clothing item '{item}' found in response")
-                            # Look for patterns like "Sarah removed her panties" or "Mike took off his shirt"
-                            # Also check for simpler patterns like "Sarah's panties" or "Mike's shirt"
-                            pattern1 = rf'\b{name}\b.*\b{item}\b'
-                            pattern2 = rf'\b{name}\'s\s+{item}\b'
-                            if re.search(pattern1, reply_lower) or re.search(pattern2, reply_lower):
-                                scene_state['characters'][name]['clothing'] = state
-                                print(f"🔍 Debug: Updated {name}'s clothing to {state}")
-                                break
-        
-        # Update positions
-        if 'sitting' in reply_lower or 'sat' in reply_lower:
-            scene_state['positions'] = 'sitting'
-        elif 'lying' in reply_lower or 'laid' in reply_lower or 'on her back' in reply_lower:
-            scene_state['positions'] = 'lying down'
-        elif 'kneeling' in reply_lower or 'on her knees' in reply_lower:
-            scene_state['positions'] = 'kneeling'
-        
-        # Update physical contact
-        if 'kiss' in reply_lower or 'kissing' in reply_lower:
-            scene_state['physical_contact'] = 'kissing'
-        elif 'touch' in reply_lower or 'touching' in reply_lower:
-            scene_state['physical_contact'] = 'touching'
-        elif 'penetration' in reply_lower or 'inside' in reply_lower:
-            scene_state['physical_contact'] = 'penetration'
-        
-        session['scene_state'] = scene_state
-        print(f"🔍 Debug: Updated scene state: {scene_state}")
+            print(f"🔍 Debug: AI-powered state extraction completed")
+            print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
+            for char_name, char_data in updated_state['characters'].items():
+                print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
+        else:
+            print(f"🔍 Debug: No state manager found in session")
         
                     # Clean up session if it gets too large (Render memory management)
             if len(session['history']) > 8:  # Reduced from 12 to 8
