@@ -78,6 +78,15 @@ def chat():
         user_input = data.get('message', '').strip()
         command = data.get('command', '')
         word_count = data.get('word_count', 500)
+        
+        # Parse commands from user input if they start with /
+        if user_input.startswith('/'):
+            parts = user_input.split(' ', 1)
+            command = parts[0][1:]  # Remove the leading /
+            if len(parts) > 1:
+                # Add the rest as additional data
+                data[command] = parts[1]
+        
         print(f"🔍 Debug: user_input='{user_input}', command='{command}', word_count={word_count}")
     except Exception as e:
         print(f"🔍 Debug: Error parsing request data: {e}")
@@ -132,8 +141,8 @@ def chat():
     
     elif command == 'loadopener':
         print(f"🔍 Debug: loadopener command detected")
-        # Handle /loadopener command - SIMPLIFIED VERSION
-        filename = data.get('filename', 'opener.txt')
+        # Handle /loadopener command - get filename from parsed command
+        filename = data.get('loadopener', 'opener.txt')
         print(f"🔍 Debug: filename='{filename}'")
         
         try:
