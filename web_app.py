@@ -393,8 +393,14 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             try:
                 # Generate TTS for responses (increased limit for paid tier)
                 if len(reply) < 1200:  # Increased for paid tier
-                    audio_file = tts.speak(reply, save_audio=True)
-                    print(f"🔍 Debug: TTS generated: {audio_file}")
+                    # For auto-save mode, always save audio files
+                    # For auto-play mode, don't save (just play)
+                    save_audio = (tts.mode == "save")
+                    audio_file = tts.speak(reply, save_audio=save_audio)
+                    if audio_file:
+                        print(f"🔍 Debug: TTS generated: {audio_file}")
+                    else:
+                        print(f"🔍 Debug: TTS played (not saved)")
             except Exception as e:
                 print(f"🔍 Debug: TTS error: {e}")
         

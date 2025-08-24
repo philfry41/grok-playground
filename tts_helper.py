@@ -95,8 +95,8 @@ class TTSHelper:
                 model_id="eleven_monolingual_v1"
             )
             
-            # Determine if we should save or play based on auto_save setting
-            should_save = save_audio or self.auto_save
+            # Determine if we should save or play based on save_audio parameter
+            should_save = save_audio
             
             if should_save:
                 # Create audio directory if it doesn't exist
