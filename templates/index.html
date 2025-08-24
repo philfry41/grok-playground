@@ -998,23 +998,48 @@
             closeOpenerModal();
             showLoading();
             
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: `/loadopener ${filename}`
-                    })
-                });
+            // Retry logic for 502 errors on paid tier
+            let retries = 0;
+            const maxRetries = 3;
+            
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: `/loadopener ${filename}`
+                        })
+                    });
                 
                 // Check if response is OK
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Server error response:', errorText);
-                    addMessage(`Server error (${response.status}): ${response.statusText}`, 'system');
-                    return;
+                    console.error(`Server error response (attempt ${retries + 1}):`, errorText);
+                    
+                    // Handle specific error codes
+                    if (response.status === 502) {
+                        retries++;
+                        if (retries < maxRetries) {
+                            addMessage(`🔄 Server temporarily unavailable (502). Retrying... (${retries}/${maxRetries})`, 'system');
+                            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+                            continue; // Retry
+                        } else {
+                            addMessage(`🔄 Server unavailable after ${maxRetries} attempts. Please try again in a moment.`, 'system');
+                            return;
+                        }
+                    } else if (response.status === 503) {
+                        addMessage(`🔄 Server is starting up (503 Service Unavailable). Please wait 30 seconds and try again.`, 'system');
+                        return;
+                    } else if (response.status === 504) {
+                        addMessage(`⏱️ Request timed out (504 Gateway Timeout). The AI response took too long. Please try again.`, 'system');
+                        return;
+                    } else {
+                        addMessage(`Server error (${response.status}): ${response.statusText}`, 'system');
+                        return;
+                    }
                 }
                 
                 // Check content type
@@ -1044,12 +1069,24 @@
                         }
                     }
                 }
+                
+                // Success - break out of retry loop
+                break;
+                
             } catch (error) {
-                console.error('Error in selectOpener:', error);
-                addMessage(`Error loading opener: ${error.message}`, 'system');
-            } finally {
-                hideLoading();
+                console.error(`Error in selectOpener (attempt ${retries + 1}):`, error);
+                retries++;
+                if (retries >= maxRetries) {
+                    addMessage(`Error loading opener after ${maxRetries} attempts: ${error.message}`, 'system');
+                } else {
+                    addMessage(`🔄 Error occurred. Retrying... (${retries}/${maxRetries})`, 'system');
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+                }
             }
+        }
+        
+        // Hide loading after all attempts
+        hideLoading();
         }
 
         // Close modal when clicking outside of it
