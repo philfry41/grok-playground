@@ -101,19 +101,32 @@ class TTSHelper:
             if should_save:
                 # Create audio directory if it doesn't exist
                 audio_dir = "audio"
-                os.makedirs(audio_dir, exist_ok=True)
+                print(f"🔍 Debug: Creating audio directory: {audio_dir}")
+                try:
+                    os.makedirs(audio_dir, exist_ok=True)
+                    print(f"🔍 Debug: Audio directory ready: {os.path.exists(audio_dir)}")
+                except Exception as dir_error:
+                    print(f"🔍 Debug: Error creating audio directory: {dir_error}")
+                    return None
                 
                 # Save to a timestamped file in audio directory
                 import datetime
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = f"grok_response_{timestamp}.mp3"
                 filepath = os.path.join(audio_dir, filename)
+                print(f"🔍 Debug: Saving audio to: {filepath}")
                 
-                with open(filepath, "wb") as f:
-                    for chunk in audio:
-                        f.write(chunk)
-                print(f"💾 Audio saved to: {filepath}")
-                return filepath
+                try:
+                    with open(filepath, "wb") as f:
+                        for chunk in audio:
+                            f.write(chunk)
+                    print(f"💾 Audio saved to: {filepath}")
+                    print(f"🔍 Debug: File exists after save: {os.path.exists(filepath)}")
+                    print(f"🔍 Debug: File size: {os.path.getsize(filepath)} bytes")
+                    return filepath
+                except Exception as save_error:
+                    print(f"🔍 Debug: Error saving audio file: {save_error}")
+                    return None
             else:
                 # Play audio directly
                 with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:

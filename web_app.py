@@ -610,26 +610,43 @@ def list_audio_files():
     """List all available audio files"""
     try:
         audio_dir = "audio"
+        print(f"🔍 Debug: Checking audio directory: {audio_dir}")
+        print(f"🔍 Debug: Current working directory: {os.getcwd()}")
+        print(f"🔍 Debug: Audio directory exists: {os.path.exists(audio_dir)}")
+        
         if not os.path.exists(audio_dir):
-            return jsonify({'files': []})
+            print(f"🔍 Debug: Audio directory does not exist, creating it")
+            try:
+                os.makedirs(audio_dir, exist_ok=True)
+                print(f"🔍 Debug: Audio directory created successfully")
+            except Exception as create_error:
+                print(f"🔍 Debug: Failed to create audio directory: {create_error}")
+                return jsonify({'error': f'Could not create audio directory: {create_error}'}), 500
         
         files = []
-        for filename in os.listdir(audio_dir):
-            if filename.endswith('.mp3'):
-                file_path = os.path.join(audio_dir, filename)
-                file_size = os.path.getsize(file_path)
-                file_time = os.path.getmtime(file_path)
-                files.append({
-                    'filename': filename,
-                    'size': file_size,
-                    'created': file_time,
-                    'url': f'/audio/{filename}'
-                })
+        try:
+            for filename in os.listdir(audio_dir):
+                if filename.endswith('.mp3'):
+                    file_path = os.path.join(audio_dir, filename)
+                    file_size = os.path.getsize(file_path)
+                    file_time = os.path.getmtime(file_path)
+                    files.append({
+                        'filename': filename,
+                        'size': file_size,
+                        'created': file_time,
+                        'url': f'/audio/{filename}'
+                    })
+                    print(f"🔍 Debug: Found audio file: {filename} ({file_size} bytes)")
+        except Exception as list_error:
+            print(f"🔍 Debug: Error listing audio files: {list_error}")
+            return jsonify({'error': f'Could not list audio files: {list_error}'}), 500
         
         # Sort by creation time (newest first)
         files.sort(key=lambda x: x['created'], reverse=True)
+        print(f"🔍 Debug: Total audio files found: {len(files)}")
         return jsonify({'files': files})
     except Exception as e:
+        print(f"🔍 Debug: Unexpected error in list_audio_files: {e}")
         return jsonify({'error': f'Could not list audio files: {e}'}), 500
 
 if __name__ == '__main__':
