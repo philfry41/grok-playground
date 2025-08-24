@@ -425,6 +425,7 @@
                 <h3>🎤 TTS Status</h3>
                 <div class="tts-status" id="ttsStatus">Loading...</div>
                 <div class="command-buttons">
+                    <button class="btn btn-primary" onclick="toggleTTS()" id="ttsToggleBtn">🔄 Toggle TTS</button>
                     <button class="btn btn-secondary" onclick="loadVoices()">🎵 List Voices</button>
                     <button class="btn btn-secondary" onclick="loadEdgeLog()">📋 Edge Log</button>
                     <button class="btn btn-secondary" onclick="loadAudioFiles()">🎵 Audio Files</button>
@@ -693,17 +694,49 @@
                 const data = await response.json();
                 
                 const statusDiv = document.getElementById('ttsStatus');
+                const toggleBtn = document.getElementById('ttsToggleBtn');
+                
                 if (data.enabled) {
                     statusDiv.innerHTML = `
                         ✅ TTS Enabled<br>
                         Voice: ${data.voice_id}<br>
                         Mode: ${data.auto_save ? 'Auto-save' : 'Auto-play'}
                     `;
+                    toggleBtn.innerHTML = '🔇 Disable TTS';
+                    toggleBtn.className = 'btn btn-danger';
                 } else {
                     statusDiv.innerHTML = '❌ TTS Disabled';
+                    toggleBtn.innerHTML = '🎤 Enable TTS';
+                    toggleBtn.className = 'btn btn-success';
                 }
             } catch (error) {
                 document.getElementById('ttsStatus').innerHTML = '❌ TTS Error';
+            }
+        }
+
+        async function toggleTTS() {
+            try {
+                const response = await fetch('/api/tts-toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'toggle'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`TTS Toggle Error: ${data.error}`, 'system');
+                } else {
+                    addMessage(data.message, 'system');
+                    // Reload TTS status to update the UI
+                    await loadTTSStatus();
+                }
+            } catch (error) {
+                addMessage(`Error toggling TTS: ${error.message}`, 'system');
             }
         }
 

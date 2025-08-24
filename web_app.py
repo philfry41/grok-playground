@@ -393,6 +393,34 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: About to return main error response")
         return jsonify({'error': f'Request failed: {error_msg}'})
 
+@app.route('/api/tts-toggle', methods=['POST'])
+def toggle_tts():
+    """Toggle TTS on/off"""
+    try:
+        data = request.get_json()
+        action = data.get('action', 'toggle')
+        
+        if action == 'enable':
+            tts.enabled = True
+            print(f"🎤 TTS enabled")
+        elif action == 'disable':
+            tts.enabled = False
+            print(f"🔇 TTS disabled")
+        elif action == 'toggle':
+            tts.enabled = not tts.enabled
+            print(f"{'🎤 TTS enabled' if tts.enabled else '🔇 TTS disabled'}")
+        else:
+            return jsonify({'error': f'Invalid action: {action}'})
+        
+        return jsonify({
+            'success': True,
+            'enabled': tts.enabled,
+            'message': f"{'🎤 TTS enabled' if tts.enabled else '🔇 TTS disabled'}"
+        })
+    except Exception as e:
+        print(f"🔍 Debug: Error toggling TTS: {e}")
+        return jsonify({'error': f'Failed to toggle TTS: {str(e)}'})
+
 @app.route('/api/opener-files', methods=['GET'])
 def get_opener_files():
     """Get list of available opener files"""
