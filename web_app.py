@@ -1,5 +1,7 @@
 import os
 import json
+import re
+import datetime
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
@@ -547,8 +549,70 @@ def test_api():
         print(f"🔍 Debug: Test API - Model: {model_env}")
         print(f"🔍 Debug: Test API - API Key set: {'Yes' if api_key else 'No'}")
         
+        # Test file system access
+        print(f"🔍 Debug: Test API - Testing file system...")
+        test_file_info = {}
+        
+        try:
+            # Test current directory
+            current_dir = os.getcwd()
+            test_file_info['current_dir'] = current_dir
+            print(f"🔍 Debug: Test API - Current directory: {current_dir}")
+            
+            # Test if we can create a test file
+            test_filename = "test_file_system.txt"
+            test_content = f"Test file created at {datetime.datetime.now()}"
+            
+            with open(test_filename, "w") as f:
+                f.write(test_content)
+            test_file_info['test_file_created'] = True
+            print(f"🔍 Debug: Test API - Test file created: {test_filename}")
+            
+            # Test if we can read the file back
+            with open(test_filename, "r") as f:
+                read_content = f.read()
+            test_file_info['test_file_read'] = (read_content == test_content)
+            print(f"🔍 Debug: Test API - Test file read: {test_file_info['test_file_read']}")
+            
+            # Test audio directory
+            audio_dir = "audio"
+            if os.path.exists(audio_dir):
+                test_file_info['audio_dir_exists'] = True
+                test_file_info['audio_dir_files'] = len([f for f in os.listdir(audio_dir) if f.endswith('.mp3')])
+                print(f"🔍 Debug: Test API - Audio directory exists with {test_file_info['audio_dir_files']} MP3 files")
+            else:
+                test_file_info['audio_dir_exists'] = False
+                print(f"🔍 Debug: Test API - Audio directory does not exist")
+                
+                # Try to create it
+                try:
+                    os.makedirs(audio_dir, exist_ok=True)
+                    test_file_info['audio_dir_created'] = True
+                    print(f"🔍 Debug: Test API - Audio directory created successfully")
+                except Exception as create_error:
+                    test_file_info['audio_dir_created'] = False
+                    test_file_info['audio_dir_error'] = str(create_error)
+                    print(f"🔍 Debug: Test API - Failed to create audio directory: {create_error}")
+            
+            # Clean up test file
+            try:
+                os.remove(test_filename)
+                test_file_info['test_file_cleaned'] = True
+                print(f"🔍 Debug: Test API - Test file cleaned up")
+            except Exception as cleanup_error:
+                test_file_info['test_file_cleaned'] = False
+                test_file_info['cleanup_error'] = str(cleanup_error)
+                print(f"🔍 Debug: Test API - Failed to clean up test file: {cleanup_error}")
+                
+        except Exception as fs_error:
+            test_file_info['file_system_error'] = str(fs_error)
+            print(f"🔍 Debug: Test API - File system test failed: {fs_error}")
+        
         if not api_key:
-            return jsonify({'error': 'XAI_API_KEY not set'})
+            return jsonify({
+                'error': 'XAI_API_KEY not set',
+                'file_system_test': test_file_info
+            })
         
         # Test with a simple message
         test_messages = [
@@ -563,7 +627,8 @@ def test_api():
                 'success': True,
                 'response': response,
                 'api_key_set': True,
-                'model': model_env
+                'model': model_env,
+                'file_system_test': test_file_info
             })
         except Exception as api_error:
             print(f"🔍 Debug: Test API - Error: {api_error}")
@@ -572,7 +637,8 @@ def test_api():
                 'success': False,
                 'error': str(api_error),
                 'api_key_set': True,
-                'model': model_env
+                'model': model_env,
+                'file_system_test': test_file_info
             })
             
     except Exception as e:
