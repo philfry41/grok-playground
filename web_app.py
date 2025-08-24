@@ -169,14 +169,77 @@ def chat():
             # Add the opener content as a user message
             session['history'].append({"role": "user", "content": opener})
             
-            print(f"🔍 Debug: About to return simple response")
-            return jsonify({
-                'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
-                'type': 'system',
-                'opener_content': opener,
-                'ai_response': 'Click "Send" to continue the story...',
-                'response_type': 'system'
-            })
+            # Get AI-powered scene state reminder
+            state_manager = session.get('state_manager')
+            if state_manager:
+                scene_state_reminder = state_manager.get_state_as_prompt()
+            else:
+                scene_state_reminder = """
+CURRENT SCENE STATE (maintain this continuity):
+- No characters tracked yet
+- Location: unknown
+- Positions: unknown
+- Physical contact: none
+
+Continue the story while maintaining this physical state. Do not have clothes magically reappear or positions change without explicit action.
+"""
+            
+            # Add scene state reminder as a system message
+            session['history'].append({"role": "system", "content": scene_state_reminder})
+            
+            # Generate AI response to continue the story
+            try:
+                print(f"🔍 Debug: Generating AI response for opener...")
+                model_env = os.getenv('XAI_MODEL', 'grok-3')
+                reply = chat_with_grok(
+                    session['history'],
+                    model=model_env,
+                    temperature=0.9,
+                    max_tokens=800,
+                    top_p=0.8,
+                    hide_thinking=True,
+                )
+                print(f"🔍 Debug: AI response generated, length={len(reply)}")
+                
+                # Add response to history
+                session['history'].append({"role": "assistant", "content": reply})
+                
+                # Update scene state using AI-powered extraction
+                try:
+                    state_manager = session.get('state_manager')
+                    if state_manager:
+                        # Add the AI response to history for state extraction
+                        temp_history = session['history'] + [{"role": "assistant", "content": reply}]
+                        
+                        # Use AI to intelligently extract current state
+                        updated_state = state_manager.extract_state_from_messages(temp_history)
+                        
+                        print(f"🔍 Debug: AI-powered state extraction completed")
+                        print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
+                        for char_name, char_data in updated_state['characters'].items():
+                            print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
+                    else:
+                        print(f"🔍 Debug: No state manager found in session")
+                except Exception as e:
+                    print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
+                
+                return jsonify({
+                    'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
+                    'type': 'system',
+                    'opener_content': opener,
+                    'ai_response': reply,
+                    'response_type': 'assistant'
+                })
+                
+            except Exception as ai_error:
+                print(f"🔍 Debug: AI response generation failed: {ai_error}")
+                return jsonify({
+                    'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
+                    'type': 'system',
+                    'opener_content': opener,
+                    'ai_response': 'Click "Send" to continue the story...',
+                    'response_type': 'system'
+                })
                 
         except FileNotFoundError:
             return jsonify({'error': f'File not found: {filename}'})
