@@ -14,14 +14,20 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
 def find_male_climax_span(text: str):
     MALE_TRIGGER = re.compile(
         r"(?:\b(Dan|he|his)\b[^.\n\r]{0,120}\b("
-        r"(?<!pre)cum(?:s|ming|med)?|come(?:s|came|coming)?|climax(?:es|ed|ing)?|orgasm(?:s|ed|ing)?|"
+        r"(?:pre)?cum(?:s|ming|med)?|come(?:s|came|coming)?|climax(?:es|ed|ing)?|orgasm(?:s|ed|ing)?|"
         r"ejaculat(?:e|es|ed|ing)|finish(?:es|ed|ing)?|release(?:s|d|ing)?|shoot(?:s|ing|ed)?|"
         r"spurt(?:s|ing|ed)?|explode(?:s|d|ing)?|unload(?:s|ed|ing)?|load|semen|sperm)"
         r")",
         flags=re.IGNORECASE
     )
     m = MALE_TRIGGER.search(text)
-    return (m.start(), m.end()) if m else (None, None)
+    if m:
+        # Check if it's "precum" and exclude it
+        match_text = text[m.start():m.end()].lower()
+        if 'precum' in match_text or 'pre-cum' in match_text:
+            return (None, None)
+        return (m.start(), m.end())
+    return (None, None)
 
 def trim_before_sentence_with_index(text: str, hit_start: int, keep_tail_sentences: int = 2):
     parts = re.split(r'(?<=[.!?…])\s+', text)
