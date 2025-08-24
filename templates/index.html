@@ -531,8 +531,21 @@
                     })
                 });
                 
+                // Check if response is OK
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('Server error response:', errorText);
+                    addMessage(`Server error (${response.status}): ${response.statusText}`, 'system');
+                    return;
+                }
+                
+                // Check content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const errorText = await response.text();
+                    console.error('Non-JSON response:', errorText);
+                    addMessage(`Server returned non-JSON response. Please try again.`, 'system');
+                    return;
                 }
                 
                 const data = await response.json();
@@ -936,6 +949,24 @@
             
             try {
                 const response = await fetch('/api/opener-files');
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error response:', errorText);
+                    openerList.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Server error (${response.status}): ${response.statusText}</div>`;
+                    return;
+                }
+                
+                // Check content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const errorText = await response.text();
+                    console.error('Non-JSON response:', errorText);
+                    openerList.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Server returned non-JSON response. Please try again.</div>`;
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (data.error) {
@@ -954,6 +985,7 @@
                     openerList.innerHTML = html;
                 }
             } catch (error) {
+                console.error('Error in openOpenerModal:', error);
                 openerList.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Error loading openers: ${error.message}</div>`;
             }
         }
@@ -977,6 +1009,23 @@
                     })
                 });
                 
+                // Check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error response:', errorText);
+                    addMessage(`Server error (${response.status}): ${response.statusText}`, 'system');
+                    return;
+                }
+                
+                // Check content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const errorText = await response.text();
+                    console.error('Non-JSON response:', errorText);
+                    addMessage(`Server returned non-JSON response. Please try again.`, 'system');
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (data.error) {
@@ -996,6 +1045,7 @@
                     }
                 }
             } catch (error) {
+                console.error('Error in selectOpener:', error);
                 addMessage(`Error loading opener: ${error.message}`, 'system');
             } finally {
                 hideLoading();
