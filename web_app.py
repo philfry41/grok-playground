@@ -310,36 +310,49 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             session['history'] = system_messages + recent_messages
             print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
         
-        # Try AI call
-        try:
-            print(f"🔍 Debug: Attempting AI call...")
-            reply = chat_with_grok(
-                session['history'],
-                model=model_env,
-                temperature=0.9,
-                max_tokens=min(800, session['max_tokens']),  # Increased for paid tier
-                top_p=0.8,
-                hide_thinking=True,
-            )
-            print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
-        except Exception as timeout_error:
-            print(f"🔍 Debug: First attempt failed: {timeout_error}")
-            print(f"🔍 Debug: Error type: {type(timeout_error)}")
-            # Try with simpler request as fallback
-            simple_history = [
-                {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
-                {"role": "user", "content": f"Continue this story: {user_input}"}
-            ]
-            print(f"🔍 Debug: Attempting fallback AI call...")
-            reply = chat_with_grok(
-                simple_history,
-                model=model_env,
-                temperature=0.7,
-                max_tokens=500,  # Increased for paid tier
-                top_p=0.7,
-                hide_thinking=True,
-            )
-            print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
+        # Try AI call with retry logic
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                print(f"🔍 Debug: Attempting AI call (attempt {attempt + 1}/{max_retries})...")
+                reply = chat_with_grok(
+                    session['history'],
+                    model=model_env,
+                    temperature=0.9,
+                    max_tokens=min(800, session['max_tokens']),  # Increased for paid tier
+                    top_p=0.8,
+                    hide_thinking=True,
+                )
+                print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
+                break  # Success, exit retry loop
+            except Exception as ai_error:
+                print(f"🔍 Debug: AI call attempt {attempt + 1} failed: {ai_error}")
+                print(f"🔍 Debug: Error type: {type(ai_error)}")
+                
+                if attempt == max_retries - 1:  # Last attempt
+                    # Try with simpler request as final fallback
+                    simple_history = [
+                        {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
+                        {"role": "user", "content": f"Continue this story: {user_input}"}
+                    ]
+                    print(f"🔍 Debug: Attempting final fallback AI call...")
+                    try:
+                        reply = chat_with_grok(
+                            simple_history,
+                            model=model_env,
+                            temperature=0.7,
+                            max_tokens=500,  # Increased for paid tier
+                            top_p=0.7,
+                            hide_thinking=True,
+                        )
+                        print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
+                    except Exception as fallback_error:
+                        print(f"🔍 Debug: Fallback AI call also failed: {fallback_error}")
+                        return jsonify({'error': f'AI service unavailable after {max_retries} attempts. Please try again.'})
+                else:
+                    # Wait a bit before retrying
+                    import time
+                    time.sleep(1)
         
         # Add response to history
         session['history'].append({"role": "assistant", "content": reply})
@@ -362,6 +375,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: No state manager found in session")
         except Exception as e:
             print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
+            print(f"🔍 Debug: Error type: {type(e)}")
             # Continue without state update if extraction fails
         
         # Clean up session if it gets too large

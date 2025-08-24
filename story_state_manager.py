@@ -74,8 +74,26 @@ RULES:
             if response.endswith("```"):
                 response = response[:-3]
             
-            # Parse JSON
-            extracted_state = json.loads(response)
+            # Try to parse JSON with better error handling
+            try:
+                extracted_state = json.loads(response)
+            except json.JSONDecodeError as json_error:
+                print(f"🔍 Debug: JSON parsing failed: {json_error}")
+                print(f"🔍 Debug: Raw response: {response}")
+                
+                # Try to extract JSON from the response if it's embedded in text
+                import re
+                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                if json_match:
+                    try:
+                        extracted_state = json.loads(json_match.group())
+                        print(f"🔍 Debug: Successfully extracted JSON from text")
+                    except json.JSONDecodeError:
+                        print(f"🔍 Debug: Failed to extract valid JSON from text")
+                        return self.current_state
+                else:
+                    print(f"🔍 Debug: No JSON found in response")
+                    return self.current_state
             
             # Validate and merge with current state
             self._merge_state(extracted_state)
