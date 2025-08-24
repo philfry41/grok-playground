@@ -232,36 +232,36 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             session['history'] = system_messages + recent_messages
             print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
         
-        # Try with reduced complexity first
-                    try:
-                print(f"🔍 Debug: Attempting AI call...")
-                reply = chat_with_grok(
-                    session['history'],
-                    model=model_env,
-                    temperature=0.9,
-                    max_tokens=min(800, session['max_tokens']),  # Increased for paid tier
-                    top_p=0.8,
-                    hide_thinking=True,
-                )
-                print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
-            except Exception as timeout_error:
-                print(f"🔍 Debug: First attempt failed: {timeout_error}")
-                print(f"🔍 Debug: Error type: {type(timeout_error)}")
-                # Try with simpler request as fallback
-                simple_history = [
-                    {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
-                    {"role": "user", "content": f"Continue this story: {user_input}"}
-                ]
-                print(f"🔍 Debug: Attempting fallback AI call...")
-                reply = chat_with_grok(
-                    simple_history,
-                    model=model_env,
-                    temperature=0.7,
-                    max_tokens=500,  # Increased for paid tier
-                    top_p=0.7,
-                    hide_thinking=True,
-                )
-                print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
+        # Try AI call
+        try:
+            print(f"🔍 Debug: Attempting AI call...")
+            reply = chat_with_grok(
+                session['history'],
+                model=model_env,
+                temperature=0.9,
+                max_tokens=min(800, session['max_tokens']),  # Increased for paid tier
+                top_p=0.8,
+                hide_thinking=True,
+            )
+            print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
+        except Exception as timeout_error:
+            print(f"🔍 Debug: First attempt failed: {timeout_error}")
+            print(f"🔍 Debug: Error type: {type(timeout_error)}")
+            # Try with simpler request as fallback
+            simple_history = [
+                {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
+                {"role": "user", "content": f"Continue this story: {user_input}"}
+            ]
+            print(f"🔍 Debug: Attempting fallback AI call...")
+            reply = chat_with_grok(
+                simple_history,
+                model=model_env,
+                temperature=0.7,
+                max_tokens=500,  # Increased for paid tier
+                top_p=0.7,
+                hide_thinking=True,
+            )
+            print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
         
         # Add response to history
         session['history'].append({"role": "assistant", "content": reply})
@@ -286,25 +286,25 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
             # Continue without state update if extraction fails
         
-                    # Clean up session if it gets too large
-            if len(session['history']) > 12:  # Increased for paid tier
-                print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
-                # Keep system messages and last 6 messages
-                system_messages = [m for m in session['history'] if m['role'] == 'system']
-                recent_messages = session['history'][-6:]
-                session['history'] = system_messages + recent_messages
-                print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
+        # Clean up session if it gets too large
+        if len(session['history']) > 12:  # Increased for paid tier
+            print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
+            # Keep system messages and last 6 messages
+            system_messages = [m for m in session['history'] if m['role'] == 'system']
+            recent_messages = session['history'][-6:]
+            session['history'] = system_messages + recent_messages
+            print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
         
-                    # Handle TTS if enabled
-            audio_file = None
-            if tts.enabled and reply.strip():
-                try:
-                    # Generate TTS for responses (increased limit for paid tier)
-                    if len(reply) < 1200:  # Increased for paid tier
-                        audio_file = tts.speak(reply, save_audio=True)
-                        print(f"🔍 Debug: TTS generated: {audio_file}")
-                except Exception as e:
-                    print(f"🔍 Debug: TTS error: {e}")
+        # Handle TTS if enabled
+        audio_file = None
+        if tts.enabled and reply.strip():
+            try:
+                # Generate TTS for responses (increased limit for paid tier)
+                if len(reply) < 1200:  # Increased for paid tier
+                    audio_file = tts.speak(reply, save_audio=True)
+                    print(f"🔍 Debug: TTS generated: {audio_file}")
+            except Exception as e:
+                print(f"🔍 Debug: TTS error: {e}")
         
         return jsonify({
             'message': reply,
