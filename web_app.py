@@ -219,6 +219,23 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 # Add response to history
                 session['history'].append({"role": "assistant", "content": reply})
                 
+                # Handle TTS if enabled (same logic as main chat)
+                audio_file = None
+                if tts.enabled and reply.strip():
+                    try:
+                        # Generate TTS for responses (increased limit for paid tier)
+                        if len(reply) < 1200:  # Increased for paid tier
+                            # For auto-save mode, always save audio files
+                            # For auto-play mode, don't save (just play)
+                            save_audio = (tts.mode == "save")
+                            audio_file = tts.speak(reply, save_audio=save_audio)
+                            if audio_file:
+                                print(f"🔍 Debug: TTS generated for opener: {audio_file}")
+                            else:
+                                print(f"🔍 Debug: TTS played for opener (not saved)")
+                    except Exception as e:
+                        print(f"🔍 Debug: TTS error for opener: {e}")
+                
                 # Update scene state using AI-powered extraction
                 try:
                     state_manager = session.get('state_manager')
@@ -243,7 +260,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     'type': 'system',
                     'opener_content': opener,
                     'ai_response': reply,
-                    'response_type': 'assistant'
+                    'response_type': 'assistant',
+                    'audio_file': audio_file
                 })
                 
             except Exception as ai_error:
