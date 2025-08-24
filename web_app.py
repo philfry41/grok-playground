@@ -415,27 +415,33 @@ Continue the story while maintaining this physical state. Do not have clothes ma
 
 @app.route('/api/tts-toggle', methods=['POST'])
 def toggle_tts():
-    """Toggle TTS on/off"""
+    """Cycle through TTS modes: off -> tts -> save -> off"""
     try:
         data = request.get_json()
-        action = data.get('action', 'toggle')
+        action = data.get('action', 'cycle')
         
-        if action == 'enable':
-            tts.enabled = True
-            print(f"🎤 TTS enabled")
+        if action == 'cycle':
+            new_mode = tts.cycle_mode()
+            mode_display = tts.get_mode_display()
+            print(f"🔄 TTS mode cycled to: {mode_display}")
+        elif action == 'enable':
+            if tts.api_key:
+                tts.mode = "tts"
+                print(f"🎤 TTS enabled (auto-play)")
+            else:
+                return jsonify({'error': 'No TTS API key available'})
         elif action == 'disable':
-            tts.enabled = False
+            tts.mode = "off"
             print(f"🔇 TTS disabled")
-        elif action == 'toggle':
-            tts.enabled = not tts.enabled
-            print(f"{'🎤 TTS enabled' if tts.enabled else '🔇 TTS disabled'}")
         else:
             return jsonify({'error': f'Invalid action: {action}'})
         
         return jsonify({
             'success': True,
             'enabled': tts.enabled,
-            'message': f"{'🎤 TTS enabled' if tts.enabled else '🔇 TTS disabled'}"
+            'mode': tts.mode,
+            'mode_display': tts.get_mode_display(),
+            'message': f"TTS: {tts.get_mode_display()}"
         })
     except Exception as e:
         print(f"🔍 Debug: Error toggling TTS: {e}")
@@ -500,8 +506,11 @@ def get_voices():
 def tts_status():
     return jsonify({
         'enabled': tts.enabled,
+        'mode': tts.mode,
+        'mode_display': tts.get_mode_display(),
         'voice_id': tts.voice_id,
-        'auto_save': tts.auto_save
+        'auto_save': tts.auto_save,
+        'has_api_key': bool(tts.api_key)
     })
 
 @app.route('/api/test-api', methods=['GET'])

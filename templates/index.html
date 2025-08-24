@@ -709,18 +709,32 @@
                 const statusDiv = document.getElementById('ttsStatus');
                 const toggleBtn = document.getElementById('ttsToggleBtn');
                 
-                if (data.enabled) {
+                if (!data.has_api_key) {
+                    statusDiv.innerHTML = '❌ No API Key';
+                    toggleBtn.innerHTML = '🔑 Set API Key';
+                    toggleBtn.className = 'btn btn-warning';
+                    toggleBtn.disabled = true;
+                } else if (data.mode === 'off') {
+                    statusDiv.innerHTML = '🔇 TTS Disabled';
+                    toggleBtn.innerHTML = '🎤 Enable TTS';
+                    toggleBtn.className = 'btn btn-success';
+                    toggleBtn.disabled = false;
+                } else if (data.mode === 'tts') {
                     statusDiv.innerHTML = `
-                        ✅ TTS Enabled<br>
-                        Voice: ${data.voice_id}<br>
-                        Mode: ${data.auto_save ? 'Auto-save' : 'Auto-play'}
+                        ✅ TTS Auto-Play<br>
+                        Voice: ${data.voice_id}
+                    `;
+                    toggleBtn.innerHTML = '💾 Switch to Save';
+                    toggleBtn.className = 'btn btn-info';
+                    toggleBtn.disabled = false;
+                } else { // save mode
+                    statusDiv.innerHTML = `
+                        💾 TTS Auto-Save<br>
+                        Voice: ${data.voice_id}
                     `;
                     toggleBtn.innerHTML = '🔇 Disable TTS';
                     toggleBtn.className = 'btn btn-danger';
-                } else {
-                    statusDiv.innerHTML = '❌ TTS Disabled';
-                    toggleBtn.innerHTML = '🎤 Enable TTS';
-                    toggleBtn.className = 'btn btn-success';
+                    toggleBtn.disabled = false;
                 }
             } catch (error) {
                 document.getElementById('ttsStatus').innerHTML = '❌ TTS Error';
@@ -735,7 +749,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'toggle'
+                        action: 'cycle'
                     })
                 });
                 

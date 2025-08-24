@@ -6,18 +6,32 @@ from elevenlabs import ElevenLabs
 class TTSHelper:
     def __init__(self):
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
-        self.enabled = bool(self.api_key)
+        # TTS modes: "off", "tts" (auto-play), "save" (auto-save)
+        self.mode = "off"  # Default to disabled
         self.voice_id = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")  # Adam voice
         self.volume = float(os.getenv("ELEVENLABS_VOLUME", "0.5"))
-        self.auto_save = os.getenv("ELEVENLABS_AUTO_SAVE", "true").lower() == "true"
         self.max_tts_length = int(os.getenv("ELEVENLABS_MAX_LENGTH", "5000"))  # 0 = no limit
         
-        if self.enabled:
-            self.client = ElevenLabs(api_key=self.api_key)
-            mode = "auto-save" if self.auto_save else "auto-play"
-            print(f"🎤 TTS enabled with voice ID: {self.voice_id} (mode: {mode})")
+        # Initialize client if API key is available
+        if self.api_key:
+            try:
+                self.client = ElevenLabs(api_key=self.api_key)
+                print(f"🎤 TTS API key found - ready to enable")
+            except Exception as e:
+                print(f"⚠️ TTS API key invalid: {e}")
+                self.api_key = None
         else:
-            print("🔇 TTS disabled - set ELEVENLABS_API_KEY to enable")
+            print("🔇 TTS disabled - no API key set")
+    
+    @property
+    def enabled(self):
+        """TTS is enabled if we have an API key and mode is not 'off'"""
+        return bool(self.api_key) and self.mode != "off"
+    
+    @property
+    def auto_save(self):
+        """Auto-save is enabled if mode is 'save'"""
+        return self.mode == "save"
     
     def get_available_voices(self):
         """Get list of available voices"""
@@ -35,6 +49,35 @@ class TTSHelper:
         """Change the voice ID"""
         self.voice_id = voice_id
         print(f"🎤 Voice changed to: {voice_id}")
+    
+    def cycle_mode(self):
+        """Cycle through TTS modes: off -> tts -> save -> off"""
+        if not self.api_key:
+            print("🔇 TTS disabled - no API key set")
+            return "off"
+        
+        if self.mode == "off":
+            self.mode = "tts"
+            print("🎤 TTS enabled (auto-play mode)")
+        elif self.mode == "tts":
+            self.mode = "save"
+            print("💾 TTS enabled (auto-save mode)")
+        else:  # save
+            self.mode = "off"
+            print("🔇 TTS disabled")
+        
+        return self.mode
+    
+    def get_mode_display(self):
+        """Get human-readable mode description"""
+        if not self.api_key:
+            return "No API Key"
+        elif self.mode == "off":
+            return "Disabled"
+        elif self.mode == "tts":
+            return "Auto-Play"
+        else:  # save
+            return "Auto-Save"
     
     def speak(self, text, save_audio=False):
         """Generate and save/play TTS audio"""
