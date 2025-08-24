@@ -321,6 +321,53 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: About to return main error response")
         return jsonify({'error': f'Request failed: {error_msg}'})
 
+@app.route('/api/opener-files', methods=['GET'])
+def get_opener_files():
+    """Get list of available opener files"""
+    try:
+        import glob
+        opener_files = glob.glob("opener*.txt")
+        opener_files.sort()  # Sort alphabetically
+        
+        # Create a more user-friendly list with descriptions
+        opener_list = []
+        for filename in opener_files:
+            # Extract description from filename
+            name = filename.replace('.txt', '').replace('opener_', '').replace('_', ' ')
+            if name == '2char':
+                description = "2 characters - Generic office scenario"
+            elif name == '3char':
+                description = "3 characters - Emma, Alex & Jordan (threesome)"
+            elif name == '4char':
+                description = "4 characters - Rachel, Marcus, Sophia & David (foursome)"
+            elif name == '5char':
+                description = "5 characters - Isabella, James, Elena, Carlos & Maya (club VIP)"
+            elif name == 'office 3':
+                description = "3 characters - Jennifer, Mr. Thompson & Lisa (office)"
+            elif name == 'party 4':
+                description = "4 characters - Taylor, Chris, Ashley & Ryan (college party)"
+            elif name == 'swingers':
+                description = "4 characters - Michelle, Robert, Jessica & Michael (swingers)"
+            elif name == 'bachelorette':
+                description = "6 characters - Amanda, Brooke, Nicole, Vanessa, Tiffany & Destiny"
+            elif name == 'fantasy':
+                description = "6 characters - Aria, Thorne, Gimli, Pip, Grok & Zara (fantasy RPG)"
+            elif name == 'sarah mike':
+                description = "2 characters - Sarah & Mike (specific names)"
+            else:
+                description = f"{name} characters"
+            
+            opener_list.append({
+                'filename': filename,
+                'name': name.title(),
+                'description': description
+            })
+        
+        return jsonify({'opener_files': opener_list})
+    except Exception as e:
+        print(f"🔍 Debug: Error getting opener files: {e}")
+        return jsonify({'error': f'Failed to get opener files: {str(e)}'})
+
 @app.route('/api/voices', methods=['GET'])
 def get_voices():
     if not tts.enabled:

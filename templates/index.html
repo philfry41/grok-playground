@@ -282,6 +282,95 @@
                 order: -1;
             }
         }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            margin: 0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .opener-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .opener-item {
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .opener-item:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+
+        .opener-item.selected {
+            border-color: #667eea;
+            background-color: #e3f2fd;
+        }
+
+        .opener-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .opener-description {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .opener-filename {
+            color: #999;
+            font-size: 12px;
+            font-family: monospace;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -327,9 +416,7 @@
                     </div>
                     
                     <div class="word-count-input">
-                        <label>File:</label>
-                        <input type="text" id="openerFile" value="opener.txt" placeholder="opener.txt" />
-                        <button class="btn btn-secondary" onclick="loadOpener()">📄 Load Opener</button>
+                        <button class="btn btn-secondary" onclick="openOpenerModal()">📄 Select Opener</button>
                     </div>
                 </div>
             </div>
@@ -348,6 +435,21 @@
             <div class="panel" id="audioPanel" style="display: none;">
                 <h3>🎵 Audio Files</h3>
                 <div id="audioFilesList">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Opener Selection Modal -->
+    <div id="openerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📄 Select Opener</h2>
+                <span class="close" onclick="closeOpenerModal()">&times;</span>
+            </div>
+            <div class="opener-list" id="openerList">
+                <div style="text-align: center; padding: 20px; color: #666;">
+                    Loading openers...
+                </div>
             </div>
         </div>
     </div>
@@ -788,6 +890,86 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // Opener Modal Functions
+        async function openOpenerModal() {
+            const modal = document.getElementById('openerModal');
+            const openerList = document.getElementById('openerList');
+            
+            // Show loading state
+            openerList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Loading openers...</div>';
+            modal.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/opener-files');
+                const data = await response.json();
+                
+                if (data.error) {
+                    openerList.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Error: ${data.error}</div>`;
+                } else {
+                    let html = '';
+                    data.opener_files.forEach(opener => {
+                        html += `
+                            <div class="opener-item" onclick="selectOpener('${opener.filename}')">
+                                <div class="opener-name">${opener.name}</div>
+                                <div class="opener-description">${opener.description}</div>
+                                <div class="opener-filename">${opener.filename}</div>
+                            </div>
+                        `;
+                    });
+                    openerList.innerHTML = html;
+                }
+            } catch (error) {
+                openerList.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Error loading openers: ${error.message}</div>`;
+            }
+        }
+
+        function closeOpenerModal() {
+            document.getElementById('openerModal').style.display = 'none';
+        }
+
+        async function selectOpener(filename) {
+            closeOpenerModal();
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `/loadopener ${filename}`
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`Error loading opener: ${data.error}`, 'system');
+                } else {
+                    addMessage(data.message, 'system');
+                    if (data.opener_content) {
+                        addMessage(data.opener_content, 'user');
+                    }
+                    if (data.ai_response) {
+                        addMessage(data.ai_response, 'assistant');
+                    }
+                }
+            } catch (error) {
+                addMessage(`Error loading opener: ${error.message}`, 'system');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('openerModal');
+            if (event.target === modal) {
+                closeOpenerModal();
+            }
         }
     </script>
 </body>
