@@ -126,6 +126,10 @@ class TTSHelper:
                         # It's a file-like object
                         audio_bytes = audio.read()
                         print(f"🔍 Debug: Read {len(audio_bytes)} bytes from audio stream")
+                    elif hasattr(audio, '__iter__') and not isinstance(audio, (bytes, str)):
+                        # It's a generator or iterable
+                        audio_bytes = b''.join(chunk for chunk in audio)
+                        print(f"🔍 Debug: Consumed generator into {len(audio_bytes)} bytes")
                     elif isinstance(audio, (list, tuple)):
                         # It's a list of chunks
                         audio_bytes = b''.join(chunk for chunk in audio)
