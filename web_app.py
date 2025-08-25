@@ -208,8 +208,10 @@ def chat():
             if byte_len == 0 or not any(ch.strip() for ch in opener):
                 return jsonify({'error': f'{filename} looks empty. Path: {abs_path} (bytes={byte_len})'})
             
-            # Add the opener content as a user message
+            # Clear old history and add the opener content as a fresh start
+            session['history'] = []  # Clear old history completely
             session['history'].append({"role": "user", "content": opener})
+            print(f"🔍 Debug: Cleared old history and added opener content")
             
             # Get AI-powered scene state reminder
             state_manager = session.get('state_manager')
@@ -251,6 +253,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 
                 # Add response to history
                 session['history'].append({"role": "assistant", "content": reply})
+                print(f"🔍 Debug: After opener response - session history has {len(session['history'])} messages")
+                for i, msg in enumerate(session['history']):
+                    print(f"🔍 Debug: Opener history {i}: {msg['role']} - {msg['content'][:100]}...")
                 
                 # Handle TTS if enabled (same logic as main chat)
                 audio_file = None
