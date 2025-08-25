@@ -103,6 +103,8 @@ def index():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     print(f"🔍 Debug: /api/chat endpoint called")
+    print(f"🔍 Debug: Session ID: {session.get('_id', 'No session ID')}")
+    print(f"🔍 Debug: Session keys: {list(session.keys())}")
     try:
         data = request.get_json()
         print(f"🔍 Debug: Request data: {data}")
@@ -338,13 +340,18 @@ Continue the story while maintaining this physical state. Do not have clothes ma
     # Simplified session management for stability
     if 'history' not in session:
         session['history'] = []
+        print(f"🔍 Debug: Created new session history")
+    
+    print(f"🔍 Debug: Before adding user input - session history has {len(session['history'])} messages")
     
     # Keep only last 4 messages for stability
     if len(session['history']) > 4:
+        print(f"🔍 Debug: Truncating history from {len(session['history'])} to 4 messages")
         session['history'] = session['history'][-4:]
     
     # Add user message to history
     session['history'].append({"role": "user", "content": user_input})
+    print(f"🔍 Debug: After adding user input - session history has {len(session['history'])} messages")
     
     try:
         # Get model from environment
@@ -408,6 +415,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Use more tokens for /cont commands since we have better timeouts
             max_tokens_for_call = 500 if command == 'cont' else 500
             
+            print(f"🔍 Debug: About to call AI with {len(context_messages)} messages")
+            print(f"🔍 Debug: Model: {model_env}")
+            print(f"🔍 Debug: Max tokens: {max_tokens_for_call}")
+            
             reply = chat_with_grok(
                 context_messages,
                 model=model_env,
@@ -416,6 +427,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 top_p=0.8,
                 hide_thinking=True,
             )
+            
+            print(f"🔍 Debug: AI response received, length: {len(reply)}")
+            print(f"🔍 Debug: AI response starts with: {reply[:200]}...")
             
             print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
         except Exception as ai_error:
