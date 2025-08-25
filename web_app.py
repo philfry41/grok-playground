@@ -375,13 +375,19 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Build context with recent history for continuity
             context_messages = []
             
-            # Add system message
-            context_messages.append({"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from where it left off, maintaining character names, locations, and situations."})
+            # Add system message with specific continuity instructions
+            if command == 'cont':
+                system_prompt = "You are an explicit storyteller. Continue the story naturally from where it left off. Maintain the exact same characters, location, and situation. Do not introduce new characters or change the setting unless explicitly mentioned in the previous context."
+            else:
+                system_prompt = "You are an explicit storyteller. Continue the story naturally from where it left off, maintaining character names, locations, and situations."
             
-            # Add recent history for continuity (last 2 messages for /cont, 3 for others)
+            context_messages.append({"role": "system", "content": system_prompt})
+            
+            # Add recent history for continuity (ensure we include the opener response)
             if len(session['history']) > 0:
                 if command == 'cont':
-                    recent_history = session['history'][-2:]  # Less context for /cont
+                    # For /cont, include more context to maintain story continuity
+                    recent_history = session['history'][-4:]  # Include more context for /cont
                 else:
                     recent_history = session['history'][-3:]
                 context_messages.extend(recent_history)
@@ -391,8 +397,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
             
-            # Use fewer tokens for /cont commands
-            max_tokens_for_call = 300 if command == 'cont' else 500
+            # Use more tokens for /cont commands since we have better timeouts
+            max_tokens_for_call = 500 if command == 'cont' else 500
             
             reply = chat_with_grok(
                 context_messages,
