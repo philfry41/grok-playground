@@ -265,7 +265,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 if tts.enabled and reply.strip():
                     try:
                         # Generate TTS for responses (increased limit for paid tier)
-                        if len(reply) < 3000:  # Reduced for Render stability (was 5000)
+                        if len(reply) < 4000:  # Increased for better timeouts (was 3000)
                             # For auto-save mode, always save audio files
                             # For auto-play mode, don't save (just play)
                             save_audio = (tts.mode == "save")
@@ -490,7 +490,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         if tts.enabled and reply.strip():
             try:
                 # Generate TTS for responses (increased limit for paid tier)
-                if len(reply) < 3000:  # Reduced for Render stability (was 5000)
+                if len(reply) < 4000:  # Increased for better timeouts (was 3000)
                     # For auto-save mode, always save audio files
                     # For auto-play mode, don't save (just play)
                     save_audio = (tts.mode == "save")
