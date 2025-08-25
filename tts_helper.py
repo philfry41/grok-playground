@@ -117,15 +117,52 @@ class TTSHelper:
                 print(f"🔍 Debug: Saving audio to: {filepath}")
                 
                 try:
+                    # Debug the audio data
+                    print(f"🔍 Debug: Audio data type: {type(audio)}")
+                    print(f"🔍 Debug: Audio data length: {len(audio) if hasattr(audio, '__len__') else 'Unknown'}")
+                    
+                    # Convert audio to bytes if it's not already
+                    if hasattr(audio, 'read'):
+                        # It's a file-like object
+                        audio_bytes = audio.read()
+                        print(f"🔍 Debug: Read {len(audio_bytes)} bytes from audio stream")
+                    elif isinstance(audio, (list, tuple)):
+                        # It's a list of chunks
+                        audio_bytes = b''.join(chunk for chunk in audio)
+                        print(f"🔍 Debug: Combined {len(audio)} chunks into {len(audio_bytes)} bytes")
+                    else:
+                        # Assume it's already bytes
+                        audio_bytes = audio
+                        print(f"🔍 Debug: Using audio as bytes: {len(audio_bytes)} bytes")
+                    
+                    # Validate that we have actual audio data
+                    if len(audio_bytes) < 100:
+                        print(f"🔍 Debug: Warning: Audio file seems too small ({len(audio_bytes)} bytes)")
+                    
+                    # Check for MP3 header
+                    if audio_bytes.startswith(b'ID3') or audio_bytes.startswith(b'\xff\xfb'):
+                        print(f"🔍 Debug: Valid MP3 header detected")
+                    else:
+                        print(f"🔍 Debug: Warning: No valid MP3 header detected")
+                        print(f"🔍 Debug: First 20 bytes: {audio_bytes[:20]}")
+                    
                     with open(filepath, "wb") as f:
-                        for chunk in audio:
-                            f.write(chunk)
+                        f.write(audio_bytes)
+                    
                     print(f"💾 Audio saved to: {filepath}")
                     print(f"🔍 Debug: File exists after save: {os.path.exists(filepath)}")
                     print(f"🔍 Debug: File size: {os.path.getsize(filepath)} bytes")
+                    
+                    # Verify the file is valid
+                    if os.path.getsize(filepath) == 0:
+                        print(f"🔍 Debug: Error: File is empty after save")
+                        return None
+                    
                     return filepath
                 except Exception as save_error:
                     print(f"🔍 Debug: Error saving audio file: {save_error}")
+                    import traceback
+                    print(f"🔍 Debug: Save error traceback: {traceback.format_exc()}")
                     return None
             else:
                 # Play audio directly
