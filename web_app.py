@@ -51,11 +51,19 @@ def generate_tts_async(text, save_audio=True):
             
             if audio_file:
                 print(f"🔍 Debug: Async TTS completed in {duration:.2f}s: {audio_file}")
+                # Verify file exists after generation
+                if os.path.exists(audio_file):
+                    file_size = os.path.getsize(audio_file)
+                    print(f"🔍 Debug: Async TTS file verified: {audio_file} ({file_size} bytes)")
+                else:
+                    print(f"🔍 Debug: Async TTS file missing after generation: {audio_file}")
             else:
                 print(f"🔍 Debug: Async TTS failed after {duration:.2f}s")
                 
         except Exception as e:
             print(f"🔍 Debug: Async TTS error: {e}")
+            import traceback
+            print(f"🔍 Debug: Async TTS error traceback: {traceback.format_exc()}")
     
     # Start TTS generation in background thread
     thread = threading.Thread(target=tts_worker, daemon=True)
@@ -305,13 +313,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                             save_audio = (tts.mode == "save")
                             audio_file = generate_tts_async(reply, save_audio=save_audio)
                             if audio_file:
-                                print(f"🔍 Debug: TTS generated for opener: {audio_file}")
-                                # Check if file actually exists after creation
-                                if os.path.exists(audio_file):
-                                    file_size = os.path.getsize(audio_file)
-                                    print(f"🔍 Debug: Audio file exists after creation: {file_size} bytes")
+                                if audio_file == "generating":
+                                    print(f"🔍 Debug: Async TTS started for opener")
                                 else:
-                                    print(f"🔍 Debug: Audio file does not exist after creation!")
+                                    print(f"🔍 Debug: TTS generated for opener: {audio_file}")
                             else:
                                 print(f"🔍 Debug: TTS played for opener (not saved)")
                         # TTS handled above based on length
@@ -533,7 +538,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     save_audio = (tts.mode == "save")
                     audio_file = generate_tts_async(reply, save_audio=save_audio)
                     if audio_file:
-                        print(f"🔍 Debug: TTS generated: {audio_file}")
+                        if audio_file == "generating":
+                            print(f"🔍 Debug: Async TTS started")
+                        else:
+                            print(f"🔍 Debug: TTS generated: {audio_file}")
                     else:
                         print(f"🔍 Debug: TTS played (not saved)")
             except Exception as e:
