@@ -231,11 +231,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             try:
                 print(f"🔍 Debug: Generating AI response for opener...")
                 model_env = os.getenv('XAI_MODEL', 'grok-3')
+                # Minimal AI call for loadopener stability
+                minimal_history = [
+                    {"role": "system", "content": "You are an explicit storyteller. Continue the story naturally."},
+                    {"role": "user", "content": f"Continue this story: {opener[:200]}..."}
+                ]
+                
                 reply = chat_with_grok(
-                    session['history'][-4:],  # Only last 4 messages for stability
+                    minimal_history,
                     model=model_env,
-                    temperature=0.8,  # Slightly reduced
-                    max_tokens=600,  # Reduced for stability
+                    temperature=0.7,
+                    max_tokens=400,  # Very conservative
                     top_p=0.8,
                     hide_thinking=True,
                 )
@@ -330,26 +336,16 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         user_input = f"Continue the story naturally from where it left off. Write approximately {target} words with detailed, explicit content. Keep the scene flowing without natural stopping points."
         session['max_tokens'] = max_tokens
     
+    # Simplified session management for stability
+    if 'history' not in session:
+        session['history'] = []
+    
+    # Keep only last 4 messages for stability
+    if len(session['history']) > 4:
+        session['history'] = session['history'][-4:]
+    
     # Add user message to history
     session['history'].append({"role": "user", "content": user_input})
-    
-    # Get AI-powered scene state reminder
-    state_manager = session.get('state_manager')
-    if state_manager:
-        scene_state_reminder = state_manager.get_state_as_prompt()
-    else:
-        scene_state_reminder = """
-CURRENT SCENE STATE (maintain this continuity):
-- No characters tracked yet
-- Location: unknown
-- Positions: unknown
-- Physical contact: none
-
-Continue the story while maintaining this physical state. Do not have clothes magically reappear or positions change without explicit action.
-"""
-    
-    # Add scene state reminder as a system message
-    session['history'].append({"role": "system", "content": scene_state_reminder})
     
     try:
         # Get model from environment
@@ -372,67 +368,36 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Force garbage collection after history cleanup
             cleanup_resources()
         
-        # Try AI call with retry logic and reduced complexity for Render
-        max_retries = 2  # Reduced retries
-        for attempt in range(max_retries):
-            try:
-                print(f"🔍 Debug: Attempting AI call (attempt {attempt + 1}/{max_retries})...")
-                
-                # Reduce complexity for Render stability
-                if attempt == 0:
-                    # First attempt: full context but reduced tokens
-                    reply = chat_with_grok(
-                        session['history'][-6:],  # Only last 6 messages for stability
-                        model=model_env,
-                        temperature=0.8,  # Slightly reduced
-                        max_tokens=min(600, session['max_tokens']),  # Reduced for stability
-                        top_p=0.8,
-                        hide_thinking=True,
-                    )
-                else:
-                    # Second attempt: minimal context
-                    simple_history = [
-                        {"role": "system", "content": "You are an explicit storyteller. Continue the story naturally."},
-                        {"role": "user", "content": f"Continue: {user_input}"}
-                    ]
-                    reply = chat_with_grok(
-                        simple_history,
-                        model=model_env,
-                        temperature=0.7,
-                        max_tokens=400,  # Even more reduced
-                        top_p=0.8,
-                        hide_thinking=True,
-                    )
-                
-                print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
-                break  # Success, exit retry loop
-            except Exception as ai_error:
-                print(f"🔍 Debug: AI call attempt {attempt + 1} failed: {ai_error}")
-                print(f"🔍 Debug: Error type: {type(ai_error)}")
-                
-                # Force cleanup after each failed attempt
-                cleanup_resources()
-                
-                if attempt == max_retries - 1:  # Last attempt
-                    # Final fallback: very simple request
-                    print(f"🔍 Debug: Attempting final fallback AI call...")
-                    try:
-                        reply = chat_with_grok(
-                            [{"role": "user", "content": "Continue the story naturally."}],
-                            model=model_env,
-                            temperature=0.7,
-                            max_tokens=500,  # Increased for paid tier
-                            top_p=0.7,
-                            hide_thinking=True,
-                        )
-                        print(f"🔍 Debug: Fallback AI call successful, reply length={len(reply)}")
-                    except Exception as fallback_error:
-                        print(f"🔍 Debug: Fallback AI call also failed: {fallback_error}")
-                        return jsonify({'error': f'AI service unavailable after {max_retries} attempts. Please try again.'})
-                else:
-                    # Wait a bit before retrying
-                    import time
-                    time.sleep(1)
+        # Try AI call with minimal complexity for Render stability
+        max_retries = 1  # Single attempt only
+        try:
+            print(f"🔍 Debug: Attempting minimal AI call...")
+            
+            # Minimal context for maximum stability
+            minimal_history = [
+                {"role": "system", "content": "You are an explicit storyteller. Continue naturally."},
+                {"role": "user", "content": user_input}
+            ]
+            
+            reply = chat_with_grok(
+                minimal_history,
+                model=model_env,
+                temperature=0.7,
+                max_tokens=400,  # Very conservative
+                top_p=0.8,
+                hide_thinking=True,
+            )
+            
+            print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
+        except Exception as ai_error:
+            print(f"🔍 Debug: AI call failed: {ai_error}")
+            print(f"🔍 Debug: Error type: {type(ai_error)}")
+            
+            # Force cleanup after failure
+            cleanup_resources()
+            
+            # Return a simple fallback response
+            reply = "I'm having trouble connecting right now. Please try again in a moment."
         
         # Add response to history
         session['history'].append({"role": "assistant", "content": reply})

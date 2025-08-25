@@ -85,11 +85,11 @@ class TTSHelper:
                     else:
                         print(f"🔍 Debug: Invalid TTS mode in file: {mode}")
             else:
-                print(f"🔍 Debug: No TTS mode file found, using default: save")
+                print(f"🔍 Debug: No TTS mode file found, using default: off")
         except Exception as e:
             print(f"🔍 Debug: Error loading TTS mode: {e}")
         
-        return "save"  # Temporarily default to save mode for testing
+        return "off"  # Temporarily disable TTS for stability testing
     
     def _save_tts_mode(self, mode):
         """Save TTS mode to file for persistence"""
