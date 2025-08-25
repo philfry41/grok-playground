@@ -661,8 +661,31 @@ def tts_status():
         'mode_display': tts.get_mode_display(),
         'voice_id': tts.voice_id,
         'auto_save': tts.auto_save,
-        'has_api_key': bool(tts.api_key)
+        'has_api_key': bool(tts.api_key),
+        'available_voices': tts.get_available_voices()
     })
+
+@app.route('/api/tts-voice', methods=['POST'])
+def set_tts_voice():
+    """Set the TTS voice"""
+    try:
+        data = request.get_json()
+        voice_id = data.get('voice_id')
+        
+        if not voice_id:
+            return jsonify({'error': 'No voice_id provided'})
+        
+        # Set the voice
+        tts.set_voice(voice_id)
+        
+        return jsonify({
+            'success': True,
+            'voice_id': voice_id,
+            'message': f'Voice changed to: {voice_id}'
+        })
+    except Exception as e:
+        print(f"🔍 Debug: Error setting TTS voice: {e}")
+        return jsonify({'error': f'Failed to set TTS voice: {str(e)}'})
 
 @app.route('/api/test-api', methods=['GET'])
 def test_api():

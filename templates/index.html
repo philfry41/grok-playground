@@ -424,6 +424,12 @@
             <div class="panel">
                 <h3>🎤 TTS Status</h3>
                 <div class="tts-status" id="ttsStatus">Loading...</div>
+                <div class="voice-selection" style="margin: 10px 0;">
+                    <label for="voiceSelect">🎵 Voice:</label>
+                    <select id="voiceSelect" onchange="changeVoice()" style="margin-left: 10px; padding: 5px;">
+                        <option value="">Loading voices...</option>
+                    </select>
+                </div>
                 <div class="command-buttons">
                     <button class="btn btn-primary" onclick="toggleTTS()" id="ttsToggleBtn">🔄 Toggle TTS</button>
                     <button class="btn btn-secondary" onclick="loadVoices()">🎵 List Voices</button>
@@ -736,8 +742,64 @@
                     toggleBtn.className = 'btn btn-danger';
                     toggleBtn.disabled = false;
                 }
+                
+                // Update voice dropdown
+                await updateVoiceDropdown(data);
             } catch (error) {
                 document.getElementById('ttsStatus').innerHTML = '❌ TTS Error';
+            }
+        }
+
+        async function updateVoiceDropdown(data) {
+            const voiceSelect = document.getElementById('voiceSelect');
+            
+            if (data.available_voices && data.available_voices.length > 0) {
+                // Clear existing options
+                voiceSelect.innerHTML = '';
+                
+                // Add voices to dropdown
+                data.available_voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice[0];
+                    option.textContent = voice[1];
+                    if (voice[0] === data.voice_id) {
+                        option.selected = true;
+                    }
+                    voiceSelect.appendChild(option);
+                });
+            } else {
+                voiceSelect.innerHTML = '<option value="">No voices available</option>';
+            }
+        }
+
+        async function changeVoice() {
+            const voiceSelect = document.getElementById('voiceSelect');
+            const selectedVoiceId = voiceSelect.value;
+            
+            if (!selectedVoiceId) return;
+            
+            try {
+                const response = await fetch('/api/tts-voice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        voice_id: selectedVoiceId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage(`Voice Change Error: ${data.error}`, 'system');
+                } else {
+                    addMessage(`🎵 ${data.message}`, 'system');
+                    // Reload TTS status to update the UI
+                    await loadTTSStatus();
+                }
+            } catch (error) {
+                addMessage(`Error changing voice: ${error.message}`, 'system');
             }
         }
 
