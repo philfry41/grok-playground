@@ -7,8 +7,8 @@ class TTSHelper:
     def __init__(self):
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
         # TTS modes: "off", "tts" (auto-play), "save" (auto-save)
-        # Try to load mode from environment variable for persistence
-        self.mode = os.getenv("TTS_MODE", "off")
+        # Load mode from file for persistence across worker restarts
+        self.mode = self._load_tts_mode()
         self.voice_id = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")  # Adam voice
         self.volume = float(os.getenv("ELEVENLABS_VOLUME", "0.5"))
         self.max_tts_length = int(os.getenv("ELEVENLABS_MAX_LENGTH", "5000"))  # 0 = no limit
@@ -67,11 +67,37 @@ class TTSHelper:
             self.mode = "off"
             print("🔇 TTS disabled")
         
-        # Save mode to environment variable for persistence across worker restarts
-        os.environ["TTS_MODE"] = self.mode
-        print(f"🔍 Debug: TTS mode saved to environment: {self.mode}")
+        # Save mode to file for persistence across worker restarts
+        self._save_tts_mode(self.mode)
         
         return self.mode
+    
+    def _load_tts_mode(self):
+        """Load TTS mode from file for persistence"""
+        try:
+            if os.path.exists("tts_mode.txt"):
+                with open("tts_mode.txt", "r") as f:
+                    mode = f.read().strip()
+                    if mode in ["off", "tts", "save"]:
+                        print(f"🔍 Debug: Loaded TTS mode from file: {mode}")
+                        return mode
+                    else:
+                        print(f"🔍 Debug: Invalid TTS mode in file: {mode}")
+            else:
+                print(f"🔍 Debug: No TTS mode file found, using default: off")
+        except Exception as e:
+            print(f"🔍 Debug: Error loading TTS mode: {e}")
+        
+        return "off"  # Default
+    
+    def _save_tts_mode(self, mode):
+        """Save TTS mode to file for persistence"""
+        try:
+            with open("tts_mode.txt", "w") as f:
+                f.write(mode)
+            print(f"🔍 Debug: Saved TTS mode to file: {mode}")
+        except Exception as e:
+            print(f"🔍 Debug: Error saving TTS mode: {e}")
     
     def get_mode_display(self):
         """Get human-readable mode description"""
