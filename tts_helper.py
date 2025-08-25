@@ -131,12 +131,20 @@ class TTSHelper:
             # Clean text for TTS (remove markdown, etc.)
             clean_text = self._clean_text_for_tts(text)
             
-            # Generate audio using the new API
-            audio = self.client.text_to_speech.convert(
-                text=clean_text,
-                voice_id=self.voice_id,
-                model_id="eleven_monolingual_v1"
-            )
+            # Generate audio using the new API with error handling
+            print(f"🔍 Debug: Calling ElevenLabs API for text length: {len(clean_text)}")
+            try:
+                audio = self.client.text_to_speech.convert(
+                    text=clean_text,
+                    voice_id=self.voice_id,
+                    model_id="eleven_monolingual_v1"
+                )
+                print(f"🔍 Debug: ElevenLabs API call completed successfully")
+            except Exception as api_error:
+                print(f"🔍 Debug: ElevenLabs API error: {api_error}")
+                import traceback
+                print(f"🔍 Debug: API error traceback: {traceback.format_exc()}")
+                return None
             
             # Determine if we should save or play based on save_audio parameter
             should_save = save_audio
@@ -165,22 +173,28 @@ class TTSHelper:
                     print(f"🔍 Debug: Audio data length: {len(audio) if hasattr(audio, '__len__') else 'Unknown'}")
                     
                     # Convert audio to bytes if it's not already
-                    if hasattr(audio, 'read'):
-                        # It's a file-like object
-                        audio_bytes = audio.read()
-                        print(f"🔍 Debug: Read {len(audio_bytes)} bytes from audio stream")
-                    elif hasattr(audio, '__iter__') and not isinstance(audio, (bytes, str)):
-                        # It's a generator or iterable
-                        audio_bytes = b''.join(chunk for chunk in audio)
-                        print(f"🔍 Debug: Consumed generator into {len(audio_bytes)} bytes")
-                    elif isinstance(audio, (list, tuple)):
-                        # It's a list of chunks
-                        audio_bytes = b''.join(chunk for chunk in audio)
-                        print(f"🔍 Debug: Combined {len(audio)} chunks into {len(audio_bytes)} bytes")
-                    else:
-                        # Assume it's already bytes
-                        audio_bytes = audio
-                        print(f"🔍 Debug: Using audio as bytes: {len(audio_bytes)} bytes")
+                    try:
+                        if hasattr(audio, 'read'):
+                            # It's a file-like object
+                            audio_bytes = audio.read()
+                            print(f"🔍 Debug: Read {len(audio_bytes)} bytes from audio stream")
+                        elif hasattr(audio, '__iter__') and not isinstance(audio, (bytes, str)):
+                            # It's a generator or iterable
+                            audio_bytes = b''.join(chunk for chunk in audio)
+                            print(f"🔍 Debug: Consumed generator into {len(audio_bytes)} bytes")
+                        elif isinstance(audio, (list, tuple)):
+                            # It's a list of chunks
+                            audio_bytes = b''.join(chunk for chunk in audio)
+                            print(f"🔍 Debug: Combined {len(audio)} chunks into {len(audio_bytes)} bytes")
+                        else:
+                            # Assume it's already bytes
+                            audio_bytes = audio
+                            print(f"🔍 Debug: Using audio as bytes: {len(audio_bytes)} bytes")
+                    except Exception as convert_error:
+                        print(f"🔍 Debug: Error converting audio data: {convert_error}")
+                        import traceback
+                        print(f"🔍 Debug: Convert error traceback: {traceback.format_exc()}")
+                        return None
                     
                     # Validate that we have actual audio data
                     if len(audio_bytes) < 100:
