@@ -3,19 +3,10 @@ services:
     name: grok-playground
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn web_app:app
+    startCommand: gunicorn --timeout 60 --workers 1 --bind 0.0.0.0:$PORT web_app:app
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.0
-      - key: XAI_API_KEY
-        sync: false
-      - key: XAI_MODEL
-        value: grok-3
-      - key: ELEVENLABS_API_KEY
-        sync: false
-      - key: ELEVENLABS_VOICE_ID
-        value: pNInz6obpgDQGcFmaJgB
-      - key: ELEVENLABS_AUTO_SAVE
-        value: true
-      - key: ELEVENLABS_MAX_LENGTH
-        value: 5000
+      - key: REQUEST_TIMEOUT
+        value: 60
+      - key: WORKER_TIMEOUT
+        value: 1800
+    plan: starter  # or higher tier
