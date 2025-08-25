@@ -811,6 +811,36 @@
                     addMessage(`API Test Error: ${data.error}`, 'system');
                 } else if (data.success) {
                     addMessage(`✅ API Test Successful: ${data.response}`, 'system');
+                    
+                    // Display file system test results if available
+                    if (data.file_system_test) {
+                        const fs = data.file_system_test;
+                        let fsMessage = `🔍 File System Test Results:\n`;
+                        fsMessage += `📁 Current Directory: ${fs.current_dir || 'Unknown'}\n`;
+                        fsMessage += `📄 Test File Created: ${fs.test_file_created ? '✅ Yes' : '❌ No'}\n`;
+                        fsMessage += `📖 Test File Read: ${fs.test_file_read ? '✅ Yes' : '❌ No'}\n`;
+                        fsMessage += `📁 Audio Directory Exists: ${fs.audio_dir_exists ? '✅ Yes' : '❌ No'}\n`;
+                        
+                        if (fs.audio_dir_created !== undefined) {
+                            fsMessage += `📁 Audio Directory Created: ${fs.audio_dir_created ? '✅ Yes' : '❌ No'}\n`;
+                        }
+                        
+                        if (fs.audio_dir_files !== undefined) {
+                            fsMessage += `🎵 MP3 Files in Audio Dir: ${fs.audio_dir_files}\n`;
+                        }
+                        
+                        fsMessage += `🧹 Test File Cleaned: ${fs.test_file_cleaned ? '✅ Yes' : '❌ No'}\n`;
+                        
+                        if (fs.file_system_error) {
+                            fsMessage += `❌ File System Error: ${fs.file_system_error}\n`;
+                        }
+                        
+                        if (fs.audio_dir_error) {
+                            fsMessage += `❌ Audio Directory Error: ${fs.audio_dir_error}\n`;
+                        }
+                        
+                        addMessage(fsMessage, 'system');
+                    }
                 } else {
                     addMessage(`❌ API Test Failed: ${data.error}`, 'system');
                 }
