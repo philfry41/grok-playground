@@ -469,11 +469,13 @@ def toggle_tts():
         elif action == 'enable':
             if tts.api_key:
                 tts.mode = "tts"
+                os.environ["TTS_MODE"] = "tts"
                 print(f"🎤 TTS enabled (auto-play)")
             else:
                 return jsonify({'error': 'No TTS API key available'})
         elif action == 'disable':
             tts.mode = "off"
+            os.environ["TTS_MODE"] = "off"
             print(f"🔇 TTS disabled")
         else:
             return jsonify({'error': f'Invalid action: {action}'})

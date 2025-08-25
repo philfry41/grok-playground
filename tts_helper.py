@@ -7,7 +7,8 @@ class TTSHelper:
     def __init__(self):
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
         # TTS modes: "off", "tts" (auto-play), "save" (auto-save)
-        self.mode = "off"  # Default to disabled
+        # Try to load mode from environment variable for persistence
+        self.mode = os.getenv("TTS_MODE", "off")
         self.voice_id = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")  # Adam voice
         self.volume = float(os.getenv("ELEVENLABS_VOLUME", "0.5"))
         self.max_tts_length = int(os.getenv("ELEVENLABS_MAX_LENGTH", "5000"))  # 0 = no limit
@@ -65,6 +66,10 @@ class TTSHelper:
         else:  # save
             self.mode = "off"
             print("🔇 TTS disabled")
+        
+        # Save mode to environment variable for persistence across worker restarts
+        os.environ["TTS_MODE"] = self.mode
+        print(f"🔍 Debug: TTS mode saved to environment: {self.mode}")
         
         return self.mode
     
