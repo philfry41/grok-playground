@@ -438,6 +438,7 @@
                     <button class="btn btn-warning" onclick="testAPI()">🧪 Test API</button>
                     <button class="btn btn-info" onclick="toggleDebugPanel()">🔍 Debug Log</button>
                     <button class="btn btn-secondary" onclick="getDebugInfo()">🔧 Server Info</button>
+                    <button class="btn btn-primary" onclick="forceRefresh()">🔄 Refresh</button>
                 </div>
             </div>
             
@@ -448,6 +449,9 @@
             
             <div class="panel" id="debugPanel" style="display: none;">
                 <h3>🔍 Debug Log</h3>
+                <div style="background: #e9ecef; padding: 5px; border-radius: 3px; font-size: 11px; margin-bottom: 10px;">
+                    Version: 1f1f05d | User Agent: <span id="userAgentDisplay"></span>
+                </div>
                 <div id="debugLog" style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
                 <button class="btn btn-secondary" onclick="clearDebugLog()">Clear Log</button>
                 <button class="btn btn-secondary" onclick="toggleDebugPanel()">Hide Debug</button>
@@ -494,6 +498,11 @@
             const debugPanel = document.getElementById('debugPanel');
             if (debugPanel.style.display === 'none') {
                 debugPanel.style.display = 'block';
+                // Update user agent display
+                const userAgentDisplay = document.getElementById('userAgentDisplay');
+                if (userAgentDisplay) {
+                    userAgentDisplay.textContent = navigator.userAgent.substring(0, 50) + '...';
+                }
                 debugLog('Debug panel opened');
             } else {
                 debugPanel.style.display = 'none';
@@ -511,7 +520,18 @@
         // Initial debug log
         debugLog('Page loaded, user agent: ' + navigator.userAgent);
         
-        // Force cache refresh
+        // Force cache refresh for iOS Chrome
+        const urlParams = new URLSearchParams(window.location.search);
+        const cacheBuster = urlParams.get('v');
+        const currentVersion = '1f1f05d'; // Current git commit hash
+        
+        if (!cacheBuster || cacheBuster !== currentVersion) {
+            console.log('Cache busting: forcing fresh load');
+            const newUrl = window.location.pathname + '?v=' + currentVersion;
+            window.location.href = newUrl;
+        }
+        
+        // Force reload if this is a cached version
         if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
             window.location.reload();
         }
@@ -1022,8 +1042,15 @@
                 debugLog('Debug info error: ' + error.message);
                 addMessage(`Debug Info Error: ${error.message}`, 'system');
             }
+                }
+        
+        function forceRefresh() {
+            debugLog('Manual refresh requested');
+            const currentVersion = '1f1f05d';
+            const newUrl = window.location.pathname + '?v=' + currentVersion + '&t=' + Date.now();
+            window.location.href = newUrl;
         }
-
+        
         async function loadAudioFiles() {
             try {
                 const response = await fetch('/api/audio-files');
