@@ -94,6 +94,7 @@ class TTSHelper:
     def _save_tts_mode(self, mode):
         """Save TTS mode to file for persistence"""
         try:
+            print(f"🔍 Debug: Attempting to save TTS mode: {mode}")
             with open("tts_mode.txt", "w") as f:
                 f.write(mode)
             print(f"🔍 Debug: Saved TTS mode to file: {mode}")
