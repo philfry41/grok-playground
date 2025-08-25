@@ -462,6 +462,9 @@
     </div>
 
     <script>
+        // iOS Chrome compatibility fixes
+        console.log('🔍 Debug: Page loaded, user agent:', navigator.userAgent);
+        
         // Force cache refresh
         if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
             window.location.reload();
@@ -501,15 +504,21 @@
         }
 
         function addMessage(content, type, edgeTriggered = false) {
-            const messagesDiv = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            if (edgeTriggered) {
-                messageDiv.classList.add('edge-triggered');
+            try {
+                const messagesDiv = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                if (edgeTriggered) {
+                    messageDiv.classList.add('edge-triggered');
+                }
+                messageDiv.textContent = content;
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } catch (error) {
+                console.error('🔍 Debug: addMessage error:', error);
+                // Fallback: try to show error in alert
+                alert(`Error displaying message: ${error.message}`);
             }
-            messageDiv.textContent = content;
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
         async function sendMessage() {
@@ -518,6 +527,11 @@
             const message = input.value.trim();
             
             if (!message) return;
+            
+            // Add iOS Chrome compatibility logging
+            console.log('🔍 Debug: sendMessage called');
+            console.log('🔍 Debug: User agent:', navigator.userAgent);
+            console.log('🔍 Debug: Message length:', message.length);
             
             addMessage(message, 'user');
             input.value = '';
