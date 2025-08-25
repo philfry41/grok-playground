@@ -231,17 +231,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             try:
                 print(f"🔍 Debug: Generating AI response for opener...")
                 model_env = os.getenv('XAI_MODEL', 'grok-3')
-                # Minimal AI call for loadopener stability
-                minimal_history = [
-                    {"role": "system", "content": "You are an explicit storyteller. Continue the story naturally."},
-                    {"role": "user", "content": f"Continue this story: {opener[:200]}..."}
+                # AI call for loadopener with proper continuity
+                opener_context = [
+                    {"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from the opener text, maintaining the characters, setting, and situation described."},
+                    {"role": "user", "content": f"Continue this story from where it left off:\n\n{opener}"}
                 ]
                 
                 reply = chat_with_grok(
-                    minimal_history,
+                    opener_context,
                     model=model_env,
                     temperature=0.7,
-                    max_tokens=400,  # Very conservative
+                    max_tokens=500,  # Slightly increased for better continuity
                     top_p=0.8,
                     hide_thinking=True,
                 )
@@ -368,22 +368,32 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Force garbage collection after history cleanup
             cleanup_resources()
         
-        # Try AI call with minimal complexity for Render stability
+        # Try AI call with basic continuity for stability
         max_retries = 1  # Single attempt only
         try:
-            print(f"🔍 Debug: Attempting minimal AI call...")
+            print(f"🔍 Debug: Attempting AI call with continuity...")
             
-            # Minimal context for maximum stability
-            minimal_history = [
-                {"role": "system", "content": "You are an explicit storyteller. Continue naturally."},
-                {"role": "user", "content": user_input}
-            ]
+            # Build context with recent history for continuity
+            context_messages = []
+            
+            # Add system message
+            context_messages.append({"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from where it left off, maintaining character names, locations, and situations."})
+            
+            # Add recent history for continuity (last 3 messages)
+            if len(session['history']) > 0:
+                recent_history = session['history'][-3:]
+                context_messages.extend(recent_history)
+            
+            # Add current user input
+            context_messages.append({"role": "user", "content": user_input})
+            
+            print(f"🔍 Debug: Using {len(context_messages)} messages for context")
             
             reply = chat_with_grok(
-                minimal_history,
+                context_messages,
                 model=model_env,
                 temperature=0.7,
-                max_tokens=400,  # Very conservative
+                max_tokens=500,  # Slightly increased for better continuity
                 top_p=0.8,
                 hide_thinking=True,
             )
