@@ -906,8 +906,24 @@
             // Get or create audio element for this URL
             let audio = audioElements.get(url);
             if (!audio) {
+                console.log('Creating new audio element for:', url);
                 audio = new Audio(url);
                 audioElements.set(url, audio);
+                
+                // Add error handling for audio loading
+                audio.addEventListener('error', (e) => {
+                    console.error('Audio loading error:', e);
+                    console.error('Audio error details:', audio.error);
+                    addMessage(`Error loading audio: ${audio.error ? audio.error.message : 'Unknown error'}`, 'system');
+                });
+                
+                audio.addEventListener('loadstart', () => {
+                    console.log('Audio loading started');
+                });
+                
+                audio.addEventListener('canplay', () => {
+                    console.log('Audio can play');
+                });
                 
                 audio.addEventListener('ended', () => {
                     console.log('Audio ended');

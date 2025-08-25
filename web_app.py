@@ -680,11 +680,27 @@ def serve_audio(filename):
         audio_dir = "audio"
         file_path = os.path.join(audio_dir, filename)
         
+        print(f"🔍 Debug: Serving audio file: {filename}")
+        print(f"🔍 Debug: File path: {file_path}")
+        print(f"🔍 Debug: File exists: {os.path.exists(file_path)}")
+        
         if os.path.exists(file_path) and os.path.isfile(file_path):
-            return send_from_directory(audio_dir, filename, as_attachment=False)
+            file_size = os.path.getsize(file_path)
+            print(f"🔍 Debug: File size: {file_size} bytes")
+            
+            # Set proper headers for audio files
+            response = send_from_directory(audio_dir, filename, as_attachment=False)
+            response.headers['Content-Type'] = 'audio/mpeg'
+            response.headers['Accept-Ranges'] = 'bytes'
+            response.headers['Cache-Control'] = 'no-cache'
+            
+            print(f"🔍 Debug: Audio file served successfully")
+            return response
         else:
+            print(f"🔍 Debug: Audio file not found: {file_path}")
             return jsonify({'error': 'Audio file not found'}), 404
     except Exception as e:
+        print(f"🔍 Debug: Error serving audio file: {e}")
         return jsonify({'error': f'Could not serve audio file: {e}'}), 500
 
 @app.route('/api/audio-files', methods=['GET'])
