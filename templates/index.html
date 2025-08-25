@@ -436,12 +436,20 @@
                     <button class="btn btn-secondary" onclick="loadEdgeLog()">📋 Edge Log</button>
                     <button class="btn btn-secondary" onclick="loadAudioFiles()">🎵 Audio Files</button>
                     <button class="btn btn-warning" onclick="testAPI()">🧪 Test API</button>
+                    <button class="btn btn-info" onclick="toggleDebugPanel()">🔍 Debug Log</button>
                 </div>
             </div>
             
             <div class="panel" id="audioPanel" style="display: none;">
                 <h3>🎵 Audio Files</h3>
                 <div id="audioFilesList">Loading...</div>
+            </div>
+            
+            <div class="panel" id="debugPanel" style="display: none;">
+                <h3>🔍 Debug Log</h3>
+                <div id="debugLog" style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
+                <button class="btn btn-secondary" onclick="clearDebugLog()">Clear Log</button>
+                <button class="btn btn-secondary" onclick="toggleDebugPanel()">Hide Debug</button>
             </div>
         </div>
     </div>
@@ -464,6 +472,43 @@
     <script>
         // iOS Chrome compatibility fixes
         console.log('🔍 Debug: Page loaded, user agent:', navigator.userAgent);
+        
+        // Debug logging functions for iOS Chrome
+        function debugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            
+            // Log to console (for desktop debugging)
+            console.log(logEntry);
+            
+            // Log to visible debug panel
+            const debugLogDiv = document.getElementById('debugLog');
+            if (debugLogDiv) {
+                debugLogDiv.innerHTML += logEntry + '<br>';
+                debugLogDiv.scrollTop = debugLogDiv.scrollHeight;
+            }
+        }
+        
+        function toggleDebugPanel() {
+            const debugPanel = document.getElementById('debugPanel');
+            if (debugPanel.style.display === 'none') {
+                debugPanel.style.display = 'block';
+                debugLog('Debug panel opened');
+            } else {
+                debugPanel.style.display = 'none';
+            }
+        }
+        
+        function clearDebugLog() {
+            const debugLogDiv = document.getElementById('debugLog');
+            if (debugLogDiv) {
+                debugLogDiv.innerHTML = '';
+                debugLog('Debug log cleared');
+            }
+        }
+        
+        // Initial debug log
+        debugLog('Page loaded, user agent: ' + navigator.userAgent);
         
         // Force cache refresh
         if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
@@ -515,7 +560,7 @@
                 messagesDiv.appendChild(messageDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             } catch (error) {
-                console.error('🔍 Debug: addMessage error:', error);
+                debugLog('addMessage error: ' + error.message);
                 // Fallback: try to show error in alert
                 alert(`Error displaying message: ${error.message}`);
             }
@@ -529,9 +574,9 @@
             if (!message) return;
             
             // Add iOS Chrome compatibility logging
-            console.log('🔍 Debug: sendMessage called');
-            console.log('🔍 Debug: User agent:', navigator.userAgent);
-            console.log('🔍 Debug: Message length:', message.length);
+            debugLog('sendMessage called');
+            debugLog('User agent: ' + navigator.userAgent);
+            debugLog('Message length: ' + message.length);
             
             addMessage(message, 'user');
             input.value = '';
