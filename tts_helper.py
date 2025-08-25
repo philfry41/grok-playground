@@ -69,6 +69,7 @@ class TTSHelper:
         
         # Save mode to file for persistence across worker restarts
         self._save_tts_mode(self.mode)
+        print(f"🔍 Debug: TTS mode after cycle: {self.mode}")
         
         return self.mode
     
@@ -96,8 +97,18 @@ class TTSHelper:
             with open("tts_mode.txt", "w") as f:
                 f.write(mode)
             print(f"🔍 Debug: Saved TTS mode to file: {mode}")
+            
+            # Verify the file was created
+            if os.path.exists("tts_mode.txt"):
+                with open("tts_mode.txt", "r") as f:
+                    saved_mode = f.read().strip()
+                print(f"🔍 Debug: Verified TTS mode file contains: {saved_mode}")
+            else:
+                print(f"🔍 Debug: Warning: TTS mode file was not created")
         except Exception as e:
             print(f"🔍 Debug: Error saving TTS mode: {e}")
+            import traceback
+            print(f"🔍 Debug: Save error traceback: {traceback.format_exc()}")
     
     def get_mode_display(self):
         """Get human-readable mode description"""
