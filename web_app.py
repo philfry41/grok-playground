@@ -337,17 +337,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         user_input = f"Continue the story naturally. Write about {target} words."
         session['max_tokens'] = max_tokens
     
-    # Simplified session management for stability
+    # Robust session management to prevent cookie overflow
     if 'history' not in session:
         session['history'] = []
         print(f"🔍 Debug: Created new session history")
     
     print(f"🔍 Debug: Before adding user input - session history has {len(session['history'])} messages")
     
-    # Keep only last 4 messages for stability
-    if len(session['history']) > 4:
-        print(f"🔍 Debug: Truncating history from {len(session['history'])} to 4 messages")
-        session['history'] = session['history'][-4:]
+    # Keep only last 2 messages to prevent cookie overflow
+    if len(session['history']) > 2:
+        print(f"🔍 Debug: Truncating history from {len(session['history'])} to 2 messages to prevent cookie overflow")
+        session['history'] = session['history'][-2:]
     
     # Add user message to history
     session['history'].append({"role": "user", "content": user_input})
@@ -390,19 +390,15 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             context_messages.append({"role": "system", "content": system_prompt})
             
-            # Add recent history for continuity (ensure we include the opener response)
+            # Add recent history for continuity (with cookie overflow protection)
             if len(session['history']) > 0:
                 print(f"🔍 Debug: Session history has {len(session['history'])} messages")
                 for i, msg in enumerate(session['history']):
                     print(f"🔍 Debug: Message {i}: {msg['role']} - {msg['content'][:100]}...")
                 
-                if command == 'cont':
-                    # For /cont, include more context to maintain story continuity
-                    recent_history = session['history'][-4:]  # Include more context for /cont
-                    print(f"🔍 Debug: Using last 4 messages for /cont continuity")
-                else:
-                    recent_history = session['history'][-3:]
-                    print(f"🔍 Debug: Using last 3 messages for other commands")
+                # Use all available history (max 3 messages to prevent overflow)
+                recent_history = session['history'][-3:]  # Use last 3 messages max
+                print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
             
             # Add current user input
@@ -442,8 +438,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Return a simple fallback response
             reply = "I'm having trouble connecting right now. Please try again in a moment."
         
-        # Add response to history
+        # Add response to history with overflow protection
         session['history'].append({"role": "assistant", "content": reply})
+        
+        # Clean up session to prevent cookie overflow
+        if len(session['history']) > 3:
+            print(f"🔍 Debug: Cleaning up session history to prevent cookie overflow")
+            session['history'] = session['history'][-3:]
         
         # Update scene state using AI-powered extraction (with fallback)
         try:
