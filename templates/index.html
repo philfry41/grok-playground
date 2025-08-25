@@ -437,6 +437,7 @@
                     <button class="btn btn-secondary" onclick="loadAudioFiles()">🎵 Audio Files</button>
                     <button class="btn btn-warning" onclick="testAPI()">🧪 Test API</button>
                     <button class="btn btn-info" onclick="toggleDebugPanel()">🔍 Debug Log</button>
+                    <button class="btn btn-secondary" onclick="getDebugInfo()">🔧 Server Info</button>
                 </div>
             </div>
             
@@ -596,34 +597,55 @@
                     })
                 });
                 
+                debugLog('Response status: ' + response.status + ' ' + response.statusText);
+                debugLog('Response headers: ' + JSON.stringify(Object.fromEntries(response.headers.entries())));
+                
                 // Check if response is OK
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Server error response:', errorText);
-                    addMessage(`Server error (${response.status}): ${response.statusText}`, 'system');
+                    debugLog('HTTP Error: ' + response.status + ' ' + response.statusText);
+                    debugLog('Error response: ' + errorText);
+                    
+                    // Try to parse as JSON for more detailed error info
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        debugLog('Parsed error JSON: ' + JSON.stringify(errorJson));
+                        addMessage(`Server error (${response.status}): ${errorJson.error || response.statusText}`, 'system');
+                    } catch (parseError) {
+                        debugLog('Could not parse error as JSON: ' + parseError.message);
+                        addMessage(`Server error (${response.status}): ${response.statusText}`, 'system');
+                    }
                     return;
                 }
                 
                 // Check content type
                 const contentType = response.headers.get('content-type');
+                debugLog('Content-Type: ' + contentType);
                 if (!contentType || !contentType.includes('application/json')) {
                     const errorText = await response.text();
-                    console.error('Non-JSON response:', errorText);
+                    debugLog('Non-JSON response: ' + contentType);
+                    debugLog('Response text: ' + errorText);
                     addMessage(`Server returned non-JSON response. Please try again.`, 'system');
                     return;
                 }
                 
                 const data = await response.json();
+                debugLog('Response data: ' + JSON.stringify(data));
                 
                 if (data.error) {
+                    debugLog('Response contains error: ' + data.error);
                     addMessage(`Error: ${data.error}`, 'system');
                 } else {
+                    debugLog('Response successful, message length: ' + (data.message ? data.message.length : 0));
                     addMessage(data.message, data.type, data.edge_triggered);
                     if (data.audio_file) {
                         addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
                     }
                 }
             } catch (error) {
+                debugLog('sendMessage catch error: ' + error.message);
+                debugLog('Error name: ' + error.name);
+                debugLog('Error stack: ' + error.stack);
                 addMessage(`Error: ${error.message}`, 'system');
             } finally {
                 hideLoading();
@@ -969,6 +991,36 @@
                 addMessage(`Error testing API: ${error.message}`, 'system');
             } finally {
                 hideLoading();
+            }
+        }
+        
+        async function getDebugInfo() {
+            try {
+                debugLog('Getting server debug info...');
+                const response = await fetch('/api/debug-info');
+                const data = await response.json();
+                
+                debugLog('Server debug info received');
+                debugLog('Server time: ' + data.server_time);
+                debugLog('Python version: ' + data.python_version);
+                debugLog('TTS enabled: ' + data.tts_status.enabled);
+                debugLog('TTS mode: ' + data.tts_status.mode);
+                debugLog('API key set: ' + data.tts_status.api_key_set);
+                debugLog('Current directory: ' + data.file_system.current_dir);
+                debugLog('Audio dir exists: ' + data.file_system.audio_dir_exists);
+                debugLog('TTS mode file exists: ' + data.file_system.tts_mode_file_exists);
+                
+                let resultText = '🔧 Server Debug Info:\n';
+                resultText += `Time: ${data.server_time}\n`;
+                resultText += `TTS: ${data.tts_status.mode} (${data.tts_status.enabled ? 'enabled' : 'disabled'})\n`;
+                resultText += `API Key: ${data.tts_status.api_key_set ? 'Set' : 'Not Set'}\n`;
+                resultText += `Audio Dir: ${data.file_system.audio_dir_exists ? 'Exists' : 'Missing'}\n`;
+                resultText += `TTS Mode File: ${data.file_system.tts_mode_file_exists ? 'Exists' : 'Missing'}\n`;
+                
+                addMessage(resultText, 'system');
+            } catch (error) {
+                debugLog('Debug info error: ' + error.message);
+                addMessage(`Debug Info Error: ${error.message}`, 'system');
             }
         }
 

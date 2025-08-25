@@ -687,6 +687,49 @@ def set_tts_voice():
         print(f"🔍 Debug: Error setting TTS voice: {e}")
         return jsonify({'error': f'Failed to set TTS voice: {str(e)}'})
 
+@app.route('/api/debug-info', methods=['GET'])
+def get_debug_info():
+    """Get debug information about the server state"""
+    try:
+        import traceback
+        import sys
+        
+        debug_info = {
+            'server_time': datetime.datetime.now().isoformat(),
+            'python_version': sys.version,
+            'environment_vars': {
+                'XAI_API_KEY': 'Set' if os.getenv('XAI_API_KEY') else 'Not Set',
+                'XAI_MODEL': os.getenv('XAI_MODEL', 'grok-3'),
+                'FLASK_SECRET_KEY': 'Set' if os.getenv('FLASK_SECRET_KEY') else 'Not Set',
+                'REQUEST_TIMEOUT': os.getenv('REQUEST_TIMEOUT', 'Not Set'),
+                'WORKER_TIMEOUT': os.getenv('WORKER_TIMEOUT', 'Not Set')
+            },
+            'tts_status': {
+                'enabled': tts.enabled,
+                'mode': tts.mode,
+                'api_key_set': bool(tts.api_key)
+            },
+            'file_system': {
+                'current_dir': os.getcwd(),
+                'files_in_dir': os.listdir('.')[:10],  # First 10 files
+                'audio_dir_exists': os.path.exists('audio_files'),
+                'tts_mode_file_exists': os.path.exists('tts_mode.txt')
+            },
+            'memory_info': {
+                'gc_count': gc.get_count(),
+                'gc_stats': gc.get_stats()
+            }
+        }
+        
+        return jsonify(debug_info)
+    except Exception as e:
+        print(f"🔍 Debug: Error getting debug info: {e}")
+        import traceback
+        return jsonify({
+            'error': f'Failed to get debug info: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
 @app.route('/api/test-api', methods=['GET'])
 def test_api():
     """Test endpoint to verify API key and basic connectivity"""
