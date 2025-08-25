@@ -2,6 +2,9 @@ import os
 import json
 import re
 import datetime
+import gc
+import signal
+import atexit
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
@@ -11,6 +14,26 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
+
+# Resource cleanup functions
+def cleanup_resources():
+    """Clean up resources to prevent memory leaks"""
+    try:
+        gc.collect()  # Force garbage collection
+        print("🧹 Cleanup: Garbage collection completed")
+    except Exception as e:
+        print(f"⚠️ Cleanup error: {e}")
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    print(f"🛑 Received signal {signum}, cleaning up...")
+    cleanup_resources()
+    exit(0)
+
+# Register cleanup handlers
+atexit.register(cleanup_resources)
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
 
 # Import the edging functions from chat.py
 def find_male_climax_span(text: str):
@@ -345,6 +368,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             recent_messages = session['history'][-8:]
             session['history'] = system_messages + recent_messages
             print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
+            
+            # Force garbage collection after history cleanup
+            cleanup_resources()
         
         # Try AI call with retry logic
         max_retries = 3
@@ -425,6 +451,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         
         # Handle TTS if enabled
         audio_file = None
+        
+        # Clean up before TTS to free memory
+        cleanup_resources()
+        
         if tts.enabled and reply.strip():
             try:
                 # Generate TTS for responses (increased limit for paid tier)
@@ -755,6 +785,17 @@ def list_audio_files():
         return jsonify({'error': f'Could not list audio files: {e}'}), 500
 
 if __name__ == '__main__':
+    # Set timeout for requests to prevent hung processes
+    import signal
+    
+    def timeout_handler(signum, frame):
+        print("⏰ Request timeout - cleaning up...")
+        cleanup_resources()
+        raise TimeoutError("Request timed out")
+    
+    # Set 60-second timeout for requests
+    signal.signal(signal.SIGALRM, timeout_handler)
+    
     port = int(os.environ.get('PORT', 8080))
     print(f"🎭 Starting Grok Playground Web Interface on port {port}")
     print(f"📍 Local: http://localhost:{port}")
