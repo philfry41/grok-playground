@@ -5,6 +5,8 @@ import datetime
 import gc
 import signal
 import atexit
+import threading
+import time
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
@@ -34,6 +36,33 @@ def signal_handler(signum, frame):
 atexit.register(cleanup_resources)
 signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
+
+def generate_tts_async(text, save_audio=True):
+    """Generate TTS audio in background thread"""
+    def tts_worker():
+        try:
+            print(f"🔍 Debug: Starting async TTS generation for {len(text)} characters")
+            start_time = time.time()
+            
+            audio_file = tts.speak(text, save_audio=save_audio)
+            
+            end_time = time.time()
+            duration = end_time - start_time
+            
+            if audio_file:
+                print(f"🔍 Debug: Async TTS completed in {duration:.2f}s: {audio_file}")
+            else:
+                print(f"🔍 Debug: Async TTS failed after {duration:.2f}s")
+                
+        except Exception as e:
+            print(f"🔍 Debug: Async TTS error: {e}")
+    
+    # Start TTS generation in background thread
+    thread = threading.Thread(target=tts_worker, daemon=True)
+    thread.start()
+    print(f"🔍 Debug: TTS generation started in background thread")
+    
+    return "generating"  # Return placeholder to indicate TTS is being generated
 
 # Import the edging functions from chat.py
 def find_male_climax_span(text: str):
@@ -264,13 +293,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 
                 if tts.enabled and reply.strip():
                     try:
-                        # Generate TTS for responses (increased limit for paid tier)
-                        if len(reply) < 1000:  # Reduced to prevent 502 errors (was 4000)
+                        # Handle TTS based on response length
+                        if len(reply) < 1000:  # Short responses - generate TTS immediately
                             # For auto-save mode, always save audio files
                             # For auto-play mode, don't save (just play)
                             save_audio = (tts.mode == "save")
                             print(f"🔍 Debug: TTS save_audio parameter: {save_audio}")
                             audio_file = tts.speak(reply, save_audio=save_audio)
+                        else:  # Long responses - generate TTS asynchronously
+                            print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
+                            save_audio = (tts.mode == "save")
+                            audio_file = generate_tts_async(reply, save_audio=save_audio)
                             if audio_file:
                                 print(f"🔍 Debug: TTS generated for opener: {audio_file}")
                                 # Check if file actually exists after creation
@@ -281,8 +314,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                                     print(f"🔍 Debug: Audio file does not exist after creation!")
                             else:
                                 print(f"🔍 Debug: TTS played for opener (not saved)")
-                        else:
-                            print(f"🔍 Debug: Reply too long for TTS: {len(reply)} chars")
+                        # TTS handled above based on length
                     except Exception as e:
                         print(f"🔍 Debug: TTS error for opener: {e}")
                         import traceback
@@ -490,11 +522,16 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         if tts.enabled and reply.strip():
             try:
                 # Generate TTS for responses (increased limit for paid tier)
-                if len(reply) < 1000:  # Reduced to prevent 502 errors (was 4000)
+                # Handle TTS based on response length
+                if len(reply) < 1000:  # Short responses - generate TTS immediately
                     # For auto-save mode, always save audio files
                     # For auto-play mode, don't save (just play)
                     save_audio = (tts.mode == "save")
                     audio_file = tts.speak(reply, save_audio=save_audio)
+                else:  # Long responses - generate TTS asynchronously
+                    print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
+                    save_audio = (tts.mode == "save")
+                    audio_file = generate_tts_async(reply, save_audio=save_audio)
                     if audio_file:
                         print(f"🔍 Debug: TTS generated: {audio_file}")
                     else:
