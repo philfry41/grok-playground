@@ -223,6 +223,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 
                 # Handle TTS if enabled (same logic as main chat)
                 audio_file = None
+                print(f"🔍 Debug: TTS enabled: {tts.enabled}, mode: {tts.mode}")
+                print(f"🔍 Debug: Reply length: {len(reply)}")
+                
                 if tts.enabled and reply.strip():
                     try:
                         # Generate TTS for responses (increased limit for paid tier)
@@ -230,13 +233,26 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                             # For auto-save mode, always save audio files
                             # For auto-play mode, don't save (just play)
                             save_audio = (tts.mode == "save")
+                            print(f"🔍 Debug: TTS save_audio parameter: {save_audio}")
                             audio_file = tts.speak(reply, save_audio=save_audio)
                             if audio_file:
                                 print(f"🔍 Debug: TTS generated for opener: {audio_file}")
+                                # Check if file actually exists after creation
+                                if os.path.exists(audio_file):
+                                    file_size = os.path.getsize(audio_file)
+                                    print(f"🔍 Debug: Audio file exists after creation: {file_size} bytes")
+                                else:
+                                    print(f"🔍 Debug: Audio file does not exist after creation!")
                             else:
                                 print(f"🔍 Debug: TTS played for opener (not saved)")
+                        else:
+                            print(f"🔍 Debug: Reply too long for TTS: {len(reply)} chars")
                     except Exception as e:
                         print(f"🔍 Debug: TTS error for opener: {e}")
+                        import traceback
+                        print(f"🔍 Debug: TTS error traceback: {traceback.format_exc()}")
+                else:
+                    print(f"🔍 Debug: TTS not enabled or reply empty")
                 
                 # Update scene state using AI-powered extraction
                 try:
@@ -710,6 +726,11 @@ def list_audio_files():
         # Sort by creation time (newest first)
         files.sort(key=lambda x: x['created'], reverse=True)
         print(f"🔍 Debug: Total audio files found: {len(files)}")
+        
+        # List all files for debugging
+        for i, file in enumerate(files[:5]):  # Show first 5 files
+            print(f"🔍 Debug: File {i+1}: {file['filename']} ({file['size']} bytes)")
+        
         return jsonify({'files': files})
     except Exception as e:
         print(f"🔍 Debug: Unexpected error in list_audio_files: {e}")
