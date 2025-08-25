@@ -385,17 +385,25 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # Add recent history for continuity (ensure we include the opener response)
             if len(session['history']) > 0:
+                print(f"🔍 Debug: Session history has {len(session['history'])} messages")
+                for i, msg in enumerate(session['history']):
+                    print(f"🔍 Debug: Message {i}: {msg['role']} - {msg['content'][:100]}...")
+                
                 if command == 'cont':
                     # For /cont, include more context to maintain story continuity
                     recent_history = session['history'][-4:]  # Include more context for /cont
+                    print(f"🔍 Debug: Using last 4 messages for /cont continuity")
                 else:
                     recent_history = session['history'][-3:]
+                    print(f"🔍 Debug: Using last 3 messages for other commands")
                 context_messages.extend(recent_history)
             
             # Add current user input
             context_messages.append({"role": "user", "content": user_input})
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
+            for i, msg in enumerate(context_messages):
+                print(f"🔍 Debug: Context {i}: {msg['role']} - {msg['content'][:100]}...")
             
             # Use more tokens for /cont commands since we have better timeouts
             max_tokens_for_call = 500 if command == 'cont' else 500
