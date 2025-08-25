@@ -232,10 +232,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: Generating AI response for opener...")
                 model_env = os.getenv('XAI_MODEL', 'grok-3')
                 reply = chat_with_grok(
-                    session['history'],
+                    session['history'][-4:],  # Only last 4 messages for stability
                     model=model_env,
-                    temperature=0.9,
-                    max_tokens=800,
+                    temperature=0.8,  # Slightly reduced
+                    max_tokens=600,  # Reduced for stability
                     top_p=0.8,
                     hide_thinking=True,
                 )
@@ -252,7 +252,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 if tts.enabled and reply.strip():
                     try:
                         # Generate TTS for responses (increased limit for paid tier)
-                        if len(reply) < 5000:  # Increased for paid tier (was 1200)
+                        if len(reply) < 3000:  # Reduced for Render stability (was 5000)
                             # For auto-save mode, always save audio files
                             # For auto-play mode, don't save (just play)
                             save_audio = (tts.mode == "save")
@@ -361,46 +361,64 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: Starting AI call with {len(session['history'])} messages")
         
                             # Limit history length for memory management
-        if len(session['history']) > 12:  # Increased for paid tier
-            print(f"🔍 Debug: Truncating history from {len(session['history'])} to 12 messages")
-            # Keep system messages and last 8 messages
+        if len(session['history']) > 8:  # Reduced for Render stability
+            print(f"🔍 Debug: Truncating history from {len(session['history'])} to 8 messages")
+            # Keep system messages and last 6 messages
             system_messages = [m for m in session['history'] if m['role'] == 'system']
-            recent_messages = session['history'][-8:]
+            recent_messages = session['history'][-6:]
             session['history'] = system_messages + recent_messages
             print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
             
             # Force garbage collection after history cleanup
             cleanup_resources()
         
-        # Try AI call with retry logic
-        max_retries = 3
+        # Try AI call with retry logic and reduced complexity for Render
+        max_retries = 2  # Reduced retries
         for attempt in range(max_retries):
             try:
                 print(f"🔍 Debug: Attempting AI call (attempt {attempt + 1}/{max_retries})...")
-                reply = chat_with_grok(
-                    session['history'],
-                    model=model_env,
-                    temperature=0.9,
-                    max_tokens=min(800, session['max_tokens']),  # Increased for paid tier
-                    top_p=0.8,
-                    hide_thinking=True,
-                )
+                
+                # Reduce complexity for Render stability
+                if attempt == 0:
+                    # First attempt: full context but reduced tokens
+                    reply = chat_with_grok(
+                        session['history'][-6:],  # Only last 6 messages for stability
+                        model=model_env,
+                        temperature=0.8,  # Slightly reduced
+                        max_tokens=min(600, session['max_tokens']),  # Reduced for stability
+                        top_p=0.8,
+                        hide_thinking=True,
+                    )
+                else:
+                    # Second attempt: minimal context
+                    simple_history = [
+                        {"role": "system", "content": "You are an explicit storyteller. Continue the story naturally."},
+                        {"role": "user", "content": f"Continue: {user_input}"}
+                    ]
+                    reply = chat_with_grok(
+                        simple_history,
+                        model=model_env,
+                        temperature=0.7,
+                        max_tokens=400,  # Even more reduced
+                        top_p=0.8,
+                        hide_thinking=True,
+                    )
+                
                 print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
                 break  # Success, exit retry loop
             except Exception as ai_error:
                 print(f"🔍 Debug: AI call attempt {attempt + 1} failed: {ai_error}")
                 print(f"🔍 Debug: Error type: {type(ai_error)}")
                 
+                # Force cleanup after each failed attempt
+                cleanup_resources()
+                
                 if attempt == max_retries - 1:  # Last attempt
-                    # Try with simpler request as final fallback
-                    simple_history = [
-                        {"role": "system", "content": "You are an explicit storyteller. Use detailed, sensual language."},
-                        {"role": "user", "content": f"Continue this story: {user_input}"}
-                    ]
+                    # Final fallback: very simple request
                     print(f"🔍 Debug: Attempting final fallback AI call...")
                     try:
                         reply = chat_with_grok(
-                            simple_history,
+                            [{"role": "user", "content": "Continue the story naturally."}],
                             model=model_env,
                             temperature=0.7,
                             max_tokens=500,  # Increased for paid tier
@@ -458,7 +476,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         if tts.enabled and reply.strip():
             try:
                 # Generate TTS for responses (increased limit for paid tier)
-                if len(reply) < 5000:  # Increased for paid tier (was 1200)
+                if len(reply) < 3000:  # Reduced for Render stability (was 5000)
                     # For auto-save mode, always save audio files
                     # For auto-play mode, don't save (just play)
                     save_audio = (tts.mode == "save")
