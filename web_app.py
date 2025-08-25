@@ -327,13 +327,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             return jsonify({'error': f"Couldn't read {filename}: {e}"})
     
     elif command == 'cont':
-        # Handle /cont command
-        target = max(250, min(1500, word_count))
-        max_tokens = int(target * 1.3)
-        max_tokens = max(200, min(2000, max_tokens))
+        # Handle /cont command with minimal complexity
+        target = max(250, min(1000, word_count))  # Reduced max
+        max_tokens = min(400, target)  # Conservative token limit
         
-        # Create a proper continuation prompt
-        user_input = f"Continue the story naturally from where it left off. Write approximately {target} words with detailed, explicit content. Keep the scene flowing without natural stopping points."
+        # Create a simple continuation prompt
+        user_input = f"Continue the story naturally. Write about {target} words."
         session['max_tokens'] = max_tokens
     
     # Simplified session management for stability
@@ -379,9 +378,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Add system message
             context_messages.append({"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from where it left off, maintaining character names, locations, and situations."})
             
-            # Add recent history for continuity (last 3 messages)
+            # Add recent history for continuity (last 2 messages for /cont, 3 for others)
             if len(session['history']) > 0:
-                recent_history = session['history'][-3:]
+                if command == 'cont':
+                    recent_history = session['history'][-2:]  # Less context for /cont
+                else:
+                    recent_history = session['history'][-3:]
                 context_messages.extend(recent_history)
             
             # Add current user input
@@ -389,11 +391,14 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
             
+            # Use fewer tokens for /cont commands
+            max_tokens_for_call = 300 if command == 'cont' else 500
+            
             reply = chat_with_grok(
                 context_messages,
                 model=model_env,
                 temperature=0.7,
-                max_tokens=500,  # Slightly increased for better continuity
+                max_tokens=max_tokens_for_call,
                 top_p=0.8,
                 hide_thinking=True,
             )
