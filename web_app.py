@@ -561,7 +561,7 @@ def test_api():
             
             # Test if we can create a test file
             test_filename = "test_file_system.txt"
-            test_content = f"Test file created at {datetime.datetime.now()}"
+            test_content = f"Test file created at {datetime.now()}"
             
             with open(test_filename, "w") as f:
                 f.write(test_content)
