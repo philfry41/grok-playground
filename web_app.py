@@ -7,6 +7,7 @@ import signal
 import atexit
 import threading
 import time
+import hashlib
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
@@ -16,6 +17,10 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
+
+# Request deduplication tracking
+active_requests = {}  # Track active requests to prevent duplicates
+tts_generation_tracker = {}  # Track TTS generations to prevent duplicates
 
 # Resource cleanup functions
 def cleanup_resources():
@@ -37,11 +42,47 @@ atexit.register(cleanup_resources)
 signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
-def generate_tts_async(text, save_audio=True):
-    """Generate TTS audio in background thread"""
+def generate_request_id(user_input, command=None):
+    """Generate a unique request ID to prevent duplicates"""
+    content = f"{user_input}:{command}:{session.get('session_id', 'no_session')}"
+    return hashlib.md5(content.encode()).hexdigest()[:8]
+
+def is_request_duplicate(request_id):
+    """Check if this request is already being processed"""
+    if request_id in active_requests:
+        # Check if the request is still active (within 30 seconds)
+        if time.time() - active_requests[request_id] < 30:
+            return True
+        else:
+            # Remove stale request
+            del active_requests[request_id]
+    return False
+
+def track_request(request_id):
+    """Track an active request"""
+    active_requests[request_id] = time.time()
+
+def untrack_request(request_id):
+    """Remove request from tracking"""
+    if request_id in active_requests:
+        del active_requests[request_id]
+
+def generate_tts_async(text, save_audio=True, request_id=None):
+    """Generate TTS audio in background thread with deduplication"""
+    # Create a unique TTS generation ID
+    tts_id = hashlib.md5(f"{text[:100]}:{save_audio}:{request_id}".encode()).hexdigest()[:8]
+    
+    # Check if this TTS generation is already in progress
+    if tts_id in tts_generation_tracker:
+        print(f"🔍 Debug: TTS generation {tts_id} already in progress, skipping duplicate")
+        return "generating"
+    
+    # Track this TTS generation
+    tts_generation_tracker[tts_id] = time.time()
+    
     def tts_worker():
         try:
-            print(f"🔍 Debug: Starting async TTS generation for {len(text)} characters")
+            print(f"🔍 Debug: Starting async TTS generation {tts_id} for {len(text)} characters")
             start_time = time.time()
             
             audio_file = tts.speak(text, save_audio=save_audio)
@@ -50,25 +91,30 @@ def generate_tts_async(text, save_audio=True):
             duration = end_time - start_time
             
             if audio_file:
-                print(f"🔍 Debug: Async TTS completed in {duration:.2f}s: {audio_file}")
+                print(f"🔍 Debug: Async TTS {tts_id} completed in {duration:.2f}s: {audio_file}")
                 # Verify file exists after generation
                 if os.path.exists(audio_file):
                     file_size = os.path.getsize(audio_file)
-                    print(f"🔍 Debug: Async TTS file verified: {audio_file} ({file_size} bytes)")
+                    print(f"🔍 Debug: Async TTS {tts_id} file verified: {audio_file} ({file_size} bytes)")
                 else:
-                    print(f"🔍 Debug: Async TTS file missing after generation: {audio_file}")
+                    print(f"🔍 Debug: Async TTS {tts_id} file missing after generation: {audio_file}")
             else:
-                print(f"🔍 Debug: Async TTS failed after {duration:.2f}s")
+                print(f"🔍 Debug: Async TTS {tts_id} failed after {duration:.2f}s")
                 
         except Exception as e:
-            print(f"🔍 Debug: Async TTS error: {e}")
+            print(f"🔍 Debug: Async TTS {tts_id} error: {e}")
             import traceback
-            print(f"🔍 Debug: Async TTS error traceback: {traceback.format_exc()}")
+            print(f"🔍 Debug: Async TTS {tts_id} error traceback: {traceback.format_exc()}")
+        finally:
+            # Remove from tracking when done
+            if tts_id in tts_generation_tracker:
+                del tts_generation_tracker[tts_id]
+                print(f"🔍 Debug: TTS generation {tts_id} removed from tracking")
     
     # Start TTS generation in background thread
     thread = threading.Thread(target=tts_worker, daemon=True)
     thread.start()
-    print(f"🔍 Debug: TTS generation started in background thread")
+    print(f"🔍 Debug: TTS generation {tts_id} started in background thread")
     
     return "generating"  # Return placeholder to indicate TTS is being generated
 
@@ -142,6 +188,10 @@ def chat():
     print(f"🔍 Debug: /api/chat endpoint called")
     print(f"🔍 Debug: Session ID: {session.get('_id', 'No session ID')}")
     print(f"🔍 Debug: Session keys: {list(session.keys())}")
+    
+    # Generate request ID for deduplication
+    request_id = None
+    
     try:
         data = request.get_json()
         print(f"🔍 Debug: Request data: {data}")
@@ -158,6 +208,20 @@ def chat():
                 data[command] = parts[1]
         
         print(f"🔍 Debug: user_input='{user_input}', command='{command}', word_count={word_count}")
+        
+        # Generate request ID for deduplication
+        request_id = generate_request_id(user_input, command)
+        print(f"🔍 Debug: Request ID: {request_id}")
+        
+        # Check for duplicate requests
+        if is_request_duplicate(request_id):
+            print(f"🔍 Debug: Duplicate request detected: {request_id}")
+            return jsonify({'error': 'Request already being processed. Please wait...'})
+        
+        # Track this request
+        track_request(request_id)
+        print(f"🔍 Debug: Request tracked: {request_id}")
+        
     except Exception as e:
         print(f"🔍 Debug: Error parsing request data: {e}")
         return jsonify({'error': f'Invalid request data: {str(e)}'})
@@ -190,6 +254,8 @@ def chat():
     # Handle commands
     if command == 'new':
         session['history'] = session['history'][:2]
+        if request_id:
+            untrack_request(request_id)
         return jsonify({'message': '🧹 New scene. Priming kept.', 'type': 'system'})
     
     elif command == 'raw':
@@ -197,14 +263,20 @@ def chat():
             "Reassert LEXICAL CONTRACT: use blunt, explicit anatomical language; avoid euphemisms; "
             "prioritize physical detail and explicit dialogue."
         )})
+        if request_id:
+            untrack_request(request_id)
         return jsonify({'message': '🎛️ Raw tone reasserted.', 'type': 'system'})
     
     elif command == 'edge':
         session['allow_female'], session['allow_male'] = True, False
+        if request_id:
+            untrack_request(request_id)
         return jsonify({'message': '⛓️ Edging: her allowed; his NOT.', 'type': 'system'})
     
     elif command == 'payoff':
         session['allow_female'], session['allow_male'] = True, True
+        if request_id:
+            untrack_request(request_id)
         return jsonify({'message': '✅ Payoff: both allowed.', 'type': 'system'})
     
     elif command == 'loadopener':
@@ -231,16 +303,24 @@ def chat():
                     print(f"🔍 Debug: opener length={len(opener)}")
                 except UnicodeDecodeError as e:
                     print(f"🔍 Debug: Unicode decode error: {e}")
+                    if request_id:
+                        untrack_request(request_id)
                     return jsonify({'error': f'File encoding error: {str(e)}'})
                 except PermissionError as e:
                     print(f"🔍 Debug: Permission error: {e}")
+                    if request_id:
+                        untrack_request(request_id)
                     return jsonify({'error': f'Permission denied reading {filename}: {str(e)}'})
                 except Exception as e:
                     print(f"🔍 Debug: File read error: {e}")
+                    if request_id:
+                        untrack_request(request_id)
                     return jsonify({'error': f'Error reading {filename}: {str(e)}'})
             
             byte_len = len(opener.encode("utf-8"))
             if byte_len == 0 or not any(ch.strip() for ch in opener):
+                if request_id:
+                    untrack_request(request_id)
                 return jsonify({'error': f'{filename} looks empty. Path: {abs_path} (bytes={byte_len})'})
             
             # Clear old history and add the opener content as a fresh start
@@ -284,7 +364,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: Starting TTS for opener text, length={len(opener)}")
                     save_audio = (tts.mode == "save")
                     print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
-                    opener_audio_file = generate_tts_async(opener, save_audio=save_audio)
+                    opener_audio_file = generate_tts_async(opener, save_audio=save_audio, request_id=request_id)
                     if opener_audio_file == "generating":
                         print(f"🔍 Debug: Async TTS started for opener text")
                         initial_response['opener_audio_file'] = "generating"
@@ -338,7 +418,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                         else:  # Long responses - generate TTS asynchronously
                             print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
                             save_audio = (tts.mode == "save")
-                            audio_file = generate_tts_async(reply, save_audio=save_audio)
+                            audio_file = generate_tts_async(reply, save_audio=save_audio, request_id=request_id)
                             if audio_file:
                                 if audio_file == "generating":
                                     print(f"🔍 Debug: Async TTS started for opener")
@@ -387,8 +467,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 return jsonify(initial_response)
                 
         except FileNotFoundError:
+            if request_id:
+                untrack_request(request_id)
             return jsonify({'error': f'File not found: {filename}'})
         except Exception as e:
+            if request_id:
+                untrack_request(request_id)
             return jsonify({'error': f"Couldn't read {filename}: {e}"})
     
     elif command == 'cont':
@@ -560,7 +644,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 else:  # Long responses - generate TTS asynchronously
                     print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
                     save_audio = (tts.mode == "save")
-                    audio_file = generate_tts_async(reply, save_audio=save_audio)
+                    audio_file = generate_tts_async(reply, save_audio=save_audio, request_id=request_id)
                     if audio_file:
                         if audio_file == "generating":
                             print(f"🔍 Debug: Async TTS started")
@@ -585,6 +669,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             error_msg = "Request timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
         print(f"🔍 Debug: About to return main error response")
         return jsonify({'error': f'Request failed: {error_msg}'})
+    finally:
+        # Clean up request tracking
+        if request_id:
+            untrack_request(request_id)
+            print(f"🔍 Debug: Request untracked: {request_id}")
 
 @app.route('/api/tts-toggle', methods=['POST'])
 def toggle_tts():
