@@ -659,7 +659,13 @@
                     debugLog('Response successful, message length: ' + (data.message ? data.message.length : 0));
                     addMessage(data.message, data.type, data.edge_triggered);
                     if (data.audio_file) {
-                        addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                        if (data.audio_file === 'generating') {
+                            debugLog('Async TTS detected - starting polling');
+                            addMessage(`🎵 Generating audio file... (checking every 2 seconds)`, 'system');
+                            startAudioPolling();
+                        } else {
+                            addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                        }
                     }
                 }
             } catch (error) {
@@ -801,7 +807,13 @@
                         console.log('Adding AI response, length:', data.ai_response.length); // Debug logging
                         addMessage(data.ai_response, data.response_type, data.edge_triggered);
                         if (data.audio_file) {
-                            addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                            if (data.audio_file === 'generating') {
+                                debugLog('Async TTS detected in loadopener - starting polling');
+                                addMessage(`🎵 Generating audio file... (checking every 2 seconds)`, 'system');
+                                startAudioPolling();
+                            } else {
+                                addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                            }
                         }
                     } else {
                         console.log('No AI response found in data'); // Debug logging
@@ -1058,6 +1070,93 @@
             window.location.href = newUrl;
         }
         
+        function startAudioPolling() {
+            debugLog('Starting audio file polling for async TTS');
+            if (audioPollingInterval) {
+                clearInterval(audioPollingInterval);
+            }
+            if (audioPollingTimeout) {
+                clearTimeout(audioPollingTimeout);
+            }
+            
+            audioPollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/audio-files');
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        debugLog('Audio polling error: ' + data.error);
+                        stopAudioPolling();
+                        return;
+                    }
+                    
+                    // Check if we have new audio files
+                    const audioPanel = document.getElementById('audioPanel');
+                    const audioFilesList = document.getElementById('audioFilesList');
+                    
+                    if (data.files.length > 0) {
+                        debugLog('New audio files detected: ' + data.files.length);
+                        
+                        // Update the audio files list
+                        if (data.files.length === 0) {
+                            audioFilesList.innerHTML = '<p>No audio files found</p>';
+                        } else {
+                            let html = '<div style="max-height: 300px; overflow-y: auto;">';
+                            data.files.forEach(file => {
+                                const sizeKB = Math.round(file.size / 1024);
+                                const date = new Date(file.created * 1000).toLocaleString();
+                                html += `
+                                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                        <div style="font-weight: bold; margin-bottom: 5px;">${file.filename}</div>
+                                        <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                                            Size: ${sizeKB}KB | Created: ${date}
+                                        </div>
+                                        <div style="display: flex; gap: 5px;">
+                                            <button onclick="playAudio('${file.url}', this)" style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">▶️ Play</button>
+                                            <button onclick="downloadAudio('${file.url}', '${file.filename}')" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">⬇️ Download</button>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                            audioFilesList.innerHTML = html;
+                        }
+                        
+                        // Show the audio panel if it's not visible
+                        if (audioPanel.style.display === 'none') {
+                            audioPanel.style.display = 'block';
+                        }
+                        
+                        // Stop polling once we have files
+                        stopAudioPolling();
+                        addMessage(`🎵 Audio file ready: ${data.files[data.files.length - 1].filename}`, 'system');
+                    }
+                } catch (error) {
+                    debugLog('Audio polling error: ' + error.message);
+                    stopAudioPolling();
+                }
+            }, 2000); // Check every 2 seconds
+            
+            // Stop polling after 60 seconds (30 attempts)
+            audioPollingTimeout = setTimeout(() => {
+                debugLog('Audio polling timeout - stopping after 60 seconds');
+                stopAudioPolling();
+                addMessage(`⚠️ Audio generation timeout - file may still be processing`, 'system');
+            }, 60000);
+        }
+        
+        function stopAudioPolling() {
+            if (audioPollingInterval) {
+                clearInterval(audioPollingInterval);
+                audioPollingInterval = null;
+                debugLog('Stopped audio file polling');
+            }
+            if (audioPollingTimeout) {
+                clearTimeout(audioPollingTimeout);
+                audioPollingTimeout = null;
+            }
+        }
+        
         async function loadAudioFiles() {
             try {
                 const response = await fetch('/api/audio-files');
@@ -1103,6 +1202,8 @@
         let currentAudio = null;
         let currentPlayButton = null;
         let audioElements = new Map(); // Store audio elements by URL
+        let audioPollingInterval = null; // For checking async TTS completion
+        let audioPollingTimeout = null; // For stopping polling after timeout
 
         function playAudio(url, button) {
             console.log('playAudio called:', url, button);
