@@ -1101,24 +1101,16 @@
                     return;
                 }
                 
-                // Check if we have the latest version by comparing server time
-                const serverTime = new Date(data.server_time);
-                const clientTime = new Date();
-                const timeDiff = Math.abs(clientTime - serverTime);
+                // Simple version check - if server responds, assume it's current
+                // The version number itself shows the actual deployed version
+                versionStatus.textContent = '✅ Connected';
+                versionStatus.style.color = '#28a745';
                 
-                if (timeDiff < 60000) { // Within 1 minute
-                    versionStatus.textContent = '✅ Latest';
-                    versionStatus.style.color = '#28a745';
-                } else {
-                    versionStatus.textContent = '⚠️ May be outdated';
-                    versionStatus.style.color = '#ffc107';
-                }
-                
-                debugLog('Version check completed: ' + versionStatus.textContent);
+                debugLog('Version check completed: Connected to server');
                 
             } catch (error) {
                 const versionStatus = document.getElementById('versionStatus');
-                versionStatus.textContent = '❌ Check failed';
+                versionStatus.textContent = '❌ Connection failed';
                 versionStatus.style.color = '#dc3545';
                 debugLog('Version check error: ' + error.message);
             }
