@@ -824,7 +824,7 @@
                 } else {
                     addMessage(data.message, data.type);
                     if (data.opener_content) {
-                        addMessage(`📄 Opener content: ${data.opener_content.substring(0, 200)}...`, 'system');
+                        addMessage(`📄 Opener content: ${data.opener_content}`, 'system');
                     }
                     if (data.ai_response) {
                         console.log('Adding AI response, length:', data.ai_response.length); // Debug logging

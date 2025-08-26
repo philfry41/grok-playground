@@ -267,22 +267,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Add scene state reminder as a system message
             session['history'].append({"role": "system", "content": scene_state_reminder})
             
-            # Generate TTS for opener text if enabled
+            # Generate TTS for opener text if enabled (use async to prevent timeouts)
             opener_audio_file = None
             if tts.enabled and opener.strip():
                 try:
                     print(f"🔍 Debug: Generating TTS for opener text, length={len(opener)}")
-                    # Handle TTS based on opener length
-                    if len(opener) < 1000:  # Short opener - generate TTS immediately
-                        save_audio = (tts.mode == "save")
-                        print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
-                        opener_audio_file = tts.speak(opener, save_audio=save_audio)
-                    else:  # Long opener - generate TTS asynchronously
-                        print(f"🔍 Debug: Long opener ({len(opener)} chars) - using async TTS")
-                        save_audio = (tts.mode == "save")
-                        opener_audio_file = generate_tts_async(opener, save_audio=save_audio)
-                        if opener_audio_file == "generating":
-                            print(f"🔍 Debug: Async TTS started for opener text")
+                    # Always use async TTS for opener to prevent timeouts
+                    save_audio = (tts.mode == "save")
+                    print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
+                    opener_audio_file = generate_tts_async(opener, save_audio=save_audio)
+                    if opener_audio_file == "generating":
+                        print(f"🔍 Debug: Async TTS started for opener text")
                 except Exception as e:
                     print(f"🔍 Debug: TTS error for opener text: {e}")
                     import traceback
