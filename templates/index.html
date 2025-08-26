@@ -379,6 +379,10 @@
             <div class="chat-header">
                 <h1>🎭 Grok Playground</h1>
                 <p>NSFW Storytelling with Edging Controls</p>
+                <div style="background: #f8f9fa; padding: 5px 10px; border-radius: 5px; font-size: 12px; color: #666; margin-top: 10px;">
+                    Version: <span id="versionDisplay">f5cfb50</span> | 
+                    <span id="versionStatus">Checking...</span>
+                </div>
             </div>
             
             <div class="chat-messages" id="chatMessages">
@@ -450,7 +454,7 @@
             <div class="panel" id="debugPanel" style="display: none;">
                 <h3>🔍 Debug Log</h3>
                 <div style="background: #e9ecef; padding: 5px; border-radius: 3px; font-size: 11px; margin-bottom: 10px;">
-                    Version: 1f1f05d | User Agent: <span id="userAgentDisplay"></span>
+                    Version: f5cfb50 | User Agent: <span id="userAgentDisplay"></span>
                 </div>
                 <div id="debugLog" style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
                 <button class="btn btn-secondary" onclick="clearDebugLog()">Clear Log</button>
@@ -519,6 +523,9 @@
         
         // Initial debug log
         debugLog('Page loaded, user agent: ' + navigator.userAgent);
+        
+        // Check version status
+        checkVersionStatus();
         
         // Force cache refresh for iOS Chrome
         const urlParams = new URLSearchParams(window.location.search);
@@ -1075,9 +1082,46 @@
         
         function forceRefresh() {
             debugLog('Manual refresh requested');
-            const currentVersion = '1f1f05d';
+            const currentVersion = 'f5cfb50';
             const newUrl = window.location.pathname + '?v=' + currentVersion + '&t=' + Date.now();
             window.location.href = newUrl;
+        }
+        
+        async function checkVersionStatus() {
+            try {
+                const response = await fetch('/api/debug-info');
+                const data = await response.json();
+                
+                const versionDisplay = document.getElementById('versionDisplay');
+                const versionStatus = document.getElementById('versionStatus');
+                
+                if (data.error) {
+                    versionStatus.textContent = '❌ Error checking version';
+                    versionStatus.style.color = '#dc3545';
+                    return;
+                }
+                
+                // Check if we have the latest version by comparing server time
+                const serverTime = new Date(data.server_time);
+                const clientTime = new Date();
+                const timeDiff = Math.abs(clientTime - serverTime);
+                
+                if (timeDiff < 60000) { // Within 1 minute
+                    versionStatus.textContent = '✅ Latest';
+                    versionStatus.style.color = '#28a745';
+                } else {
+                    versionStatus.textContent = '⚠️ May be outdated';
+                    versionStatus.style.color = '#ffc107';
+                }
+                
+                debugLog('Version check completed: ' + versionStatus.textContent);
+                
+            } catch (error) {
+                const versionStatus = document.getElementById('versionStatus');
+                versionStatus.textContent = '❌ Check failed';
+                versionStatus.style.color = '#dc3545';
+                debugLog('Version check error: ' + error.message);
+            }
         }
         
         function startAudioPolling() {
