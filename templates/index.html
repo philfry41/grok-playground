@@ -677,6 +677,10 @@
                 if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
                     debugLog('Server error detected - check Render logs for details');
                     debugLog('This might be a session serialization issue or AI call timeout');
+                } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
+                    debugLog('502 Bad Gateway detected - likely worker timeout');
+                    debugLog('This usually means the AI call took too long (>30 seconds)');
+                    debugLog('Try using a smaller word count or waiting a moment');
                 }
                 
                 addMessage(`Error: ${error.message}`, 'system');
