@@ -267,17 +267,27 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Add scene state reminder as a system message
             session['history'].append({"role": "system", "content": scene_state_reminder})
             
-            # Generate TTS for opener text if enabled (use async to prevent timeouts)
-            opener_audio_file = None
+            # Return opener content immediately, then handle TTS and AI response
+            initial_response = {
+                'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
+                'type': 'system',
+                'opener_content': opener,
+                'ai_response': None,
+                'response_type': 'system',
+                'audio_file': None,
+                'opener_audio_file': None
+            }
+            
+            # Start TTS generation for opener text in background (if enabled)
             if tts.enabled and opener.strip():
                 try:
-                    print(f"🔍 Debug: Generating TTS for opener text, length={len(opener)}")
-                    # Always use async TTS for opener to prevent timeouts
+                    print(f"🔍 Debug: Starting TTS for opener text, length={len(opener)}")
                     save_audio = (tts.mode == "save")
                     print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
                     opener_audio_file = generate_tts_async(opener, save_audio=save_audio)
                     if opener_audio_file == "generating":
                         print(f"🔍 Debug: Async TTS started for opener text")
+                        initial_response['opener_audio_file'] = "generating"
                 except Exception as e:
                     print(f"🔍 Debug: TTS error for opener text: {e}")
                     import traceback
@@ -361,25 +371,20 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
                     print(f"🔍 Debug: Error type: {type(e)}")
                 
-                return jsonify({
-                    'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
-                    'type': 'system',
-                    'opener_content': opener,
-                    'ai_response': reply,
-                    'response_type': 'assistant',
-                    'audio_file': audio_file,
-                    'opener_audio_file': opener_audio_file
-                })
+                # Update initial response with AI response and audio
+                initial_response['ai_response'] = reply
+                initial_response['response_type'] = 'assistant'
+                initial_response['audio_file'] = audio_file
+                
+                return jsonify(initial_response)
                 
             except Exception as ai_error:
                 print(f"🔍 Debug: AI response generation failed: {ai_error}")
-                return jsonify({
-                    'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
-                    'type': 'system',
-                    'opener_content': opener,
-                    'ai_response': 'Click "Send" to continue the story...',
-                    'response_type': 'system'
-                })
+                # Update initial response with fallback AI response
+                initial_response['ai_response'] = 'Click "Send" to continue the story...'
+                initial_response['response_type'] = 'system'
+                
+                return jsonify(initial_response)
                 
         except FileNotFoundError:
             return jsonify({'error': f'File not found: {filename}'})
