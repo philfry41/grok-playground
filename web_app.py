@@ -182,12 +182,10 @@ def chat():
         session['allow_female'] = True
         session['allow_male'] = False
         session['max_tokens'] = 1200
-        # Initialize AI-powered story state manager
+        # Initialize AI-powered story state manager (not stored in session to avoid JSON serialization issues)
         if 'state_manager' not in session:
-            session['state_manager'] = StoryStateManager()
-        else:
-            # Reset state for new story
-            session['state_manager'].reset_state()
+            # Create a new state manager but don't store it in session
+            pass
     
     # Handle commands
     if command == 'new':
@@ -250,11 +248,12 @@ def chat():
             session['history'].append({"role": "user", "content": opener})
             print(f"🔍 Debug: Cleared old history and added opener content")
             
-            # Get AI-powered scene state reminder
-            state_manager = session.get('state_manager')
-            if state_manager:
+            # Get AI-powered scene state reminder (create locally to avoid session serialization issues)
+            try:
+                state_manager = StoryStateManager()
                 scene_state_reminder = state_manager.get_state_as_prompt()
-            else:
+            except Exception as e:
+                print(f"🔍 Debug: State manager error, using fallback: {e}")
                 scene_state_reminder = """
 CURRENT SCENE STATE (maintain this continuity):
 - No characters tracked yet
@@ -327,24 +326,22 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 else:
                     print(f"🔍 Debug: TTS not enabled or reply empty")
                 
-                # Update scene state using AI-powered extraction
+                # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
                 try:
-                    state_manager = session.get('state_manager')
-                    if state_manager:
-                        # Add the AI response to history for state extraction
-                        temp_history = session['history'] + [{"role": "assistant", "content": reply}]
-                        
-                        # Use AI to intelligently extract current state
-                        updated_state = state_manager.extract_state_from_messages(temp_history)
-                        
-                        print(f"🔍 Debug: AI-powered state extraction completed")
-                        print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
-                        for char_name, char_data in updated_state['characters'].items():
-                            print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
-                    else:
-                        print(f"🔍 Debug: No state manager found in session")
+                    state_manager = StoryStateManager()
+                    # Add the AI response to history for state extraction
+                    temp_history = session['history'] + [{"role": "assistant", "content": reply}]
+                    
+                    # Use AI to intelligently extract current state
+                    updated_state = state_manager.extract_state_from_messages(temp_history)
+                    
+                    print(f"🔍 Debug: AI-powered state extraction completed")
+                    print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
+                    for char_name, char_data in updated_state['characters'].items():
+                        print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
                 except Exception as e:
                     print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
+                    print(f"🔍 Debug: Error type: {type(e)}")
                 
                 return jsonify({
                     'message': f'📄 Loaded opener from {abs_path} (bytes={byte_len})',
@@ -488,22 +485,19 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: Cleaning up session history to prevent cookie overflow")
             session['history'] = session['history'][-3:]
         
-        # Update scene state using AI-powered extraction (with fallback)
+        # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
         try:
-            state_manager = session.get('state_manager')
-            if state_manager:
-                # Add the AI response to history for state extraction
-                temp_history = session['history'] + [{"role": "assistant", "content": reply}]
-                
-                # Use AI to intelligently extract current state
-                updated_state = state_manager.extract_state_from_messages(temp_history)
-                
-                print(f"🔍 Debug: AI-powered state extraction completed")
-                print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
-                for char_name, char_data in updated_state['characters'].items():
-                    print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
-            else:
-                print(f"🔍 Debug: No state manager found in session")
+            state_manager = StoryStateManager()
+            # Add the AI response to history for state extraction
+            temp_history = session['history'] + [{"role": "assistant", "content": reply}]
+            
+            # Use AI to intelligently extract current state
+            updated_state = state_manager.extract_state_from_messages(temp_history)
+            
+            print(f"🔍 Debug: AI-powered state extraction completed")
+            print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
+            for char_name, char_data in updated_state['characters'].items():
+                print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
         except Exception as e:
             print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
             print(f"🔍 Debug: Error type: {type(e)}")

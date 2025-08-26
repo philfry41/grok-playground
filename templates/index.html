@@ -666,6 +666,13 @@
                 debugLog('sendMessage catch error: ' + error.message);
                 debugLog('Error name: ' + error.name);
                 debugLog('Error stack: ' + error.stack);
+                
+                // Check if it's a server error that should be shown in debug panel
+                if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+                    debugLog('Server error detected - check Render logs for details');
+                    debugLog('This might be a session serialization issue or AI call timeout');
+                }
+                
                 addMessage(`Error: ${error.message}`, 'system');
             } finally {
                 hideLoading();
