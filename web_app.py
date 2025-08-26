@@ -77,8 +77,11 @@ def generate_tts_async(text, save_audio=True, request_id=None):
         print(f"🔍 Debug: TTS generation {tts_id} already in progress, skipping duplicate")
         return "generating"
     
-    # Track this TTS generation
+    # Track this TTS generation with timeout
     tts_generation_tracker[tts_id] = time.time()
+    
+    # Set a timeout for TTS generation (60 seconds)
+    TTS_TIMEOUT = 60
     
     def tts_worker():
         try:
@@ -111,10 +114,20 @@ def generate_tts_async(text, save_audio=True, request_id=None):
                 del tts_generation_tracker[tts_id]
                 print(f"🔍 Debug: TTS generation {tts_id} removed from tracking")
     
-    # Start TTS generation in background thread
+    # Start TTS generation in background thread with timeout
     thread = threading.Thread(target=tts_worker, daemon=True)
     thread.start()
     print(f"🔍 Debug: TTS generation {tts_id} started in background thread")
+    
+    # Set a timer to clean up if TTS takes too long
+    def timeout_cleanup():
+        time.sleep(TTS_TIMEOUT)
+        if tts_id in tts_generation_tracker:
+            print(f"🔍 Debug: TTS generation {tts_id} timed out after {TTS_TIMEOUT}s")
+            del tts_generation_tracker[tts_id]
+    
+    timeout_thread = threading.Thread(target=timeout_cleanup, daemon=True)
+    timeout_thread.start()
     
     return "generating"  # Return placeholder to indicate TTS is being generated
 
@@ -639,10 +652,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             try:
                 # Generate TTS for responses (increased limit for paid tier)
                 # Handle TTS based on response length
-                if len(reply) < 1000:  # Short responses - generate TTS immediately
+                if len(reply) < 2000:  # Increased threshold to reduce async TTS usage
                     # For auto-save mode, always save audio files
                     # For auto-play mode, don't save (just play)
                     save_audio = (tts.mode == "save")
+                    print(f"🔍 Debug: Short response ({len(reply)} chars) - using immediate TTS")
                     audio_file = tts.speak(reply, save_audio=save_audio)
                 else:  # Long responses - generate TTS asynchronously
                     print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
@@ -658,6 +672,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: TTS error: {e}")
         
+        # Clean up request tracking before sending response
+        if request_id:
+            untrack_request(request_id)
+            print(f"🔍 Debug: Request untracked: {request_id}")
+        
         return jsonify({
             'message': reply,
             'type': 'assistant',
@@ -671,12 +690,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         if "timeout" in error_msg.lower():
             error_msg = "Request timed out. This may be due to Render free tier limitations. Try again or consider upgrading to a paid plan."
         print(f"🔍 Debug: About to return main error response")
-        return jsonify({'error': f'Request failed: {error_msg}'})
-    finally:
-        # Clean up request tracking
+        
+        # Clean up request tracking on error
         if request_id:
             untrack_request(request_id)
-            print(f"🔍 Debug: Request untracked: {request_id}")
+            print(f"🔍 Debug: Request untracked on error: {request_id}")
+        
+        return jsonify({'error': f'Request failed: {error_msg}'})
 
 @app.route('/api/tts-toggle', methods=['POST'])
 def toggle_tts():
