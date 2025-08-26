@@ -252,6 +252,7 @@ class TTSHelper:
             # Get the best model for this voice
             model_id = self.get_voice_model(self.voice_id)
             print(f"🔍 Debug: Using model {model_id} for voice {self.voice_id}")
+            print(f"🔍 Debug: TTS speak() called with voice_id: {self.voice_id}")
             
             # Generate audio using the new API with error handling
             print(f"🔍 Debug: Calling ElevenLabs API for text length: {len(clean_text)}")

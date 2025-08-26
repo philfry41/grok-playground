@@ -362,6 +362,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             if tts.enabled and opener.strip():
                 try:
                     print(f"🔍 Debug: Starting TTS for opener text, length={len(opener)}")
+                    print(f"🔍 Debug: Using voice ID: {tts.voice_id}")
                     save_audio = (tts.mode == "save")
                     print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
                     opener_audio_file = generate_tts_async(opener, save_audio=save_audio, request_id=request_id)
@@ -401,10 +402,40 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 for i, msg in enumerate(session['history']):
                     print(f"🔍 Debug: Opener history {i}: {msg['role']} - {msg['content'][:100]}...")
                 
-                # For /loadopener, we only generate TTS for the opener text, not the AI response
-                # This prevents duplicate TTS generations and reduces complexity
+                # Handle TTS for AI response (same logic as main chat)
                 audio_file = None
-                print(f"🔍 Debug: /loadopener - skipping TTS for AI response to prevent duplicates")
+                print(f"🔍 Debug: TTS enabled: {tts.enabled}, mode: {tts.mode}")
+                print(f"🔍 Debug: Reply length: {len(reply)}")
+                
+                if tts.enabled and reply.strip():
+                    try:
+                        # Handle TTS based on response length
+                        if len(reply) < 1000:  # Short responses - generate TTS immediately
+                            # For auto-save mode, always save audio files
+                            # For auto-play mode, don't save (just play)
+                            save_audio = (tts.mode == "save")
+                            print(f"🔍 Debug: TTS save_audio parameter: {save_audio}")
+                            print(f"🔍 Debug: Using voice ID for AI response: {tts.voice_id}")
+                            audio_file = tts.speak(reply, save_audio=save_audio)
+                        else:  # Long responses - generate TTS asynchronously
+                            print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
+                            save_audio = (tts.mode == "save")
+                            print(f"🔍 Debug: Using voice ID for AI response: {tts.voice_id}")
+                            audio_file = generate_tts_async(reply, save_audio=save_audio, request_id=request_id)
+                            if audio_file:
+                                if audio_file == "generating":
+                                    print(f"🔍 Debug: Async TTS started for AI response")
+                                else:
+                                    print(f"🔍 Debug: TTS generated for AI response: {audio_file}")
+                            else:
+                                print(f"🔍 Debug: TTS played for AI response (not saved)")
+                        # TTS handled above based on length
+                    except Exception as e:
+                        print(f"🔍 Debug: TTS error for AI response: {e}")
+                        import traceback
+                        print(f"🔍 Debug: TTS error traceback: {traceback.format_exc()}")
+                else:
+                    print(f"🔍 Debug: TTS not enabled or reply empty for AI response")
                 
                 # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
                 try:
