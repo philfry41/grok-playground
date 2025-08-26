@@ -695,7 +695,7 @@ def get_debug_info():
         import sys
         
         debug_info = {
-            'server_time': datetime.datetime.now().isoformat(),
+            'server_time': datetime.now().isoformat(),
             'python_version': sys.version,
             'environment_vars': {
                 'XAI_API_KEY': 'Set' if os.getenv('XAI_API_KEY') else 'Not Set',
