@@ -267,6 +267,29 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Add scene state reminder as a system message
             session['history'].append({"role": "system", "content": scene_state_reminder})
             
+            # Generate TTS for opener text if enabled
+            opener_audio_file = None
+            if tts.enabled and opener.strip():
+                try:
+                    print(f"🔍 Debug: Generating TTS for opener text, length={len(opener)}")
+                    # Handle TTS based on opener length
+                    if len(opener) < 1000:  # Short opener - generate TTS immediately
+                        save_audio = (tts.mode == "save")
+                        print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
+                        opener_audio_file = tts.speak(opener, save_audio=save_audio)
+                    else:  # Long opener - generate TTS asynchronously
+                        print(f"🔍 Debug: Long opener ({len(opener)} chars) - using async TTS")
+                        save_audio = (tts.mode == "save")
+                        opener_audio_file = generate_tts_async(opener, save_audio=save_audio)
+                        if opener_audio_file == "generating":
+                            print(f"🔍 Debug: Async TTS started for opener text")
+                except Exception as e:
+                    print(f"🔍 Debug: TTS error for opener text: {e}")
+                    import traceback
+                    print(f"🔍 Debug: TTS error traceback for opener: {traceback.format_exc()}")
+            else:
+                print(f"🔍 Debug: TTS not enabled or opener empty for opener text")
+            
             # Generate AI response to continue the story
             try:
                 print(f"🔍 Debug: Generating AI response for opener...")
@@ -349,7 +372,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     'opener_content': opener,
                     'ai_response': reply,
                     'response_type': 'assistant',
-                    'audio_file': audio_file
+                    'audio_file': audio_file,
+                    'opener_audio_file': opener_audio_file
                 })
                 
             except Exception as ai_error:

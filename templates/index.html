@@ -823,15 +823,24 @@
                     if (data.ai_response) {
                         console.log('Adding AI response, length:', data.ai_response.length); // Debug logging
                         addMessage(data.ai_response, data.response_type, data.edge_triggered);
-                        if (data.audio_file) {
-                            if (data.audio_file === 'generating') {
-                                debugLog('Async TTS detected in loadopener - starting polling');
-                                addMessage(`🎵 Generating audio file... (checking every 2 seconds)`, 'system');
-                                startAudioPolling();
-                            } else {
-                                addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
-                            }
+                                            if (data.opener_audio_file) {
+                        if (data.opener_audio_file === 'generating') {
+                            debugLog('Async TTS detected for opener text - starting polling');
+                            addMessage(`🎵 Generating opener audio... (checking every 2 seconds)`, 'system');
+                            startAudioPolling();
+                        } else {
+                            addMessage(`💾 Opener audio saved: ${data.opener_audio_file}`, 'system');
                         }
+                    }
+                    if (data.audio_file) {
+                        if (data.audio_file === 'generating') {
+                            debugLog('Async TTS detected for AI response - starting polling');
+                            addMessage(`🎵 Generating response audio... (checking every 2 seconds)`, 'system');
+                            startAudioPolling();
+                        } else {
+                            addMessage(`💾 Response audio saved: ${data.audio_file}`, 'system');
+                        }
+                    }
                     } else {
                         console.log('No AI response found in data'); // Debug logging
                     }
