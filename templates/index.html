@@ -562,6 +562,12 @@
         function showLoading() {
             document.getElementById('loading').classList.add('show');
             document.getElementById('sendButton').disabled = true;
+            
+            // Show longer processing message for /cont commands
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput.value.trim().startsWith('/cont')) {
+                addMessage(`⏳ Processing /cont command - this may take up to 2 minutes for complex stories...`, 'system');
+            }
         }
 
         function hideLoading() {
@@ -679,8 +685,8 @@
                     debugLog('This might be a session serialization issue or AI call timeout');
                 } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
                     debugLog('502 Bad Gateway detected - likely worker timeout');
-                    debugLog('This usually means the AI call took too long (>30 seconds)');
-                    debugLog('Try using a smaller word count or waiting a moment');
+                    debugLog('This usually means the AI call took too long (>120 seconds)');
+                    debugLog('The server is configured for longer timeouts now - try again');
                 }
                 
                 addMessage(`Error: ${error.message}`, 'system');

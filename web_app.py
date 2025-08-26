@@ -368,9 +368,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             return jsonify({'error': f"Couldn't read {filename}: {e}"})
     
     elif command == 'cont':
-        # Handle /cont command with ultra-minimal complexity for Render stability
-        target = max(200, min(500, word_count))  # Further reduced max
-        max_tokens = min(300, target)  # Very conservative token limit
+        # Handle /cont command with full context for better story quality
+        target = max(250, min(1000, word_count))  # Restored original range
+        max_tokens = min(500, target)  # Restored original token limit
         
         # Create a simple continuation prompt
         user_input = f"Continue the story naturally. Write about {target} words."
@@ -435,13 +435,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 for i, msg in enumerate(session['history']):
                     print(f"🔍 Debug: Message {i}: {msg['role']} - {msg['content'][:100]}...")
                 
-                # Use minimal history for /cont commands to prevent timeouts
-                if command == 'cont':
-                    recent_history = session['history'][-2:]  # Use only last 2 messages for /cont
-                    print(f"🔍 Debug: Using last {len(recent_history)} messages for /cont (minimal context)")
-                else:
-                    recent_history = session['history'][-3:]  # Use last 3 messages max for other commands
-                    print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
+                # Use full history for better story continuity
+                recent_history = session['history'][-3:]  # Use last 3 messages for all commands
+                print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
             
             # Add current user input
@@ -451,8 +447,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             for i, msg in enumerate(context_messages):
                 print(f"🔍 Debug: Context {i}: {msg['role']} - {msg['content'][:100]}...")
             
-            # Use fewer tokens for /cont commands to prevent timeouts
-            max_tokens_for_call = 300 if command == 'cont' else 500
+            # Use full tokens for better story quality
+            max_tokens_for_call = 500 if command == 'cont' else 500
             
             print(f"🔍 Debug: About to call AI with {len(context_messages)} messages")
             print(f"🔍 Debug: Model: {model_env}")
@@ -460,7 +456,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # Add timeout handling for /cont commands
             if command == 'cont':
-                print(f"🔍 Debug: /cont command detected - using conservative timeout")
+                print(f"🔍 Debug: /cont command detected - allowing longer processing time")
                 # Force cleanup before AI call
                 cleanup_resources()
             
