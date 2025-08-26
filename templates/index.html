@@ -909,12 +909,21 @@
                 // Clear existing options
                 voiceSelect.innerHTML = '';
                 
-                // Add voices to dropdown
+                // Add voices to dropdown with model information
                 data.available_voices.forEach(voice => {
                     const option = document.createElement('option');
-                    option.value = voice[0];
-                    option.textContent = voice[1];
-                    if (voice[0] === data.voice_id) {
+                    option.value = voice.voice_id;
+                    
+                    // Create display text with model info
+                    let displayText = voice.name;
+                    if (voice.has_flash_v2_5) {
+                        displayText += ' ⚡ FLASH V2.5';
+                    } else if (voice.model && voice.model !== 'eleven_monolingual_v1') {
+                        displayText += ` 🚀 ${voice.model.replace('eleven_', '').toUpperCase()}`;
+                    }
+                    
+                    option.textContent = displayText;
+                    if (voice.voice_id === data.voice_id) {
                         option.selected = true;
                     }
                     voiceSelect.appendChild(option);
@@ -983,17 +992,25 @@
 
         async function loadVoices() {
             try {
-                const response = await fetch('/api/voices');
+                const response = await fetch('/api/tts-status');
                 const data = await response.json();
                 
                 if (data.error) {
                     addMessage(`TTS Error: ${data.error}`, 'system');
-                } else {
+                } else if (data.available_voices && data.available_voices.length > 0) {
                     let voiceList = '🎵 Available Voices:\n';
-                    data.voices.forEach(voice => {
-                        voiceList += `${voice[0]}: ${voice[1]}\n`;
+                    data.available_voices.forEach(voice => {
+                        let modelInfo = '';
+                        if (voice.has_flash_v2_5) {
+                            modelInfo = ' ⚡ FLASH V2.5';
+                        } else if (voice.model && voice.model !== 'eleven_monolingual_v1') {
+                            modelInfo = ` 🚀 ${voice.model.replace('eleven_', '').toUpperCase()}`;
+                        }
+                        voiceList += `${voice.name}${modelInfo}\n`;
                     });
                     addMessage(voiceList, 'system');
+                } else {
+                    addMessage('No voices available', 'system');
                 }
             } catch (error) {
                 addMessage(`Error loading voices: ${error.message}`, 'system');

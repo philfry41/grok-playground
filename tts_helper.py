@@ -1,6 +1,7 @@
 import os
 import tempfile
 import subprocess
+import requests
 from elevenlabs import ElevenLabs
 
 class TTSHelper:
@@ -12,6 +13,9 @@ class TTSHelper:
         self.voice_id = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")  # Adam voice
         self.volume = float(os.getenv("ELEVENLABS_VOLUME", "0.5"))
         self.max_tts_length = int(os.getenv("ELEVENLABS_MAX_LENGTH", "5000"))  # 0 = no limit
+        
+        # Voice model cache to avoid repeated API calls
+        self._voice_models_cache = {}
         
         # Initialize client if API key is available
         if self.api_key:
@@ -35,21 +39,100 @@ class TTSHelper:
         return self.mode == "save"
     
     def get_available_voices(self):
-        """Get list of available voices"""
+        """Get list of available voices with model information"""
         if not self.enabled:
             return []
         
         try:
-            available_voices = self.client.voices.get_all()
-            return [(v.voice_id, v.name) for v in available_voices.voices]
+            # Use direct API call to get detailed voice information
+            headers = {"xi-api-key": self.api_key}
+            response = requests.get("https://api.elevenlabs.io/v1/voices", headers=headers)
+            response.raise_for_status()
+            
+            voices_data = response.json()
+            voices = []
+            
+            for voice in voices_data.get("voices", []):
+                voice_id = voice.get("voice_id")
+                name = voice.get("name", "Unknown")
+                
+                # Get best available model for this voice
+                best_model = self._get_best_model_for_voice(voice)
+                
+                voices.append({
+                    "voice_id": voice_id,
+                    "name": name,
+                    "model": best_model,
+                    "has_flash_v2_5": best_model == "eleven_flash_v2_5"
+                })
+            
+            return voices
         except Exception as e:
             print(f"⚠️ Could not fetch voices: {e}")
             return []
+    
+    def _get_best_model_for_voice(self, voice_data):
+        """Get the best available model for a voice, preferring FLASH V2.5"""
+        if not voice_data or "fine_tuning" not in voice_data:
+            return "eleven_monolingual_v1"  # Default fallback
+        
+        fine_tuning = voice_data.get("fine_tuning", {})
+        state = fine_tuning.get("state", {})
+        
+        # Priority order: FLASH V2.5 > FLASH V2 > TURBO V2.5 > TURBO V2 > Multilingual V2 > Default
+        model_priority = [
+            "eleven_flash_v2_5",
+            "eleven_flash_v2", 
+            "eleven_turbo_v2_5",
+            "eleven_turbo_v2",
+            "eleven_multilingual_v2",
+            "eleven_v2_flash",
+            "eleven_v2_5_flash"
+        ]
+        
+        for model in model_priority:
+            if state.get(model) == "fine_tuned":
+                return model
+        
+        # Fallback to default model
+        return "eleven_monolingual_v1"
+    
+    def get_voice_model(self, voice_id=None):
+        """Get the best model for a specific voice"""
+        if voice_id is None:
+            voice_id = self.voice_id
+        
+        # Check cache first
+        if voice_id in self._voice_models_cache:
+            return self._voice_models_cache[voice_id]
+        
+        try:
+            # Fetch voice details
+            headers = {"xi-api-key": self.api_key}
+            response = requests.get(f"https://api.elevenlabs.io/v1/voices/{voice_id}", headers=headers)
+            response.raise_for_status()
+            
+            voice_data = response.json()
+            best_model = self._get_best_model_for_voice(voice_data)
+            
+            # Cache the result
+            self._voice_models_cache[voice_id] = best_model
+            
+            print(f"🔍 Debug: Voice {voice_id} using model: {best_model}")
+            return best_model
+            
+        except Exception as e:
+            print(f"⚠️ Could not get model for voice {voice_id}: {e}")
+            return "eleven_monolingual_v1"  # Default fallback
     
     def set_voice(self, voice_id):
         """Change the voice ID"""
         self.voice_id = voice_id
         print(f"🎤 Voice changed to: {voice_id}")
+        
+        # Get and log the model for this voice
+        model = self.get_voice_model(voice_id)
+        print(f"🎤 Voice {voice_id} will use model: {model}")
     
     def cycle_mode(self):
         """Cycle through TTS modes: off -> tts -> save -> off"""
@@ -131,15 +214,19 @@ class TTSHelper:
             # Clean text for TTS (remove markdown, etc.)
             clean_text = self._clean_text_for_tts(text)
             
+            # Get the best model for this voice
+            model_id = self.get_voice_model(self.voice_id)
+            print(f"🔍 Debug: Using model {model_id} for voice {self.voice_id}")
+            
             # Generate audio using the new API with error handling
             print(f"🔍 Debug: Calling ElevenLabs API for text length: {len(clean_text)}")
             try:
                 audio = self.client.text_to_speech.convert(
                     text=clean_text,
                     voice_id=self.voice_id,
-                    model_id="eleven_monolingual_v1"
+                    model_id=model_id
                 )
-                print(f"🔍 Debug: ElevenLabs API call completed successfully")
+                print(f"🔍 Debug: ElevenLabs API call completed successfully with model {model_id}")
             except Exception as api_error:
                 print(f"🔍 Debug: ElevenLabs API error: {api_error}")
                 import traceback
