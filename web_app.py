@@ -754,6 +754,48 @@ def get_debug_info():
             'traceback': traceback.format_exc()
         })
 
+@app.route('/api/server-logs', methods=['GET'])
+def get_server_logs():
+    """Get recent server logs and error information"""
+    try:
+        import io
+        import sys
+        
+        # Capture recent print statements (this is a simple approach)
+        logs = []
+        
+        # Get recent error information
+        logs.append(f"Server Time: {datetime.now().isoformat()}")
+        logs.append(f"Python Version: {sys.version}")
+        logs.append(f"Current Directory: {os.getcwd()}")
+        logs.append(f"TTS Enabled: {tts.enabled}")
+        logs.append(f"TTS Mode: {tts.mode}")
+        logs.append(f"API Key Set: {'Yes' if os.getenv('XAI_API_KEY') else 'No'}")
+        logs.append(f"Model: {os.getenv('XAI_MODEL', 'grok-3')}")
+        logs.append("")
+        
+        # Check for common issues
+        if not os.path.exists('audio_files'):
+            logs.append("⚠️ Audio directory missing")
+        if not os.path.exists('tts_mode.txt'):
+            logs.append("⚠️ TTS mode file missing")
+        if not tts.api_key:
+            logs.append("⚠️ TTS API key not set")
+        
+        logs.append("")
+        logs.append("Recent server activity would appear here...")
+        logs.append("(Server logs are not captured in this simple implementation)")
+        
+        return jsonify({
+            'logs': logs,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to get server logs: {str(e)}',
+            'logs': [f"Error getting logs: {e}"]
+        })
+
 @app.route('/api/test-api', methods=['GET'])
 def test_api():
     """Test endpoint to verify API key and basic connectivity"""

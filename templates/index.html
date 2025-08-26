@@ -442,6 +442,7 @@
                     <button class="btn btn-warning" onclick="testAPI()">🧪 Test API</button>
                     <button class="btn btn-info" onclick="toggleDebugPanel()">🔍 Debug Log</button>
                     <button class="btn btn-secondary" onclick="getDebugInfo()">🔧 Server Info</button>
+                    <button class="btn btn-secondary" onclick="getServerLogs()">📋 Server Logs</button>
                     <button class="btn btn-primary" onclick="forceRefresh()">🔄 Refresh</button>
                 </div>
             </div>
@@ -690,10 +691,15 @@
                 if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
                     debugLog('Server error detected - check Render logs for details');
                     debugLog('This might be a session serialization issue or AI call timeout');
+                    debugLog('Try clicking "📋 Server Logs" for more details');
                 } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
                     debugLog('502 Bad Gateway detected - likely worker timeout');
                     debugLog('This usually means the AI call took too long (>120 seconds)');
                     debugLog('The server is configured for longer timeouts now - try again');
+                    debugLog('Try clicking "📋 Server Logs" for more details');
+                } else {
+                    debugLog('Other error detected: ' + error.message);
+                    debugLog('Try clicking "📋 Server Logs" for server status');
                 }
                 
                 addMessage(`Error: ${error.message}`, 'system');
@@ -1088,6 +1094,36 @@
                 addMessage(`Debug Info Error: ${error.message}`, 'system');
             }
                 }
+        
+        async function getServerLogs() {
+            try {
+                debugLog('Fetching server logs...');
+                const response = await fetch('/api/server-logs');
+                const data = await response.json();
+                
+                if (data.error) {
+                    debugLog('Server logs error: ' + data.error);
+                    addMessage(`Server Logs Error: ${data.error}`, 'system');
+                    return;
+                }
+                
+                debugLog('Server logs received:');
+                data.logs.forEach(log => {
+                    debugLog('SERVER: ' + log);
+                });
+                
+                // Also add to chat for visibility
+                let logMessage = '📋 Server Logs:\n';
+                data.logs.forEach(log => {
+                    logMessage += log + '\n';
+                });
+                addMessage(logMessage, 'system');
+                
+            } catch (error) {
+                debugLog('Server logs fetch error: ' + error.message);
+                addMessage(`Server Logs Error: ${error.message}`, 'system');
+            }
+        }
         
         function forceRefresh() {
             debugLog('Manual refresh requested');
