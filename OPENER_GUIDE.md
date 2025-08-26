@@ -3,30 +3,30 @@
 ## 📁 Available Openers
 
 ### **2-Character Scenarios:**
-- `opener_2char.txt` - Generic 2-character office scenario
-- `opener_sarah_mike.txt` - Specific names: Sarah & Mike
+- `opener_2char.txt` - Emma & Alex in upscale restaurant (public play)
+- `opener_sarah_mike.txt` - Sarah & Mike in office conference room (rough play)
 
 ### **3-Character Scenarios:**
-- `opener_3char.txt` - Emma, Alex & Jordan (threesome)
-- `opener_office_3.txt` - Jennifer, Mr. Thompson & Lisa (office)
+- `opener_3char.txt` - Emma, Alex & Jordan (threesome with double penetration)
+- `opener_office_3.txt` - Jennifer, Mr. Thompson & Lisa (office threesome with boss)
 
 ### **4-Character Scenarios:**
-- `opener_4char.txt` - Rachel, Marcus, Sophia & David (foursome)
-- `opener_party_4.txt` - Taylor, Chris, Ashley & Ryan (college party)
-- `opener_swingers.txt` - Michelle, Robert, Jessica & Michael (swingers)
+- `opener_4char.txt` - Rachel, Marcus, Sophia & David (foursome with double penetration)
+- `opener_party_4.txt` - Taylor, Chris, Ashley & Ryan (college party with oral focus)
+- `opener_swingers.txt` - Michelle, Robert, Jessica & Michael (swingers party with DP)
 
 ### **5-Character Scenarios:**
-- `opener_5char.txt` - Isabella, James, Elena, Carlos & Maya (club VIP)
-- `opener_bachelorette.txt` - Amanda, Brooke, Nicole, Vanessa, Tiffany & Destiny (bachelorette)
+- `opener_5char.txt` - Isabella, James, Elena, Carlos & Maya (VIP club with multiple partners)
+- `opener_bachelorette.txt` - Amanda, Brooke, Nicole, Vanessa, Tiffany & Destiny (bachelorette party with all-female action)
 
 ### **6-Character Scenarios:**
-- `opener_fantasy.txt` - Aria, Thorne, Gimli, Pip, Grok & Zara (fantasy RPG)
+- `opener_fantasy.txt` - Aria, Thorne, Gimli, Pip, Grok & Zara (fantasy RPG with magical enhancement)
 
 ## 🚀 How to Use
 
 ### **In the Web Interface:**
-1. Click "Load Opener" button
-2. Type the filename (e.g., `opener_3char.txt`)
+1. Click "📄 Select Opener" button
+2. Choose from the list of available scenarios
 3. Click "Send" to continue the story
 
 ### **Examples:**
@@ -67,17 +67,25 @@ Create your own by:
 ## 🎭 Character Examples
 
 ### **Female Names Used:**
-- Sarah, Emma, Rachel, Sophia, Elena, Maya
+- Emma, Sarah, Rachel, Sophia, Elena, Maya
 - Jennifer, Lisa, Ashley, Taylor, Jessica
 - Michelle, Brooke, Nicole, Vanessa, Tiffany
 - Destiny, Aria, Pip, Zara
 
 ### **Male Names Used:**
-- Mike, Alex, Marcus, David, James, Carlos
+- Alex, Mike, Marcus, David, James, Carlos
 - Mr. Thompson, Chris, Ryan, Michael, Robert
 - Thorne, Gimli, Grok
 
 ### **Gender-Neutral Names:**
 - Jordan, Taylor, Pip
+
+## 🌶️ Content Warnings
+
+All openers contain explicit sexual content including:
+- Explicit anatomical language
+- Sexual acts and positions
+- Multiple partner scenarios
+- Fantasy and roleplay elements
 
 The system will automatically detect and track any character names you introduce in your story!
