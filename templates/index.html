@@ -380,7 +380,7 @@
                 <h1>🎭 Grok Playground</h1>
                 <p>NSFW Storytelling with Edging Controls</p>
                 <div style="background: #f8f9fa; padding: 5px 10px; border-radius: 5px; font-size: 12px; color: #666; margin-top: 10px;">
-                    Version: <span id="versionDisplay">f5cfb50</span> | 
+                    Version: <span id="versionDisplay">6263663</span> | 
                     <span id="versionStatus">Checking...</span>
                 </div>
             </div>
@@ -454,7 +454,7 @@
             <div class="panel" id="debugPanel" style="display: none;">
                 <h3>🔍 Debug Log</h3>
                 <div style="background: #e9ecef; padding: 5px; border-radius: 3px; font-size: 11px; margin-bottom: 10px;">
-                    Version: f5cfb50 | User Agent: <span id="userAgentDisplay"></span>
+                    Version: 6263663 | User Agent: <span id="userAgentDisplay"></span>
                 </div>
                 <div id="debugLog" style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
                 <button class="btn btn-secondary" onclick="clearDebugLog()">Clear Log</button>
@@ -1082,7 +1082,7 @@
         
         function forceRefresh() {
             debugLog('Manual refresh requested');
-            const currentVersion = 'f5cfb50';
+            const currentVersion = '6263663';
             const newUrl = window.location.pathname + '?v=' + currentVersion + '&t=' + Date.now();
             window.location.href = newUrl;
         }
