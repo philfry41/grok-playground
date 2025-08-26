@@ -16,6 +16,7 @@ audio/*.mp3
 
 # TTS mode persistence file
 tts_mode.txt
+tts_voice_id.txt
 
 # Logs
 *.log

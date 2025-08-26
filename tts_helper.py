@@ -10,7 +10,10 @@ class TTSHelper:
         # TTS modes: "off", "tts" (auto-play), "save" (auto-save)
         # Load mode from file for persistence across worker restarts
         self.mode = self._load_tts_mode()
-        self.voice_id = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")  # Adam voice
+        
+        # Load voice ID from file for persistence across worker restarts
+        self.voice_id = self._load_voice_id()
+        
         self.volume = float(os.getenv("ELEVENLABS_VOLUME", "0.5"))
         self.max_tts_length = int(os.getenv("ELEVENLABS_MAX_LENGTH", "5000"))  # 0 = no limit
         
@@ -125,10 +128,42 @@ class TTSHelper:
             print(f"⚠️ Could not get model for voice {voice_id}: {e}")
             return "eleven_monolingual_v1"  # Default fallback
     
+    def _load_voice_id(self):
+        """Load voice ID from file for persistence"""
+        try:
+            if os.path.exists("tts_voice_id.txt"):
+                with open("tts_voice_id.txt", "r") as f:
+                    voice_id = f.read().strip()
+                    if voice_id:
+                        print(f"🔍 Debug: Loaded voice ID from file: {voice_id}")
+                        return voice_id
+                    else:
+                        print(f"🔍 Debug: Voice ID file is empty, using default")
+            else:
+                print(f"🔍 Debug: No voice ID file found, using default")
+        except Exception as e:
+            print(f"🔍 Debug: Error loading voice ID: {e}")
+        
+        # Default to environment variable or fallback
+        return os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")  # Adam voice
+    
+    def _save_voice_id(self, voice_id):
+        """Save voice ID to file for persistence"""
+        try:
+            print(f"🔍 Debug: Saving voice ID to file: {voice_id}")
+            with open("tts_voice_id.txt", "w") as f:
+                f.write(voice_id)
+            print(f"🔍 Debug: Voice ID saved to file successfully")
+        except Exception as e:
+            print(f"🔍 Debug: Error saving voice ID: {e}")
+    
     def set_voice(self, voice_id):
         """Change the voice ID"""
         self.voice_id = voice_id
         print(f"🎤 Voice changed to: {voice_id}")
+        
+        # Save voice ID to file for persistence
+        self._save_voice_id(voice_id)
         
         # Get and log the model for this voice
         model = self.get_voice_model(voice_id)
