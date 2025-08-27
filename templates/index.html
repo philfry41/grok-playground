@@ -1517,14 +1517,17 @@
                                 console.log('🔍 TTS mode: ' + ttsData.mode + ' (' + ttsData.mode_display + ')');
                                 
                                 if (ttsData.mode === 'tts') {  // Auto-play mode
-                                    console.log('🔍 Auto-play mode detected - playing newest audio file');
-                                    addMessage(`🎵 Playing audio: ${newestFile.filename}`, 'system');
+                                    console.log('🔍 Auto-play mode detected - queuing audio file: ' + newestFile.filename);
+                                    addMessage(`🎵 Queuing audio: ${newestFile.filename}`, 'system');
                                     
-                                    // Auto-play the newest file
-                                    setTimeout(() => {
-                                        console.log('🔍 Auto-playing audio file: ' + newestFile.url);
-                                        playAudio(newestFile.url, null);
-                                    }, 500); // Small delay to ensure UI is ready
+                                    // Add to audio queue instead of playing immediately
+                                    audioQueue.push(newestFile.url);
+                                    console.log('🔍 Audio queue length: ' + audioQueue.length);
+                                    
+                                    // Start playing if nothing is currently playing
+                                    if (!isPlaying) {
+                                        playNextInQueue();
+                                    }
                                 } else {
                                     console.log('🔍 Auto-save mode detected - not auto-playing');
                                     addMessage(`💾 Audio saved: ${newestFile.filename}`, 'system');
@@ -1672,7 +1675,21 @@
         let audioElements = new Map(); // Store audio elements by URL
         let audioPollingInterval = null; // For checking async TTS completion
         let audioPollingTimeout = null; // For stopping polling after timeout
+        let audioQueue = []; // Queue for sequential audio playback
+        let isPlaying = false; // Track if audio is currently playing
 
+        function playNextInQueue() {
+            if (audioQueue.length === 0) {
+                console.log('🔍 Audio queue empty, stopping playback');
+                isPlaying = false;
+                return;
+            }
+            
+            const nextUrl = audioQueue.shift();
+            console.log('🔍 Playing next in queue: ' + nextUrl);
+            playAudio(nextUrl, null);
+        }
+        
         function playAudio(url, button) {
             console.log('playAudio called:', url, button);
             console.log('Current audio:', currentAudio);
@@ -1712,6 +1729,14 @@
                     }
                     currentAudio = null;
                     currentPlayButton = null;
+                    
+                    // If this was auto-played (no button), play next in queue
+                    if (!button) {
+                        console.log('🔍 Auto-play audio ended, checking queue');
+                        setTimeout(() => {
+                            playNextInQueue();
+                        }, 1000); // Small delay between audio files
+                    }
                 });
                 
                 audio.addEventListener('pause', () => {
@@ -1759,6 +1784,7 @@
             console.log('Starting new audio');
             currentAudio = audio;
             currentPlayButton = button;
+            isPlaying = true;
             
             audio.play().catch(error => {
                 console.error('Audio play error:', error);
@@ -1768,6 +1794,14 @@
                 }
                 currentAudio = null;
                 currentPlayButton = null;
+                isPlaying = false;
+                
+                // If this was auto-played, try next in queue
+                if (!button) {
+                    setTimeout(() => {
+                        playNextInQueue();
+                    }, 1000);
+                }
             });
         }
 
