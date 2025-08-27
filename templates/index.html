@@ -1464,6 +1464,7 @@
             
             audioPollingInterval = setInterval(async () => {
                 try {
+                    debugLog('Polling for audio files...');
                     const response = await fetch('/api/audio-files');
                     const data = await response.json();
                     
@@ -1472,6 +1473,8 @@
                         stopAudioPolling();
                         return;
                     }
+                    
+                    debugLog('Audio files response: ' + data.files.length + ' files');
                     
                     // Check if we have new audio files
                     const audioPanel = document.getElementById('audioPanel');
@@ -1483,6 +1486,7 @@
                         // Check if we have new files (more files than before)
                         if (data.files.length > lastFileCount) {
                             debugLog('New audio files detected!');
+                            debugLog('Previous count: ' + lastFileCount + ', Current count: ' + data.files.length);
                             
                             // Get the newest file (last in the list)
                             const newestFile = data.files[data.files.length - 1];
@@ -1490,8 +1494,10 @@
                             
                             // Check TTS mode to see if we should auto-play
                             try {
+                                debugLog('Checking TTS mode for auto-play...');
                                 const ttsResponse = await fetch('/api/tts-status');
                                 const ttsData = await ttsResponse.json();
+                                debugLog('TTS mode: ' + ttsData.mode + ' (' + ttsData.mode_display + ')');
                                 
                                 if (ttsData.mode === 'tts') {  // Auto-play mode
                                     debugLog('Auto-play mode detected - playing newest audio file');
@@ -1499,6 +1505,7 @@
                                     
                                     // Auto-play the newest file
                                     setTimeout(() => {
+                                        debugLog('Auto-playing audio file: ' + newestFile.url);
                                         playAudio(newestFile.url, null);
                                     }, 500); // Small delay to ensure UI is ready
                                 } else {
@@ -1544,8 +1551,11 @@
                         // Update the last file count
                         lastFileCount = data.files.length;
                         
-                        // Stop polling once we have files and have processed them
-                        stopAudioPolling();
+                        // Don't stop polling immediately - wait a bit to ensure files are fully written
+                        // and to catch any additional files that might be generated
+                        setTimeout(() => {
+                            stopAudioPolling();
+                        }, 3000); // Wait 3 seconds before stopping
                     }
                 } catch (error) {
                     debugLog('Audio polling error: ' + error.message);
