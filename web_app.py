@@ -388,7 +388,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 try:
                     print(f"🔍 Debug: Starting TTS for opener text, length={len(opener)}")
                     print(f"🔍 Debug: Using voice ID: {tts.voice_id}")
-                    save_audio = (tts.mode == "save")
+                    # Always save opener audio file when TTS is enabled (needed for both auto-play and auto-save)
+                    save_audio = True
                     print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
                     opener_audio_file = generate_tts_async(opener, save_audio=save_audio, request_id=request_id)
                     if opener_audio_file == "generating":
@@ -436,15 +437,15 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     try:
                         # Handle TTS based on response length
                         if len(reply) < 1000:  # Short responses - generate TTS immediately
-                            # For auto-save mode, always save audio files
-                            # For auto-play mode, don't save (just play)
-                            save_audio = (tts.mode == "save")
+                            # Always save audio files (needed for both auto-play and auto-save)
+                            save_audio = True
                             print(f"🔍 Debug: TTS save_audio parameter: {save_audio}")
                             print(f"🔍 Debug: Using voice ID for AI response: {tts.voice_id}")
                             audio_file = tts.speak(reply, save_audio=save_audio)
                         else:  # Long responses - generate TTS asynchronously
                             print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
-                            save_audio = (tts.mode == "save")
+                            # Always save audio files (needed for both auto-play and auto-save)
+                            save_audio = True
                             print(f"🔍 Debug: Using voice ID for AI response: {tts.voice_id}")
                             audio_file = generate_tts_async(reply, save_audio=save_audio, request_id=request_id)
                             if audio_file:
