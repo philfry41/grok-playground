@@ -1757,6 +1757,13 @@
                 console.log('No button (auto-play mode)');
             }
             
+            // Check if this is mobile and auto-play attempt
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (isMobile && !button) {
+                console.log('🔍 Mobile device detected - skipping auto-play attempt');
+                return; // Don't even try to auto-play on mobile
+            }
+            
             // Get or create audio element for this URL
             let audio = audioElements.get(url);
             if (!audio) {
