@@ -1090,6 +1090,10 @@
                     throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
                 }
                 console.log('LoadOpener response:', data); // Debug logging
+                debugLog('LoadOpener response received');
+                debugLog('opener_audio_file: ' + (data.opener_audio_file || 'undefined'));
+                debugLog('audio_file: ' + (data.audio_file || 'undefined'));
+                debugLog('ai_response: ' + (data.ai_response ? 'present' : 'missing'));
                 
                 if (data.error) {
                     addOpenerMessage(`Error: ${data.error}`, 'system');
@@ -1102,22 +1106,30 @@
                         console.log('Adding AI response, length:', data.ai_response.length); // Debug logging
                         addOpenerMessage(data.ai_response, data.response_type, data.edge_triggered);
                         if (data.opener_audio_file) {
+                            debugLog('Checking opener_audio_file: ' + data.opener_audio_file);
                             if (data.opener_audio_file === 'generating') {
                                 debugLog('Async TTS detected for opener text - starting polling');
                                 addOpenerMessage(`🎵 Generating opener audio... (checking every 2 seconds)`, 'system');
                                 startAudioPolling();
                             } else {
+                                debugLog('Opener audio file already generated: ' + data.opener_audio_file);
                                 addOpenerMessage(`💾 Opener audio saved: ${data.opener_audio_file}`, 'system');
                             }
+                        } else {
+                            debugLog('No opener_audio_file in response');
                         }
                         if (data.audio_file) {
+                            debugLog('Checking audio_file: ' + data.audio_file);
                             if (data.audio_file === 'generating') {
                                 debugLog('Async TTS detected for AI response - starting polling');
                                 addOpenerMessage(`🎵 Generating response audio... (checking every 2 seconds)`, 'system');
                                 startAudioPolling();
                             } else {
+                                debugLog('AI response audio file already generated: ' + data.audio_file);
                                 addOpenerMessage(`💾 Response audio saved: ${data.audio_file}`, 'system');
                             }
+                        } else {
+                            debugLog('No audio_file in response');
                         }
                     } else {
                         console.log('No AI response found in data'); // Debug logging
