@@ -1551,11 +1551,36 @@
                         // Update the last file count
                         lastFileCount = data.files.length;
                         
-                        // Don't stop polling immediately - wait a bit to ensure files are fully written
-                        // and to catch any additional files that might be generated
+                        // Continue polling for a while to catch multiple async TTS generations
+                        // (opener text + AI response might generate separate files)
+                        // Only stop if we haven't found new files in the last few polls
+                        if (!window.audioPollingContinueCount) {
+                            window.audioPollingContinueCount = 0;
+                        }
+                        window.audioPollingContinueCount = 0; // Reset counter when we find files
+                        
+                        // Stop polling after 10 seconds of no new files
                         setTimeout(() => {
+                            window.audioPollingContinueCount++;
+                            if (window.audioPollingContinueCount >= 5) { // 5 polls without new files
+                                debugLog('Stopping audio polling - no new files for 10 seconds');
+                                stopAudioPolling();
+                                window.audioPollingContinueCount = 0;
+                            }
+                        }, 2000); // Check every 2 seconds
+                    } else {
+                        // No files found - increment counter for stopping
+                        if (!window.audioPollingContinueCount) {
+                            window.audioPollingContinueCount = 0;
+                        }
+                        window.audioPollingContinueCount++;
+                        
+                        // Stop polling after 10 seconds of no files
+                        if (window.audioPollingContinueCount >= 5) {
+                            debugLog('Stopping audio polling - no files found for 10 seconds');
                             stopAudioPolling();
-                        }, 3000); // Wait 3 seconds before stopping
+                            window.audioPollingContinueCount = 0;
+                        }
                     }
                 } catch (error) {
                     debugLog('Audio polling error: ' + error.message);
