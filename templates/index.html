@@ -1768,7 +1768,12 @@
                 audio.addEventListener('error', (e) => {
                     console.error('Audio loading error:', e);
                     console.error('Audio error details:', audio.error);
-                    addMessage(`Error loading audio: ${audio.error ? audio.error.message : 'Unknown error'}`, 'system');
+                    
+                    // Only show error messages on desktop (mobile uses download approach)
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (!isMobile) {
+                        addMessage(`Error loading audio: ${audio.error ? audio.error.message : 'Unknown error'}`, 'system');
+                    }
                 });
                 
                 audio.addEventListener('loadstart', () => {
@@ -1823,7 +1828,12 @@
                 console.log('Resuming paused audio');
                 audio.play().catch(error => {
                     console.error('Audio resume error:', error);
-                    addMessage(`Error resuming audio: ${error.message}`, 'system');
+                    
+                    // Only show error messages on desktop (mobile uses download approach)
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (!isMobile) {
+                        addMessage(`Error resuming audio: ${error.message}`, 'system');
+                    }
                 });
                 return;
             }
