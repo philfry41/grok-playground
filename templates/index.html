@@ -703,6 +703,25 @@
                 currentInteraction.innerHTML = '';
             }
         }
+
+        // Special function for opener messages to prevent premature history movement
+        function addOpenerMessage(content, type, edgeTriggered = false) {
+            try {
+                const currentInteraction = document.getElementById('currentInteraction');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                if (edgeTriggered) {
+                    messageDiv.classList.add('edge-triggered');
+                }
+                messageDiv.textContent = content;
+                currentInteraction.appendChild(messageDiv);
+                currentInteraction.scrollTop = currentInteraction.scrollHeight;
+                
+                // Don't move to history for opener messages - let them stay visible
+            } catch (error) {
+                debugLog('addOpenerMessage error: ' + error.message);
+            }
+        }
         
         // Initial debug log
         debugLog('Page loaded, user agent: ' + navigator.userAgent);
@@ -789,9 +808,18 @@
                 currentInteraction.appendChild(messageDiv);
                 currentInteraction.scrollTop = currentInteraction.scrollHeight;
                 
-                // If this is a user message, move previous interaction to history
+                // Only move to history when we have a complete interaction (user + assistant)
+                // and a new user message is being added
                 if (type === 'user') {
-                    moveCurrentToHistory();
+                    const messages = currentInteraction.querySelectorAll('.message');
+                    const userMessages = currentInteraction.querySelectorAll('.message.user');
+                    const assistantMessages = currentInteraction.querySelectorAll('.message.assistant');
+                    
+                    // Only move to history if we have both user and assistant messages
+                    // and this isn't the first user message
+                    if (userMessages.length > 1 && assistantMessages.length > 0) {
+                        moveCurrentToHistory();
+                    }
                 }
             } catch (error) {
                 debugLog('addMessage error: ' + error.message);
@@ -1043,40 +1071,40 @@
                 console.log('LoadOpener response:', data); // Debug logging
                 
                 if (data.error) {
-                    addMessage(`Error: ${data.error}`, 'system');
+                    addOpenerMessage(`Error: ${data.error}`, 'system');
                 } else {
-                    addMessage(data.message, data.type);
+                    addOpenerMessage(data.message, data.type);
                     if (data.opener_content) {
-                        addMessage(`📄 Opener content: ${data.opener_content}`, 'system');
+                        addOpenerMessage(`📄 Opener content: ${data.opener_content}`, 'system');
                     }
                     if (data.ai_response) {
                         console.log('Adding AI response, length:', data.ai_response.length); // Debug logging
-                        addMessage(data.ai_response, data.response_type, data.edge_triggered);
-                                            if (data.opener_audio_file) {
-                        if (data.opener_audio_file === 'generating') {
-                            debugLog('Async TTS detected for opener text - starting polling');
-                            addMessage(`🎵 Generating opener audio... (checking every 2 seconds)`, 'system');
-                            startAudioPolling();
-                        } else {
-                            addMessage(`💾 Opener audio saved: ${data.opener_audio_file}`, 'system');
+                        addOpenerMessage(data.ai_response, data.response_type, data.edge_triggered);
+                        if (data.opener_audio_file) {
+                            if (data.opener_audio_file === 'generating') {
+                                debugLog('Async TTS detected for opener text - starting polling');
+                                addOpenerMessage(`🎵 Generating opener audio... (checking every 2 seconds)`, 'system');
+                                startAudioPolling();
+                            } else {
+                                addOpenerMessage(`💾 Opener audio saved: ${data.opener_audio_file}`, 'system');
+                            }
                         }
-                    }
-                    if (data.audio_file) {
-                        if (data.audio_file === 'generating') {
-                            debugLog('Async TTS detected for AI response - starting polling');
-                            addMessage(`🎵 Generating response audio... (checking every 2 seconds)`, 'system');
-                            startAudioPolling();
-                        } else {
-                            addMessage(`💾 Response audio saved: ${data.audio_file}`, 'system');
+                        if (data.audio_file) {
+                            if (data.audio_file === 'generating') {
+                                debugLog('Async TTS detected for AI response - starting polling');
+                                addOpenerMessage(`🎵 Generating response audio... (checking every 2 seconds)`, 'system');
+                                startAudioPolling();
+                            } else {
+                                addOpenerMessage(`💾 Response audio saved: ${data.audio_file}`, 'system');
+                            }
                         }
-                    }
                     } else {
                         console.log('No AI response found in data'); // Debug logging
                     }
                 }
             } catch (error) {
                 console.error('LoadOpener error:', error); // Debug logging
-                addMessage(`Error: ${error.message}`, 'system');
+                addOpenerMessage(`Error: ${error.message}`, 'system');
             } finally {
                 hideLoading();
             }
