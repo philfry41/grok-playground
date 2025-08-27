@@ -80,8 +80,8 @@ def generate_tts_async(text, save_audio=True, request_id=None):
     # Track this TTS generation with timeout
     tts_generation_tracker[tts_id] = time.time()
     
-    # Set a timeout for TTS generation (60 seconds)
-    TTS_TIMEOUT = 60
+    # Set a timeout for TTS generation (5 minutes)
+    TTS_TIMEOUT = 300
     
     def tts_worker():
         try:
@@ -1114,7 +1114,7 @@ if __name__ == '__main__':
         cleanup_resources()
         raise TimeoutError("Request timed out")
     
-    # Set 60-second timeout for requests
+        # Set 5-minute timeout for requests
     signal.signal(signal.SIGALRM, timeout_handler)
     
     port = int(os.environ.get('PORT', 8080))

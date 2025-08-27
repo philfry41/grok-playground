@@ -1069,7 +1069,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(requestBody),
-                    signal: AbortSignal.timeout(60000) // 60 second timeout
+                    signal: AbortSignal.timeout(300000) // 5 minute timeout
                 });
                 
                 console.log('🔍 Debug: Response status:', response.status);
@@ -1517,12 +1517,12 @@
                 }
             }, 2000); // Check every 2 seconds
             
-            // Stop polling after 60 seconds (30 attempts)
+            // Stop polling after 5 minutes (150 attempts)
             audioPollingTimeout = setTimeout(() => {
-                debugLog('Audio polling timeout - stopping after 60 seconds');
+                debugLog('Audio polling timeout - stopping after 5 minutes');
                 stopAudioPolling();
                 addMessage(`⚠️ Audio generation timeout - file may still be processing`, 'system');
-            }, 60000);
+            }, 300000);
         }
         
         function stopAudioPolling() {
