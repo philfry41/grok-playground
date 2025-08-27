@@ -1047,7 +1047,9 @@
         }
 
         async function loadOpener() {
+            console.log('🔍 loadOpener function called!');
             const filename = document.getElementById('openerFile').value.trim() || 'opener.txt';
+            console.log('🔍 Filename: ' + filename);
             
             showLoading();
             
@@ -1063,6 +1065,7 @@
                 };
                 console.log('🔍 Debug: Request payload:', JSON.stringify(requestBody));
                 
+                console.log('🔍 Making fetch request to /api/chat');
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
@@ -1071,6 +1074,7 @@
                     body: JSON.stringify(requestBody),
                     signal: AbortSignal.timeout(120000) // 2 minute timeout
                 });
+                console.log('🔍 Fetch response received, status: ' + response.status);
                 
                 console.log('🔍 Debug: Response status:', response.status);
                 console.log('🔍 Debug: Response headers:', response.headers);
@@ -1080,6 +1084,7 @@
                 }
                 
                 const responseText = await response.text();
+                console.log('🔍 Response text received, length: ' + responseText.length);
                 console.log('🔍 Debug: Response text:', responseText);
                 
                 let data;
