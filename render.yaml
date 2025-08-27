@@ -3,10 +3,10 @@ services:
     name: grok-playground
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --timeout 600 --workers 1 --bind 0.0.0.0:$PORT web_app:app
+    startCommand: gunicorn --timeout 120 --workers 1 --bind 0.0.0.0:$PORT web_app:app
     envVars:
       - key: REQUEST_TIMEOUT
-        value: 600
+        value: 120
       - key: WORKER_TIMEOUT
-        value: 3600
+        value: 300
     plan: starter  # or higher tier

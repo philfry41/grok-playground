@@ -80,8 +80,8 @@ def generate_tts_async(text, save_audio=True, request_id=None):
     # Track this TTS generation with timeout
     tts_generation_tracker[tts_id] = time.time()
     
-    # Set a timeout for TTS generation (5 minutes)
-    TTS_TIMEOUT = 300
+    # Set a timeout for TTS generation (2 minutes)
+    TTS_TIMEOUT = 120
     
     def tts_worker():
         try:
