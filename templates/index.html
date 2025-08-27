@@ -1677,7 +1677,11 @@
             console.log('playAudio called:', url, button);
             console.log('Current audio:', currentAudio);
             console.log('Current button:', currentPlayButton);
-            console.log('Button text:', button.innerHTML);
+            if (button) {
+                console.log('Button text:', button.innerHTML);
+            } else {
+                console.log('No button (auto-play mode)');
+            }
             
             // Get or create audio element for this URL
             let audio = audioElements.get(url);
@@ -1759,7 +1763,9 @@
             audio.play().catch(error => {
                 console.error('Audio play error:', error);
                 addMessage(`Error playing audio: ${error.message}`, 'system');
-                button.innerHTML = '▶️ Play';
+                if (button) {
+                    button.innerHTML = '▶️ Play';
+                }
                 currentAudio = null;
                 currentPlayButton = null;
             });
