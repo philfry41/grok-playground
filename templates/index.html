@@ -1845,7 +1845,12 @@
             
             audio.play().catch(error => {
                 console.error('Audio play error:', error);
-                addMessage(`Error playing audio: ${error.message}`, 'system');
+                
+                // Only show error messages on desktop (mobile uses download approach)
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (!isMobile) {
+                    addMessage(`Error playing audio: ${error.message}`, 'system');
+                }
                 
                 if (button) {
                     button.innerHTML = '▶️ Play';
