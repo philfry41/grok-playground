@@ -1090,10 +1090,10 @@
                     throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
                 }
                 console.log('LoadOpener response:', data); // Debug logging
-                debugLog('LoadOpener response received');
-                debugLog('opener_audio_file: ' + (data.opener_audio_file || 'undefined'));
-                debugLog('audio_file: ' + (data.audio_file || 'undefined'));
-                debugLog('ai_response: ' + (data.ai_response ? 'present' : 'missing'));
+                console.log('🔍 LoadOpener response received');
+                console.log('🔍 opener_audio_file: ' + (data.opener_audio_file || 'undefined'));
+                console.log('🔍 audio_file: ' + (data.audio_file || 'undefined'));
+                console.log('🔍 ai_response: ' + (data.ai_response ? 'present' : 'missing'));
                 
                 if (data.error) {
                     addOpenerMessage(`Error: ${data.error}`, 'system');
@@ -1106,30 +1106,30 @@
                         console.log('Adding AI response, length:', data.ai_response.length); // Debug logging
                         addOpenerMessage(data.ai_response, data.response_type, data.edge_triggered);
                         if (data.opener_audio_file) {
-                            debugLog('Checking opener_audio_file: ' + data.opener_audio_file);
+                            console.log('🔍 Checking opener_audio_file: ' + data.opener_audio_file);
                             if (data.opener_audio_file === 'generating') {
-                                debugLog('Async TTS detected for opener text - starting polling');
+                                console.log('🔍 Async TTS detected for opener text - starting polling');
                                 addOpenerMessage(`🎵 Generating opener audio... (checking every 2 seconds)`, 'system');
                                 startAudioPolling();
                             } else {
-                                debugLog('Opener audio file already generated: ' + data.opener_audio_file);
+                                console.log('🔍 Opener audio file already generated: ' + data.opener_audio_file);
                                 addOpenerMessage(`💾 Opener audio saved: ${data.opener_audio_file}`, 'system');
                             }
                         } else {
-                            debugLog('No opener_audio_file in response');
+                            console.log('🔍 No opener_audio_file in response');
                         }
                         if (data.audio_file) {
-                            debugLog('Checking audio_file: ' + data.audio_file);
+                            console.log('🔍 Checking audio_file: ' + data.audio_file);
                             if (data.audio_file === 'generating') {
-                                debugLog('Async TTS detected for AI response - starting polling');
+                                console.log('🔍 Async TTS detected for AI response - starting polling');
                                 addOpenerMessage(`🎵 Generating response audio... (checking every 2 seconds)`, 'system');
                                 startAudioPolling();
                             } else {
-                                debugLog('AI response audio file already generated: ' + data.audio_file);
+                                console.log('🔍 AI response audio file already generated: ' + data.audio_file);
                                 addOpenerMessage(`💾 Response audio saved: ${data.audio_file}`, 'system');
                             }
                         } else {
-                            debugLog('No audio_file in response');
+                            console.log('🔍 No audio_file in response');
                         }
                     } else {
                         console.log('No AI response found in data'); // Debug logging
@@ -1476,17 +1476,17 @@
             
             audioPollingInterval = setInterval(async () => {
                 try {
-                    debugLog('Polling for audio files...');
+                    console.log('🔍 Polling for audio files...');
                     const response = await fetch('/api/audio-files');
                     const data = await response.json();
                     
                     if (data.error) {
-                        debugLog('Audio polling error: ' + data.error);
+                        console.log('🔍 Audio polling error: ' + data.error);
                         stopAudioPolling();
                         return;
                     }
                     
-                    debugLog('Audio files response: ' + data.files.length + ' files');
+                    console.log('🔍 Audio files response: ' + data.files.length + ' files');
                     
                     // Check if we have new audio files
                     const audioPanel = document.getElementById('audioPanel');
@@ -1497,35 +1497,35 @@
                         
                         // Check if we have new files (more files than before)
                         if (data.files.length > lastFileCount) {
-                            debugLog('New audio files detected!');
-                            debugLog('Previous count: ' + lastFileCount + ', Current count: ' + data.files.length);
+                            console.log('🔍 New audio files detected!');
+                            console.log('🔍 Previous count: ' + lastFileCount + ', Current count: ' + data.files.length);
                             
                             // Get the newest file (last in the list)
                             const newestFile = data.files[data.files.length - 1];
-                            debugLog('Newest file: ' + newestFile.filename);
+                            console.log('🔍 Newest file: ' + newestFile.filename);
                             
                             // Check TTS mode to see if we should auto-play
                             try {
-                                debugLog('Checking TTS mode for auto-play...');
+                                console.log('🔍 Checking TTS mode for auto-play...');
                                 const ttsResponse = await fetch('/api/tts-status');
                                 const ttsData = await ttsResponse.json();
-                                debugLog('TTS mode: ' + ttsData.mode + ' (' + ttsData.mode_display + ')');
+                                console.log('🔍 TTS mode: ' + ttsData.mode + ' (' + ttsData.mode_display + ')');
                                 
                                 if (ttsData.mode === 'tts') {  // Auto-play mode
-                                    debugLog('Auto-play mode detected - playing newest audio file');
+                                    console.log('🔍 Auto-play mode detected - playing newest audio file');
                                     addMessage(`🎵 Playing audio: ${newestFile.filename}`, 'system');
                                     
                                     // Auto-play the newest file
                                     setTimeout(() => {
-                                        debugLog('Auto-playing audio file: ' + newestFile.url);
+                                        console.log('🔍 Auto-playing audio file: ' + newestFile.url);
                                         playAudio(newestFile.url, null);
                                     }, 500); // Small delay to ensure UI is ready
                                 } else {
-                                    debugLog('Auto-save mode detected - not auto-playing');
+                                    console.log('🔍 Auto-save mode detected - not auto-playing');
                                     addMessage(`💾 Audio saved: ${newestFile.filename}`, 'system');
                                 }
                             } catch (ttsError) {
-                                debugLog('Error checking TTS mode: ' + ttsError.message);
+                                console.log('🔍 Error checking TTS mode: ' + ttsError.message);
                                 addMessage(`🎵 Audio ready: ${newestFile.filename}`, 'system');
                             }
                         }
@@ -1575,7 +1575,7 @@
                         setTimeout(() => {
                             window.audioPollingContinueCount++;
                             if (window.audioPollingContinueCount >= 5) { // 5 polls without new files
-                                debugLog('Stopping audio polling - no new files for 10 seconds');
+                                console.log('🔍 Stopping audio polling - no new files for 10 seconds');
                                 stopAudioPolling();
                                 window.audioPollingContinueCount = 0;
                             }
@@ -1589,13 +1589,13 @@
                         
                         // Stop polling after 10 seconds of no files
                         if (window.audioPollingContinueCount >= 5) {
-                            debugLog('Stopping audio polling - no files found for 10 seconds');
+                            console.log('🔍 Stopping audio polling - no files found for 10 seconds');
                             stopAudioPolling();
                             window.audioPollingContinueCount = 0;
                         }
                     }
                 } catch (error) {
-                    debugLog('Audio polling error: ' + error.message);
+                    console.log('🔍 Audio polling error: ' + error.message);
                     stopAudioPolling();
                 }
             }, 2000); // Check every 2 seconds
