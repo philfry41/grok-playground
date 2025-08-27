@@ -732,6 +732,11 @@ def toggle_tts():
             tts.mode = "off"
             tts._save_tts_mode("off")
             print(f"🔇 TTS disabled")
+        elif action == 'force_auto_play':
+            # Force auto-play mode for testing
+            tts.mode = "tts"
+            tts._save_tts_mode("tts")
+            print(f"🎤 TTS forced to auto-play mode")
         else:
             return jsonify({'error': f'Invalid action: {action}'})
         
