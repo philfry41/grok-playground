@@ -1459,6 +1459,9 @@
                 clearTimeout(audioPollingTimeout);
             }
             
+            // Track the last file count to detect new files
+            let lastFileCount = 0;
+            
             audioPollingInterval = setInterval(async () => {
                 try {
                     const response = await fetch('/api/audio-files');
@@ -1475,7 +1478,38 @@
                     const audioFilesList = document.getElementById('audioFilesList');
                     
                     if (data.files.length > 0) {
-                        debugLog('New audio files detected: ' + data.files.length);
+                        debugLog('Audio files detected: ' + data.files.length + ' (last count: ' + lastFileCount + ')');
+                        
+                        // Check if we have new files (more files than before)
+                        if (data.files.length > lastFileCount) {
+                            debugLog('New audio files detected!');
+                            
+                            // Get the newest file (last in the list)
+                            const newestFile = data.files[data.files.length - 1];
+                            debugLog('Newest file: ' + newestFile.filename);
+                            
+                            // Check TTS mode to see if we should auto-play
+                            try {
+                                const ttsResponse = await fetch('/api/tts-status');
+                                const ttsData = await ttsResponse.json();
+                                
+                                if (ttsData.mode === 'tts') {  // Auto-play mode
+                                    debugLog('Auto-play mode detected - playing newest audio file');
+                                    addMessage(`🎵 Playing audio: ${newestFile.filename}`, 'system');
+                                    
+                                    // Auto-play the newest file
+                                    setTimeout(() => {
+                                        playAudio(newestFile.url, null);
+                                    }, 500); // Small delay to ensure UI is ready
+                                } else {
+                                    debugLog('Auto-save mode detected - not auto-playing');
+                                    addMessage(`💾 Audio saved: ${newestFile.filename}`, 'system');
+                                }
+                            } catch (ttsError) {
+                                debugLog('Error checking TTS mode: ' + ttsError.message);
+                                addMessage(`🎵 Audio ready: ${newestFile.filename}`, 'system');
+                            }
+                        }
                         
                         // Update the audio files list
                         if (data.files.length === 0) {
@@ -1507,9 +1541,11 @@
                             audioPanel.style.display = 'block';
                         }
                         
-                        // Stop polling once we have files
+                        // Update the last file count
+                        lastFileCount = data.files.length;
+                        
+                        // Stop polling once we have files and have processed them
                         stopAudioPolling();
-                        addMessage(`🎵 Audio file ready: ${data.files[data.files.length - 1].filename}`, 'system');
                     }
                 } catch (error) {
                     debugLog('Audio polling error: ' + error.message);

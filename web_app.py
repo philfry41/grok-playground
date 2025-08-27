@@ -88,7 +88,14 @@ def generate_tts_async(text, save_audio=True, request_id=None):
             print(f"🔍 Debug: Starting async TTS generation {tts_id} for {len(text)} characters")
             start_time = time.time()
             
-            audio_file = tts.speak(text, save_audio=save_audio)
+            # For auto-play mode, we need to save the file first, then play it
+            # For auto-save mode, just save the file
+            if tts.mode == "tts":  # Auto-play mode
+                print(f"🔍 Debug: Auto-play mode - will save and play audio")
+                audio_file = tts.speak(text, save_audio=True)  # Always save for auto-play
+            else:  # Auto-save mode
+                print(f"🔍 Debug: Auto-save mode - will save audio only")
+                audio_file = tts.speak(text, save_audio=save_audio)
             
             end_time = time.time()
             duration = end_time - start_time
@@ -99,6 +106,11 @@ def generate_tts_async(text, save_audio=True, request_id=None):
                 if os.path.exists(audio_file):
                     file_size = os.path.getsize(audio_file)
                     print(f"🔍 Debug: Async TTS {tts_id} file verified: {audio_file} ({file_size} bytes)")
+                    
+                    # For auto-play mode, trigger audio playback via polling
+                    if tts.mode == "tts":
+                        print(f"🔍 Debug: Auto-play mode - audio file ready for playback: {audio_file}")
+                        # The frontend will detect the new file via polling and play it
                 else:
                     print(f"🔍 Debug: Async TTS {tts_id} file missing after generation: {audio_file}")
             else:
