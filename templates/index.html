@@ -28,6 +28,36 @@
             height: 100vh;
         }
 
+        /* Mobile responsive design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+            
+            .chat-container {
+                height: calc(100vh - 200px);
+            }
+            
+            .panel {
+                padding: 15px;
+            }
+            
+            .command-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+        }
+
         .chat-container {
             background: white;
             border-radius: 12px;
@@ -92,6 +122,90 @@
         .message.edge-triggered {
             border-left: 4px solid #dc3545;
             background: #fff5f5;
+        }
+
+        /* History panel styles */
+        .history-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .history-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-header:hover {
+            background: #e9ecef;
+        }
+
+        .history-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .history-toggle {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .history-content {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .history-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .history-message.user {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .history-message.assistant {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .history-message.system {
+            background: #fff3e0;
+            color: #f57c00;
+            text-align: center;
+        }
+
+        /* Current interaction styles */
+        .current-interaction {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .current-interaction .message {
+            margin-bottom: 10px;
+        }
+
+        .current-interaction .message:last-child {
+            margin-bottom: 0;
         }
 
         .chat-input {
@@ -385,9 +499,23 @@
                 </div>
             </div>
             
+            <!-- History Panel -->
+            <div class="history-panel" id="historyPanel">
+                <div class="history-header" onclick="toggleHistoryPanel()">
+                    <h3>📚 Story History</h3>
+                    <button class="history-toggle" id="historyToggle">▼</button>
+                </div>
+                <div class="history-content" id="historyContent">
+                    <div class="message system">
+                        Welcome to Grok Playground! Use the sidebar to control the story mode and send messages below.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Interaction Area -->
             <div class="chat-messages" id="chatMessages">
-                <div class="message system">
-                    Welcome to Grok Playground! Use the sidebar to control the story mode and send messages below.
+                <div class="current-interaction" id="currentInteraction">
+                    <!-- Current user prompt and AI response will be shown here -->
                 </div>
             </div>
             
@@ -421,6 +549,7 @@
                     
                     <div class="word-count-input">
                         <button class="btn btn-secondary" onclick="openOpenerModal()">📄 Select Opener</button>
+                        <button class="btn btn-secondary" onclick="toggleHistoryPanel()">📚 History</button>
                     </div>
                 </div>
             </div>
@@ -521,6 +650,59 @@
                 debugLog('Debug log cleared');
             }
         }
+
+        // History panel management
+        function toggleHistoryPanel() {
+            const historyPanel = document.getElementById('historyPanel');
+            const historyContent = document.getElementById('historyContent');
+            const historyToggle = document.getElementById('historyToggle');
+            
+            if (historyContent.style.display === 'none' || !historyContent.style.display) {
+                historyContent.style.display = 'block';
+                historyToggle.textContent = '▲';
+                debugLog('History panel opened');
+            } else {
+                historyContent.style.display = 'none';
+                historyToggle.textContent = '▼';
+                debugLog('History panel closed');
+            }
+        }
+
+        // Show history panel on mobile by default
+        function showHistoryPanel() {
+            const historyPanel = document.getElementById('historyPanel');
+            const historyContent = document.getElementById('historyContent');
+            const historyToggle = document.getElementById('historyToggle');
+            
+            historyPanel.style.display = 'block';
+            historyContent.style.display = 'block';
+            historyToggle.textContent = '▲';
+        }
+
+        // Add message to history (for older messages)
+        function addToHistory(content, type, edgeTriggered = false) {
+            try {
+                const historyContent = document.getElementById('historyContent');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `history-message ${type}`;
+                if (edgeTriggered) {
+                    messageDiv.classList.add('edge-triggered');
+                }
+                messageDiv.textContent = content;
+                historyContent.appendChild(messageDiv);
+                historyContent.scrollTop = historyContent.scrollHeight;
+            } catch (error) {
+                debugLog('addToHistory error: ' + error.message);
+            }
+        }
+
+        // Clear current interaction area
+        function clearCurrentInteraction() {
+            const currentInteraction = document.getElementById('currentInteraction');
+            if (currentInteraction) {
+                currentInteraction.innerHTML = '';
+            }
+        }
         
         // Initial debug log
         debugLog('Page loaded, user agent: ' + navigator.userAgent);
@@ -548,6 +730,18 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadTTSStatus();
+            
+            // Initialize history panel
+            const historyPanel = document.getElementById('historyPanel');
+            if (historyPanel) {
+                historyPanel.style.display = 'block';
+            }
+            
+            // Show history panel on mobile by default
+            if (window.innerWidth <= 768) {
+                showHistoryPanel();
+            }
+            
             const messageInput = document.getElementById('messageInput');
             const sendButton = document.getElementById('sendButton');
             
@@ -585,19 +779,48 @@
 
         function addMessage(content, type, edgeTriggered = false) {
             try {
-                const messagesDiv = document.getElementById('chatMessages');
+                const currentInteraction = document.getElementById('currentInteraction');
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${type}`;
                 if (edgeTriggered) {
                     messageDiv.classList.add('edge-triggered');
                 }
                 messageDiv.textContent = content;
-                messagesDiv.appendChild(messageDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                currentInteraction.appendChild(messageDiv);
+                currentInteraction.scrollTop = currentInteraction.scrollHeight;
+                
+                // If this is a user message, move previous interaction to history
+                if (type === 'user') {
+                    moveCurrentToHistory();
+                }
             } catch (error) {
                 debugLog('addMessage error: ' + error.message);
                 // Fallback: try to show error in alert
                 alert(`Error displaying message: ${error.message}`);
+            }
+        }
+
+        // Move current interaction to history when new user message is added
+        function moveCurrentToHistory() {
+            const currentInteraction = document.getElementById('currentInteraction');
+            const historyContent = document.getElementById('historyContent');
+            
+            // Get all messages except the last one (which is the new user message)
+            const messages = currentInteraction.querySelectorAll('.message');
+            if (messages.length > 1) {
+                // Move all but the last message to history
+                for (let i = 0; i < messages.length - 1; i++) {
+                    const message = messages[i];
+                    const historyMessage = document.createElement('div');
+                    historyMessage.className = `history-message ${message.className.replace('message ', '')}`;
+                    historyMessage.textContent = message.textContent;
+                    historyContent.appendChild(historyMessage);
+                }
+                
+                // Clear current interaction except for the new user message
+                const newUserMessage = messages[messages.length - 1];
+                currentInteraction.innerHTML = '';
+                currentInteraction.appendChild(newUserMessage);
             }
         }
 
