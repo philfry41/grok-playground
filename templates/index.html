@@ -731,11 +731,13 @@
         document.addEventListener('click', () => {
             window.userInteracted = true;
             console.log('🔍 User interaction detected - audio playback enabled');
+            initializeAudioContext();
         });
         
         document.addEventListener('touchstart', () => {
             window.userInteracted = true;
             console.log('🔍 Touch interaction detected - audio playback enabled');
+            initializeAudioContext();
         });
         
         // Check version status
@@ -1542,9 +1544,13 @@
                                         playButton.innerHTML = '▶️ Play Audio';
                                         playButton.className = 'btn btn-success';
                                         playButton.style.margin = '5px';
-                                        playButton.onclick = () => {
+                                        playButton.onclick = async () => {
                                             window.userInteracted = true;
                                             console.log('🔍 Mobile play button clicked - starting audio queue');
+                                            
+                                            // Initialize audio context for mobile
+                                            initializeAudioContext();
+                                            
                                             // Add all queued audio files to the queue
                                             if (window.pendingAudioQueue) {
                                                 audioQueue.push(...window.pendingAudioQueue);
@@ -1740,6 +1746,26 @@
             playAudio(nextUrl, null);
         }
         
+        // Initialize audio context for mobile devices
+        function initializeAudioContext() {
+            try {
+                // Create audio context if it doesn't exist
+                if (!window.audioContext) {
+                    window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    console.log('🔍 Audio context initialized');
+                }
+                
+                // Resume audio context if suspended (required on mobile)
+                if (window.audioContext.state === 'suspended') {
+                    window.audioContext.resume().then(() => {
+                        console.log('🔍 Audio context resumed');
+                    });
+                }
+            } catch (error) {
+                console.log('🔍 Audio context initialization error:', error);
+            }
+        }
+        
         function playAudio(url, button) {
             console.log('playAudio called:', url, button);
             console.log('Current audio:', currentAudio);
@@ -1838,7 +1864,33 @@
             
             audio.play().catch(error => {
                 console.error('Audio play error:', error);
-                addMessage(`Error playing audio: ${error.message}`, 'system');
+                
+                // Handle mobile-specific errors
+                if (error.message.includes('user agent') || error.message.includes('permission')) {
+                    addMessage(`🎵 Mobile audio requires user interaction. Tap the play button to start audio.`, 'system');
+                    // For mobile, show a manual play button
+                    if (!button) {
+                        const manualPlayButton = document.createElement('button');
+                        manualPlayButton.innerHTML = '▶️ Play Audio (Mobile)';
+                        manualPlayButton.className = 'btn btn-warning';
+                        manualPlayButton.style.margin = '5px';
+                        manualPlayButton.onclick = () => {
+                            initializeAudioContext();
+                            audio.play().catch(e => {
+                                console.error('Manual play error:', e);
+                                addMessage(`Audio playback failed: ${e.message}`, 'system');
+                            });
+                            manualPlayButton.remove();
+                        };
+                        const currentInteraction = document.getElementById('currentInteraction');
+                        if (currentInteraction) {
+                            currentInteraction.appendChild(manualPlayButton);
+                        }
+                    }
+                } else {
+                    addMessage(`Error playing audio: ${error.message}`, 'system');
+                }
+                
                 if (button) {
                     button.innerHTML = '▶️ Play';
                 }
