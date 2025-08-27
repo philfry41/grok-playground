@@ -724,6 +724,20 @@
         // Initial debug log
         debugLog('Page loaded, user agent: ' + navigator.userAgent);
         
+        // Set up user interaction tracking for mobile audio
+        window.userInteracted = false;
+        
+        // Mark user as interacted when they click/touch anything
+        document.addEventListener('click', () => {
+            window.userInteracted = true;
+            console.log('🔍 User interaction detected - audio playback enabled');
+        });
+        
+        document.addEventListener('touchstart', () => {
+            window.userInteracted = true;
+            console.log('🔍 Touch interaction detected - audio playback enabled');
+        });
+        
         // Check version status
         checkVersionStatus();
         
@@ -1518,15 +1532,51 @@
                                 
                                 if (ttsData.mode === 'tts') {  // Auto-play mode
                                     console.log('🔍 Auto-play mode detected - queuing audio file: ' + newestFile.filename);
-                                    addMessage(`🎵 Queuing audio: ${newestFile.filename}`, 'system');
                                     
-                                    // Add to audio queue instead of playing immediately
-                                    audioQueue.push(newestFile.url);
-                                    console.log('🔍 Audio queue length: ' + audioQueue.length);
-                                    
-                                    // Start playing if nothing is currently playing
-                                    if (!isPlaying) {
-                                        playNextInQueue();
+                                    // Check if we're on mobile and need user interaction
+                                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                                    if (isMobile && !window.userInteracted) {
+                                        addMessage(`🎵 Audio ready: ${newestFile.filename} (tap to play on mobile)`, 'system');
+                                        // Add a clickable play button for mobile
+                                        const playButton = document.createElement('button');
+                                        playButton.innerHTML = '▶️ Play Audio';
+                                        playButton.className = 'btn btn-success';
+                                        playButton.style.margin = '5px';
+                                        playButton.onclick = () => {
+                                            window.userInteracted = true;
+                                            console.log('🔍 Mobile play button clicked - starting audio queue');
+                                            // Add all queued audio files to the queue
+                                            if (window.pendingAudioQueue) {
+                                                audioQueue.push(...window.pendingAudioQueue);
+                                                window.pendingAudioQueue = [];
+                                            }
+                                            audioQueue.push(newestFile.url);
+                                            if (!isPlaying) {
+                                                playNextInQueue();
+                                            }
+                                            playButton.remove();
+                                        };
+                                        // Add the button to the current interaction area
+                                        const currentInteraction = document.getElementById('currentInteraction');
+                                        if (currentInteraction) {
+                                            currentInteraction.appendChild(playButton);
+                                        }
+                                        // Store this audio file for later
+                                        if (!window.pendingAudioQueue) {
+                                            window.pendingAudioQueue = [];
+                                        }
+                                        window.pendingAudioQueue.push(newestFile.url);
+                                    } else {
+                                        addMessage(`🎵 Queuing audio: ${newestFile.filename}`, 'system');
+                                        
+                                        // Add to audio queue instead of playing immediately
+                                        audioQueue.push(newestFile.url);
+                                        console.log('🔍 Audio queue length: ' + audioQueue.length);
+                                        
+                                        // Start playing if nothing is currently playing
+                                        if (!isPlaying) {
+                                            playNextInQueue();
+                                        }
                                     }
                                 } else {
                                     console.log('🔍 Auto-save mode detected - not auto-playing');
