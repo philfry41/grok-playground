@@ -1831,6 +1831,7 @@
         }
 
         async function selectOpener(filename) {
+            console.log('🔍 selectOpener function called with filename: ' + filename);
             closeOpenerModal();
             showLoading();
             
@@ -1888,6 +1889,7 @@
                 }
                 
                 const data = await response.json();
+                console.log('🔍 selectOpener response received:', data);
                 
                 if (data.error) {
                     addMessage(`Error loading opener: ${data.error}`, 'system');
@@ -1902,6 +1904,31 @@
                             addMessage(data.ai_response, 'assistant');
                         } else {
                             addMessage(data.ai_response, 'system');
+                        }
+                    }
+                    
+                    // Handle TTS responses
+                    console.log('🔍 Checking for TTS responses...');
+                    if (data.opener_audio_file) {
+                        console.log('🔍 opener_audio_file: ' + data.opener_audio_file);
+                        if (data.opener_audio_file === 'generating') {
+                            console.log('🔍 Async TTS detected for opener text - starting polling');
+                            addMessage(`🎵 Generating opener audio... (checking every 2 seconds)`, 'system');
+                            startAudioPolling();
+                        } else {
+                            console.log('🔍 Opener audio file already generated: ' + data.opener_audio_file);
+                            addMessage(`💾 Opener audio saved: ${data.opener_audio_file}`, 'system');
+                        }
+                    }
+                    if (data.audio_file) {
+                        console.log('🔍 audio_file: ' + data.audio_file);
+                        if (data.audio_file === 'generating') {
+                            console.log('🔍 Async TTS detected for AI response - starting polling');
+                            addMessage(`🎵 Generating response audio... (checking every 2 seconds)`, 'system');
+                            startAudioPolling();
+                        } else {
+                            console.log('🔍 AI response audio file already generated: ' + data.audio_file);
+                            addMessage(`💾 Response audio saved: ${data.audio_file}`, 'system');
                         }
                     }
                 }
