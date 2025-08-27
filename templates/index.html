@@ -864,7 +864,15 @@
             debugLog('User agent: ' + navigator.userAgent);
             debugLog('Message length: ' + message.length);
             
-            addMessage(message, 'user');
+            // Check if this is a command that should not trigger history movement
+            const isCommand = message.startsWith('/');
+            if (isCommand) {
+                // For commands, use addOpenerMessage to prevent history movement
+                addOpenerMessage(message, 'user');
+            } else {
+                // For regular messages, use addMessage which may trigger history movement
+                addMessage(message, 'user');
+            }
             input.value = '';
             sendButton.disabled = true; // Disable after sending
             
@@ -922,14 +930,29 @@
                     addMessage(`Error: ${data.error}`, 'system');
                 } else {
                     debugLog('Response successful, message length: ' + (data.message ? data.message.length : 0));
-                    addMessage(data.message, data.type, data.edge_triggered);
-                    if (data.audio_file) {
-                        if (data.audio_file === 'generating') {
-                            debugLog('Async TTS detected - starting polling');
-                            addMessage(`🎵 Generating audio file... (checking every 2 seconds)`, 'system');
-                            startAudioPolling();
-                        } else {
-                            addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                    
+                    // Check if this was a command response
+                    if (isCommand) {
+                        addOpenerMessage(data.message, data.type, data.edge_triggered);
+                        if (data.audio_file) {
+                            if (data.audio_file === 'generating') {
+                                debugLog('Async TTS detected - starting polling');
+                                addOpenerMessage(`🎵 Generating audio file... (checking every 2 seconds)`, 'system');
+                                startAudioPolling();
+                            } else {
+                                addOpenerMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                            }
+                        }
+                    } else {
+                        addMessage(data.message, data.type, data.edge_triggered);
+                        if (data.audio_file) {
+                            if (data.audio_file === 'generating') {
+                                debugLog('Async TTS detected - starting polling');
+                                addMessage(`🎵 Generating audio file... (checking every 2 seconds)`, 'system');
+                                startAudioPolling();
+                            } else {
+                                addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');
+                            }
                         }
                     }
                 }
