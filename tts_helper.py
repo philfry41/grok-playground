@@ -7,7 +7,7 @@ from elevenlabs import ElevenLabs
 class TTSHelper:
     def __init__(self):
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
-        # TTS modes: "off", "tts" (auto-play), "save" (auto-save)
+        # TTS modes: "off", "save" (generate .mp3 files)
         # Load mode from file for persistence across worker restarts
         self.mode = self._load_tts_mode()
         
@@ -38,7 +38,7 @@ class TTSHelper:
     
     @property
     def auto_save(self):
-        """Auto-save is enabled if mode is 'save'"""
+        """TTS file generation is enabled if mode is 'save'"""
         return self.mode == "save"
     
     def get_available_voices(self):
@@ -170,17 +170,14 @@ class TTSHelper:
         print(f"🎤 Voice {voice_id} will use model: {model}")
     
     def cycle_mode(self):
-        """Cycle through TTS modes: off -> tts -> save -> off"""
+        """Cycle through TTS modes: off -> save -> off"""
         if not self.api_key:
             print("🔇 TTS disabled - no API key set")
             return "off"
         
         if self.mode == "off":
-            self.mode = "tts"
-            print("🎤 TTS enabled (auto-play mode)")
-        elif self.mode == "tts":
             self.mode = "save"
-            print("💾 TTS enabled (auto-save mode)")
+            print("💾 TTS enabled (generate .mp3 files)")
         else:  # save
             self.mode = "off"
             print("🔇 TTS disabled")
@@ -197,17 +194,17 @@ class TTSHelper:
             if os.path.exists("tts_mode.txt"):
                 with open("tts_mode.txt", "r") as f:
                     mode = f.read().strip()
-                    if mode in ["off", "tts", "save"]:
+                    if mode in ["off", "save"]:
                         print(f"🔍 Debug: Loaded TTS mode from file: {mode}")
                         return mode
                     else:
                         print(f"🔍 Debug: Invalid TTS mode in file: {mode}")
             else:
-                print(f"🔍 Debug: No TTS mode file found, using default: tts (auto-play)")
+                print(f"🔍 Debug: No TTS mode file found, using default: save")
         except Exception as e:
             print(f"🔍 Debug: Error loading TTS mode: {e}")
         
-        return "tts"  # Default to auto-play mode for TTS
+        return "save"  # Default to save mode for TTS
     
     def _save_tts_mode(self, mode):
         """Save TTS mode to file for persistence"""
@@ -235,10 +232,8 @@ class TTSHelper:
             return "No API Key"
         elif self.mode == "off":
             return "Disabled"
-        elif self.mode == "tts":
-            return "Auto-Play"
         else:  # save
-            return "Auto-Save"
+            return "Generate .mp3"
     
     def speak(self, text, save_audio=False):
         """Generate and save/play TTS audio"""

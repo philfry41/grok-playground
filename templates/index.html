@@ -1532,42 +1532,11 @@
                                 const ttsData = await ttsResponse.json();
                                 console.log('🔍 TTS mode: ' + ttsData.mode + ' (' + ttsData.mode_display + ')');
                                 
-                                if (ttsData.mode === 'tts') {  // Auto-play mode
-                                    console.log('🔍 Auto-play mode detected - queuing audio file: ' + newestFile.filename);
-                                    
-                                    // Check if we're on mobile - use manual download approach
-                                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                                    if (isMobile) {
-                                        addMessage(`🎵 Audio ready: ${newestFile.filename}`, 'system');
-                                        // Add download button for mobile (more reliable than auto-play)
-                                        const downloadButton = document.createElement('button');
-                                        downloadButton.innerHTML = '⬇️ Download Audio';
-                                        downloadButton.className = 'btn btn-primary';
-                                        downloadButton.style.margin = '5px';
-                                        downloadButton.onclick = () => {
-                                            console.log('🔍 Mobile download button clicked');
-                                            downloadAudio(newestFile.url, newestFile.filename);
-                                        };
-                                        // Add the button to the current interaction area
-                                        const currentInteraction = document.getElementById('currentInteraction');
-                                        if (currentInteraction) {
-                                            currentInteraction.appendChild(downloadButton);
-                                        }
-                                    } else {
-                                        addMessage(`🎵 Queuing audio: ${newestFile.filename}`, 'system');
-                                        
-                                        // Add to audio queue instead of playing immediately
-                                        audioQueue.push(newestFile.url);
-                                        console.log('🔍 Audio queue length: ' + audioQueue.length);
-                                        
-                                        // Start playing if nothing is currently playing
-                                        if (!isPlaying) {
-                                            playNextInQueue();
-                                        }
-                                    }
+                                if (ttsData.mode === 'save') {  // TTS enabled
+                                    console.log('🔍 TTS enabled - audio file ready: ' + newestFile.filename);
+                                    addMessage(`🎵 Audio ready: ${newestFile.filename}`, 'system');
                                 } else {
-                                    console.log('🔍 Auto-save mode detected - not auto-playing');
-                                    addMessage(`💾 Audio saved: ${newestFile.filename}`, 'system');
+                                    console.log('🔍 TTS disabled - not generating audio');
                                 }
                             } catch (ttsError) {
                                 console.log('🔍 Error checking TTS mode: ' + ttsError.message);
@@ -1712,20 +1681,7 @@
         let audioElements = new Map(); // Store audio elements by URL
         let audioPollingInterval = null; // For checking async TTS completion
         let audioPollingTimeout = null; // For stopping polling after timeout
-        let audioQueue = []; // Queue for sequential audio playback
-        let isPlaying = false; // Track if audio is currently playing
-
-        function playNextInQueue() {
-            if (audioQueue.length === 0) {
-                console.log('🔍 Audio queue empty, stopping playback');
-                isPlaying = false;
-                return;
-            }
-            
-            const nextUrl = audioQueue.shift();
-            console.log('🔍 Playing next in queue: ' + nextUrl);
-            playAudio(nextUrl, null);
-        }
+        // Audio queue system removed - no more auto-play
         
         // Initialize audio context for mobile devices
         function initializeAudioContext() {
@@ -1799,13 +1755,7 @@
                     currentAudio = null;
                     currentPlayButton = null;
                     
-                    // If this was auto-played (no button), play next in queue
-                    if (!button) {
-                        console.log('🔍 Auto-play audio ended, checking queue');
-                        setTimeout(() => {
-                            playNextInQueue();
-                        }, 1000); // Small delay between audio files
-                    }
+                    // Auto-play removed - no queue management needed
                 });
                 
                 audio.addEventListener('pause', () => {
@@ -1858,7 +1808,6 @@
             console.log('Starting new audio');
             currentAudio = audio;
             currentPlayButton = button;
-            isPlaying = true;
             
             audio.play().catch(error => {
                 console.error('Audio play error:', error);
@@ -1874,14 +1823,8 @@
                 }
                 currentAudio = null;
                 currentPlayButton = null;
-                isPlaying = false;
                 
-                // If this was auto-played, try next in queue
-                if (!button) {
-                    setTimeout(() => {
-                        playNextInQueue();
-                    }, 1000);
-                }
+                // Auto-play removed - no queue management needed
             });
         }
 
