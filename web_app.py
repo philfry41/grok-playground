@@ -90,6 +90,8 @@ def generate_tts_async(text, save_audio=True, request_id=None):
             
             # Always save audio files when TTS is enabled
             print(f"🔍 Debug: TTS mode - generating .mp3 file")
+            print(f"🔍 Debug: Text to convert: {text[:100]}{'...' if len(text) > 100 else ''}")
+            print(f"🔍 Debug: Text length: {len(text)} characters")
             audio_file = tts.speak(text, save_audio=True)
             
             end_time = time.time()

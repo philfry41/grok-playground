@@ -2,6 +2,7 @@ import os
 import tempfile
 import subprocess
 import requests
+import time
 from elevenlabs import ElevenLabs
 
 class TTSHelper:
@@ -48,11 +49,22 @@ class TTSHelper:
         
         try:
             # Use direct API call to get detailed voice information
+            print(f"🔍 Debug: Fetching voices from ElevenLabs API...")
+            print(f"🔍 Debug: API Key: {self.api_key[:10]}...{self.api_key[-4:] if len(self.api_key) > 14 else '***'}")
+            
             headers = {"xi-api-key": self.api_key}
+            start_time = time.time()
+            
             response = requests.get("https://api.elevenlabs.io/v1/voices", headers=headers)
             response.raise_for_status()
             
+            end_time = time.time()
+            duration = end_time - start_time
+            print(f"🔍 Debug: Voices API call completed in {duration:.2f} seconds")
+            print(f"🔍 Debug: Response status: {response.status_code}")
+            
             voices_data = response.json()
+            print(f"🔍 Debug: Found {len(voices_data.get('voices', []))} voices")
             voices = []
             
             for voice in voices_data.get("voices", []):
@@ -249,17 +261,34 @@ class TTSHelper:
             print(f"🔍 Debug: Using model {model_id} for voice {self.voice_id}")
             print(f"🔍 Debug: TTS speak() called with voice_id: {self.voice_id}")
             
-            # Generate audio using the new API with error handling
+            # Generate audio using the new API with detailed logging
             print(f"🔍 Debug: Calling ElevenLabs API for text length: {len(clean_text)}")
+            print(f"🔍 Debug: ElevenLabs API call details:")
+            print(f"  - Voice ID: {self.voice_id}")
+            print(f"  - Model ID: {model_id}")
+            print(f"  - Text preview: {clean_text[:100]}{'...' if len(clean_text) > 100 else ''}")
+            print(f"  - API Key: {self.api_key[:10]}...{self.api_key[-4:] if len(self.api_key) > 14 else '***'}")
+            
             try:
+                print(f"🔍 Debug: Making ElevenLabs API request...")
+                start_time = time.time()
+                
                 audio = self.client.text_to_speech.convert(
                     text=clean_text,
                     voice_id=self.voice_id,
                     model_id=model_id
                 )
-                print(f"🔍 Debug: ElevenLabs API call completed successfully with model {model_id}")
+                
+                end_time = time.time()
+                duration = end_time - start_time
+                print(f"🔍 Debug: ElevenLabs API call completed successfully!")
+                print(f"  - Duration: {duration:.2f} seconds")
+                print(f"  - Model used: {model_id}")
+                print(f"  - Response type: {type(audio)}")
+                
             except Exception as api_error:
                 print(f"🔍 Debug: ElevenLabs API error: {api_error}")
+                print(f"🔍 Debug: API error type: {type(api_error).__name__}")
                 import traceback
                 print(f"🔍 Debug: API error traceback: {traceback.format_exc()}")
                 return None
