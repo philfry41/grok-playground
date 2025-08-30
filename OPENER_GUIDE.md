@@ -1,91 +1,89 @@
-# 🎭 Opener Files Guide
+# Opener Guide
 
-## 📁 Available Openers
+This guide describes the available opener files for starting stories with different character configurations and scenarios.
 
-### **2-Character Scenarios:**
-- `opener_2char.txt` - Emma & Alex in upscale restaurant (public play)
-- `opener_sarah_mike.txt` - Sarah & Mike in office conference room (rough play)
+## **🎭 Available Openers**
 
-### **3-Character Scenarios:**
-- `opener_3char.txt` - Emma, Alex & Jordan (threesome with double penetration)
-- `opener_office_3.txt` - Jennifer, Mr. Thompson & Lisa (office threesome with boss)
+### **2 Characters**
+- **`opener_2char.txt`** - Emma & Unnamed Man at upscale restaurant
+  - **Scenario**: Romantic dinner turns intimate
+  - **Characters**: Emma (female), Unnamed Man (male)
+  - **Setting**: Upscale restaurant with dim lighting
+  - **Clothing**: Emma in silk blouse, Man in tailored suit
 
-### **4-Character Scenarios:**
-- `opener_4char.txt` - Rachel, Marcus, Sophia & David (foursome with double penetration)
-- `opener_party_4.txt` - Taylor, Chris, Ashley & Ryan (college party with oral focus)
-- `opener_swingers.txt` - Michelle, Robert, Jessica & Michael (swingers party with DP)
+### **3 Characters**
+- **`opener_3char.txt`** - Emma, Alex & Jordan in bedroom
+  - **Scenario**: Threesome encounter
+  - **Characters**: Emma (female), Alex (male), Jordan (female)
+  - **Setting**: Dimly lit bedroom
+  - **Clothing**: Emma in dress, Alex & Jordan fully dressed
 
-### **5-Character Scenarios:**
-- `opener_5char.txt` - Isabella, James, Elena, Carlos & Maya (VIP club with multiple partners)
-- `opener_bachelorette.txt` - Amanda, Brooke, Nicole, Vanessa, Tiffany & Destiny (bachelorette party with all-female action)
+### **4 Characters**
+- **`opener_4char.txt`** - Rachel, Marcus, Sophia & David in penthouse
+  - **Scenario**: Luxury foursome
+  - **Characters**: Rachel (female), Marcus (male), Sophia (female), David (male)
+  - **Setting**: Luxurious penthouse
+  - **Clothing**: Rachel in cocktail dress, Marcus in suit, Sophia in designer dress, David in business attire
 
-### **6-Character Scenarios:**
-- `opener_fantasy.txt` - Aria, Thorne, Gimli, Pip, Grok & Zara (fantasy RPG with magical enhancement)
+### **5 Characters**
+- **`opener_5char.txt`** - Isabella, James, Elena, Carlos & Maya at exclusive club
+  - **Scenario**: VIP club encounter
+  - **Characters**: Isabella (female), James (male), Elena (female), Carlos (male), Maya (female)
+  - **Setting**: Exclusive club VIP section
+  - **Clothing**: All in designer/party attire
 
-## 🚀 How to Use
+### **Office Scenarios**
+- **`opener_office_3.txt`** - Jennifer, Mr. Thompson & Lisa in office
+  - **Scenario**: Office threesome
+  - **Characters**: Jennifer (female employee), Mr. Thompson (male boss), Lisa (female colleague)
+  - **Setting**: Empty office after hours
+  - **Clothing**: Professional business attire
 
-### **In the Web Interface:**
-1. Click "📄 Select Opener" button
-2. Choose from the list of available scenarios
-3. Click "Send" to continue the story
+### **Party Scenarios**
+- **`opener_party_4.txt`** - Taylor, Chris, Ashley & Ryan at party
+  - **Scenario**: College party encounter
+  - **Characters**: Taylor (female), Chris (male), Ashley (female), Ryan (male)
+  - **Setting**: Party bedroom
+  - **Clothing**: Casual party attire
 
-### **Examples:**
-- For a threesome: Use `opener_3char.txt`
-- For a foursome: Use `opener_4char.txt`
-- For a fantasy scenario: Use `opener_fantasy.txt`
+### **Swinger Scenarios**
+- **`opener_swingers.txt`** - Michelle, Robert, Jessica & Michael in hotel
+  - **Scenario**: Swinger party
+  - **Characters**: Michelle (female), Robert (male), Jessica (female), Michael (male)
+  - **Setting**: Luxury hotel suite
+  - **Clothing**: Elegant evening wear
 
-## 🎯 Character Tracking
+### **Bachelorette Party**
+- **`opener_bachelorette.txt`** - Amanda, Brooke, Nicole, Vanessa, Tiffany & Destiny
+  - **Scenario**: All-female bachelorette party
+  - **Characters**: 6 women at bachelorette party
+  - **Setting**: Luxury hotel suite
+  - **Clothing**: Party dresses and cocktail attire
 
-The dynamic character system will automatically:
-- ✅ Detect character names from the opener
-- ✅ Track individual clothing states
-- ✅ Maintain continuity across `/cont` commands
-- ✅ Support unlimited characters
+### **Fantasy RPG**
+- **`opener_fantasy.txt`** - Aria, Thorne, Gimli, Pip & Zara in mystical chamber
+  - **Scenario**: Fantasy RPG party encounter
+  - **Characters**: Aria (elf), Thorne (orc), Gimli (dwarf), Pip (rogue), Zara (mage)
+  - **Setting**: Mystical chamber
+  - **Clothing**: Fantasy armor and robes
 
-## 💡 Tips
+### **Specific Names**
+- **`opener_sarah_mike.txt`** - Sarah & Mike in conference room
+  - **Scenario**: Office romance
+  - **Characters**: Sarah (female), Mike (male)
+  - **Setting**: Empty conference room
+  - **Clothing**: Professional business attire
 
-- **Mix and Match:** You can start with one opener and add characters later
-- **Custom Names:** Edit any opener file to use your preferred names
-- **Scene Variety:** Each opener sets up different scenarios and dynamics
-- **Character Development:** The AI will remember character names and states
+## **🎯 Clothing Continuity Testing**
 
-## 🔄 Switching Openers
+All openers have been revised to start with characters **fully dressed** to enable proper testing of the clothing continuity system. This allows the scene state manager to track clothing removal and prevent clothes from magically reappearing later in the story.
 
-To try a different scenario:
-1. Refresh the web page (clears session)
-2. Load a different opener file
-3. Start fresh with new characters
+### **Testing Process:**
+1. **Load opener** - Characters start fully dressed
+2. **Continue story** - Clothing gets removed through natural progression
+3. **Verify continuity** - Removed clothing stays removed
+4. **Test persistence** - State maintained across multiple interactions
 
-## 📝 Custom Openers
+## **📝 Usage**
 
-Create your own by:
-1. Copy any existing opener file
-2. Rename it (e.g., `opener_my_scenario.txt`)
-3. Edit the content with your preferred characters and setup
-4. Use it in the web interface
-
-## 🎭 Character Examples
-
-### **Female Names Used:**
-- Emma, Sarah, Rachel, Sophia, Elena, Maya
-- Jennifer, Lisa, Ashley, Taylor, Jessica
-- Michelle, Brooke, Nicole, Vanessa, Tiffany
-- Destiny, Aria, Pip, Zara
-
-### **Male Names Used:**
-- Alex, Mike, Marcus, David, James, Carlos
-- Mr. Thompson, Chris, Ryan, Michael, Robert
-- Thorne, Gimli, Grok
-
-### **Gender-Neutral Names:**
-- Jordan, Taylor, Pip
-
-## 🌶️ Content Warnings
-
-All openers contain explicit sexual content including:
-- Explicit anatomical language
-- Sexual acts and positions
-- Multiple partner scenarios
-- Fantasy and roleplay elements
-
-The system will automatically detect and track any character names you introduce in your story!
+Use `/loadopener filename.txt` to start a story with the specified opener. The scene state manager will track character clothing, positions, and scene details to maintain continuity throughout the story.
