@@ -31,6 +31,28 @@ class TTSHelper:
                 self.api_key = None
         else:
             print("🔇 TTS disabled - no API key set")
+        
+        # Create default files if they don't exist to avoid startup messages
+        self._ensure_default_files()
+    
+    def _ensure_default_files(self):
+        """Create default TTS configuration files if they don't exist"""
+        try:
+            # Create default TTS mode file if it doesn't exist
+            if not os.path.exists("tts_mode.txt"):
+                with open("tts_mode.txt", "w") as f:
+                    f.write("save")  # Default to save mode
+                print(f"🔍 Debug: Created default TTS mode file: save")
+            
+            # Create default voice ID file if it doesn't exist
+            if not os.path.exists("tts_voice_id.txt"):
+                default_voice = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
+                with open("tts_voice_id.txt", "w") as f:
+                    f.write(default_voice)
+                print(f"🔍 Debug: Created default voice ID file: {default_voice}")
+                
+        except Exception as e:
+            print(f"🔍 Debug: Error creating default files: {e}")
     
     @property
     def enabled(self):
