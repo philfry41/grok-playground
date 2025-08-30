@@ -138,6 +138,9 @@ RULES:
         # Update story progress
         if "story_progress" in new_state:
             self.current_state["story_progress"] = new_state["story_progress"]
+        
+        # Save updated state to file
+        self._save_state()
     
     def get_state_as_prompt(self) -> str:
         """
@@ -178,3 +181,39 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             "key_objects": [],
             "story_progress": []
         }
+        self._save_state()
+    
+    def _save_state(self):
+        """
+        Save current state to file for persistence
+        """
+        try:
+            with open("scene_state.json", "w") as f:
+                json.dump(self.current_state, f, indent=2)
+            print(f"🔍 Debug: Scene state saved to file")
+        except Exception as e:
+            print(f"🔍 Debug: Error saving scene state: {e}")
+    
+    def _load_state(self):
+        """
+        Load state from file if it exists
+        """
+        try:
+            if os.path.exists("scene_state.json"):
+                with open("scene_state.json", "r") as f:
+                    loaded_state = json.load(f)
+                    self.current_state = loaded_state
+                print(f"🔍 Debug: Scene state loaded from file")
+                print(f"🔍 Debug: Loaded characters: {list(self.current_state['characters'].keys())}")
+            else:
+                print(f"🔍 Debug: No scene state file found, using default state")
+        except Exception as e:
+            print(f"🔍 Debug: Error loading scene state: {e}")
+    
+    def get_current_state(self):
+        """
+        Get current state (load from file if needed)
+        """
+        if not self.current_state.get("characters"):
+            self._load_state()
+        return self.current_state
