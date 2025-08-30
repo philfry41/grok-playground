@@ -8,9 +8,6 @@ from elevenlabs import ElevenLabs
 class TTSHelper:
     def __init__(self):
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
-        # TTS modes: "off", "save" (generate .mp3 files)
-        # Load mode from file for persistence across worker restarts
-        self.mode = self._load_tts_mode()
         
         # Load voice ID from file for persistence across worker restarts
         self.voice_id = self._load_voice_id()
@@ -38,12 +35,6 @@ class TTSHelper:
     def _ensure_default_files(self):
         """Create default TTS configuration files if they don't exist"""
         try:
-            # Create default TTS mode file if it doesn't exist
-            if not os.path.exists("tts_mode.txt"):
-                with open("tts_mode.txt", "w") as f:
-                    f.write("save")  # Default to save mode
-                print(f"🔍 Debug: Created default TTS mode file: save")
-            
             # Create default voice ID file if it doesn't exist
             if not os.path.exists("tts_voice_id.txt"):
                 default_voice = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
@@ -56,13 +47,8 @@ class TTSHelper:
     
     @property
     def enabled(self):
-        """TTS is enabled if we have an API key and mode is not 'off'"""
-        return bool(self.api_key) and self.mode != "off"
-    
-    @property
-    def auto_save(self):
-        """TTS file generation is enabled if mode is 'save'"""
-        return self.mode == "save"
+        """TTS is enabled if we have an API key"""
+        return bool(self.api_key)
     
     def get_available_voices(self):
         """Get list of available voices with model information"""
@@ -203,71 +189,12 @@ class TTSHelper:
         model = self.get_voice_model(voice_id)
         print(f"🎤 Voice {voice_id} will use model: {model}")
     
-    def cycle_mode(self):
-        """Cycle through TTS modes: off -> save -> off"""
-        if not self.api_key:
-            print("🔇 TTS disabled - no API key set")
-            return "off"
-        
-        if self.mode == "off":
-            self.mode = "save"
-            print("💾 TTS enabled (generate .mp3 files)")
-        else:  # save
-            self.mode = "off"
-            print("🔇 TTS disabled")
-        
-        # Save mode to file for persistence across worker restarts
-        self._save_tts_mode(self.mode)
-        print(f"🔍 Debug: TTS mode after cycle: {self.mode}")
-        
-        return self.mode
-    
-    def _load_tts_mode(self):
-        """Load TTS mode from file for persistence"""
-        try:
-            if os.path.exists("tts_mode.txt"):
-                with open("tts_mode.txt", "r") as f:
-                    mode = f.read().strip()
-                    if mode in ["off", "save"]:
-                        print(f"🔍 Debug: Loaded TTS mode from file: {mode}")
-                        return mode
-                    else:
-                        print(f"🔍 Debug: Invalid TTS mode in file: {mode}")
-            else:
-                print(f"🔍 Debug: No TTS mode file found, using default: save")
-        except Exception as e:
-            print(f"🔍 Debug: Error loading TTS mode: {e}")
-        
-        return "save"  # Default to save mode for TTS
-    
-    def _save_tts_mode(self, mode):
-        """Save TTS mode to file for persistence"""
-        try:
-            print(f"🔍 Debug: Attempting to save TTS mode: {mode}")
-            with open("tts_mode.txt", "w") as f:
-                f.write(mode)
-            print(f"🔍 Debug: Saved TTS mode to file: {mode}")
-            
-            # Verify the file was created
-            if os.path.exists("tts_mode.txt"):
-                with open("tts_mode.txt", "r") as f:
-                    saved_mode = f.read().strip()
-                print(f"🔍 Debug: Verified TTS mode file contains: {saved_mode}")
-            else:
-                print(f"🔍 Debug: Warning: TTS mode file was not created")
-        except Exception as e:
-            print(f"🔍 Debug: Error saving TTS mode: {e}")
-            import traceback
-            print(f"🔍 Debug: Save error traceback: {traceback.format_exc()}")
-    
     def get_mode_display(self):
         """Get human-readable mode description"""
         if not self.api_key:
             return "No API Key"
-        elif self.mode == "off":
-            return "Disabled"
-        else:  # save
-            return "Generate .mp3"
+        else:
+            return "Enabled"
     
     def speak(self, text, save_audio=False):
         """Generate and save/play TTS audio"""

@@ -668,44 +668,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
 
 @app.route('/api/tts-toggle', methods=['POST'])
 def toggle_tts():
-    """Cycle through TTS modes: off -> tts -> save -> off"""
+    """Simple TTS status check - TTS is always enabled if API key is available"""
     try:
-        data = request.get_json()
-        action = data.get('action', 'cycle')
-        
-        if action == 'cycle':
-            new_mode = tts.cycle_mode()
-            mode_display = tts.get_mode_display()
-            print(f"🔄 TTS mode cycled to: {mode_display}")
-        elif action == 'enable':
-            if tts.api_key:
-                tts.mode = "save"
-                tts._save_tts_mode("save")
-                print(f"💾 TTS enabled (generate .mp3 files)")
-            else:
-                return jsonify({'error': 'No TTS API key available'})
-        elif action == 'disable':
-            tts.mode = "off"
-            tts._save_tts_mode("off")
-            print(f"🔇 TTS disabled")
-        elif action == 'force_save':
-            # Force save mode for testing
-            tts.mode = "save"
-            tts._save_tts_mode("save")
-            print(f"💾 TTS forced to save mode")
-        else:
-            return jsonify({'error': f'Invalid action: {action}'})
-        
         return jsonify({
             'success': True,
             'enabled': tts.enabled,
-            'mode': tts.mode,
             'mode_display': tts.get_mode_display(),
             'message': f"TTS: {tts.get_mode_display()}"
         })
     except Exception as e:
-        print(f"🔍 Debug: Error toggling TTS: {e}")
-        return jsonify({'error': f'Failed to toggle TTS: {str(e)}'})
+        print(f"🔍 Debug: Error checking TTS status: {e}")
+        return jsonify({'error': f'Failed to check TTS status: {str(e)}'})
 
 @app.route('/api/opener-files', methods=['GET'])
 def get_opener_files():
@@ -766,10 +739,8 @@ def get_voices():
 def tts_status():
     return jsonify({
         'enabled': tts.enabled,
-        'mode': tts.mode,
         'mode_display': tts.get_mode_display(),
         'voice_id': tts.voice_id,
-        'auto_save': tts.auto_save,
         'has_api_key': bool(tts.api_key),
         'available_voices': tts.get_available_voices()
     })
