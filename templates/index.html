@@ -818,7 +818,23 @@
                 if (edgeTriggered) {
                     messageDiv.classList.add('edge-triggered');
                 }
-                messageDiv.textContent = content;
+                
+                // Create text content
+                const textDiv = document.createElement('div');
+                textDiv.textContent = content;
+                messageDiv.appendChild(textDiv);
+                
+                // Add TTS button for assistant messages if TTS is enabled
+                if (type === 'assistant') {
+                    const ttsButton = document.createElement('button');
+                    ttsButton.innerHTML = '🎵 Play TTS';
+                    ttsButton.className = 'btn btn-primary';
+                    ttsButton.style.marginTop = '10px';
+                    ttsButton.style.fontSize = '12px';
+                    ttsButton.onclick = () => generateTTSOnDemand();
+                    messageDiv.appendChild(ttsButton);
+                }
+                
                 currentInteraction.appendChild(messageDiv);
                 currentInteraction.scrollTop = currentInteraction.scrollHeight;
                 
@@ -839,6 +855,38 @@
                 debugLog('addMessage error: ' + error.message);
                 // Fallback: try to show error in alert
                 alert(`Error displaying message: ${error.message}`);
+            }
+        }
+
+        // Generate TTS on demand for the most recent AI response
+        async function generateTTSOnDemand() {
+            try {
+                addMessage('🎵 Generating TTS...', 'system');
+                
+                const response = await fetch('/api/tts-generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.audio_file === 'generating') {
+                        addMessage('🎵 TTS generation started. Audio will be available shortly...', 'system');
+                        // Start polling for the audio file
+                        startAudioPolling();
+                    } else {
+                        addMessage(`🎵 TTS generated: ${data.audio_file}`, 'system');
+                        // Play the audio immediately
+                        playAudio('/audio/' + data.audio_file.split('/').pop(), null);
+                    }
+                } else {
+                    addMessage(`Error: ${data.error}`, 'system');
+                }
+            } catch (error) {
+                addMessage(`Error generating TTS: ${error.message}`, 'system');
             }
         }
 

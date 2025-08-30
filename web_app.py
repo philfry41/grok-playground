@@ -424,40 +424,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 for i, msg in enumerate(session['history']):
                     print(f"🔍 Debug: Opener history {i}: {msg['role']} - {msg['content'][:100]}...")
                 
-                # Handle TTS for AI response (same logic as main chat)
-                audio_file = None
+                # TTS will be generated on-demand via button, not automatically
                 print(f"🔍 Debug: TTS enabled: {tts.enabled}, mode: {tts.mode}")
                 print(f"🔍 Debug: Reply length: {len(reply)}")
-                
-                if tts.enabled and reply.strip():
-                    try:
-                        # Handle TTS based on response length
-                        if len(reply) < 1000:  # Short responses - generate TTS immediately
-                            # Always save audio files (needed for both auto-play and auto-save)
-                            save_audio = True
-                            print(f"🔍 Debug: TTS save_audio parameter: {save_audio}")
-                            print(f"🔍 Debug: Using voice ID for AI response: {tts.voice_id}")
-                            audio_file = tts.speak(reply, save_audio=save_audio)
-                        else:  # Long responses - generate TTS asynchronously
-                            print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
-                            # Always save audio files (needed for both auto-play and auto-save)
-                            save_audio = True
-                            print(f"🔍 Debug: Using voice ID for AI response: {tts.voice_id}")
-                            audio_file = generate_tts_async(reply, save_audio=save_audio, request_id=request_id)
-                            if audio_file:
-                                if audio_file == "generating":
-                                    print(f"🔍 Debug: Async TTS started for AI response")
-                                else:
-                                    print(f"🔍 Debug: TTS generated for AI response: {audio_file}")
-                            else:
-                                print(f"🔍 Debug: TTS played for AI response (not saved)")
-                        # TTS handled above based on length
-                    except Exception as e:
-                        print(f"🔍 Debug: TTS error for AI response: {e}")
-                        import traceback
-                        print(f"🔍 Debug: TTS error traceback: {traceback.format_exc()}")
-                else:
-                    print(f"🔍 Debug: TTS not enabled or reply empty for AI response")
+                print(f"🔍 Debug: TTS will be generated on-demand when user clicks 'Play TTS' button")
                 
                 # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
                 try:
@@ -476,10 +446,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
                     print(f"🔍 Debug: Error type: {type(e)}")
                 
-                # Update initial response with AI response and audio
+                # Update initial response with AI response (no audio file yet)
                 initial_response['ai_response'] = reply
                 initial_response['response_type'] = 'assistant'
-                initial_response['audio_file'] = audio_file
+                initial_response['audio_file'] = None  # Will be generated on-demand
                 
                 return jsonify(initial_response)
                 
@@ -662,35 +632,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             session['history'] = system_messages + recent_messages
             print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
         
-        # Handle TTS if enabled
-        audio_file = None
+        # TTS will be generated on-demand via button, not automatically
+        print(f"🔍 Debug: TTS enabled: {tts.enabled}, mode: {tts.mode}")
+        print(f"🔍 Debug: Reply length: {len(reply)}")
+        print(f"🔍 Debug: TTS will be generated on-demand when user clicks 'Play TTS' button")
         
-        # Clean up before TTS to free memory
+        # Clean up before sending response
         cleanup_resources()
-        
-        if tts.enabled and reply.strip():
-            try:
-                # Generate TTS for responses (increased limit for paid tier)
-                # Handle TTS based on response length
-                if len(reply) < 2000:  # Increased threshold to reduce async TTS usage
-                    # For auto-save mode, always save audio files
-                    # For auto-play mode, don't save (just play)
-                    save_audio = (tts.mode == "save")
-                    print(f"🔍 Debug: Short response ({len(reply)} chars) - using immediate TTS")
-                    audio_file = tts.speak(reply, save_audio=save_audio)
-                else:  # Long responses - generate TTS asynchronously
-                    print(f"🔍 Debug: Long response ({len(reply)} chars) - using async TTS")
-                    save_audio = (tts.mode == "save")
-                    audio_file = generate_tts_async(reply, save_audio=save_audio, request_id=request_id)
-                    if audio_file:
-                        if audio_file == "generating":
-                            print(f"🔍 Debug: Async TTS started")
-                        else:
-                            print(f"🔍 Debug: TTS generated: {audio_file}")
-                    else:
-                        print(f"🔍 Debug: TTS played (not saved)")
-            except Exception as e:
-                print(f"🔍 Debug: TTS error: {e}")
         
         # Clean up request tracking before sending response
         if request_id:
@@ -701,7 +649,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             'message': reply,
             'type': 'assistant',
             'edge_triggered': False,  # Simplified for Render
-            'audio_file': audio_file
+            'audio_file': None  # Will be generated on-demand
         })
         
     except Exception as e:
@@ -847,6 +795,58 @@ def set_tts_voice():
     except Exception as e:
         print(f"🔍 Debug: Error setting TTS voice: {e}")
         return jsonify({'error': f'Failed to set TTS voice: {str(e)}'})
+
+@app.route('/api/tts-generate', methods=['POST'])
+def generate_tts_on_demand():
+    """Generate TTS for the most recent AI response on demand"""
+    try:
+        if not tts.enabled:
+            return jsonify({'error': 'TTS not enabled'})
+        
+        # Get the most recent AI response from session
+        if 'history' not in session:
+            return jsonify({'error': 'No conversation history found'})
+        
+        # Find the most recent assistant message
+        assistant_messages = [msg for msg in session['history'] if msg['role'] == 'assistant']
+        if not assistant_messages:
+            return jsonify({'error': 'No AI response found to generate TTS for'})
+        
+        latest_response = assistant_messages[-1]['content']
+        print(f"🔍 Debug: Generating TTS on-demand for response length: {len(latest_response)}")
+        
+        # Generate TTS for the response
+        if len(latest_response) < 2000:  # Short responses - generate immediately
+            print(f"🔍 Debug: Short response - using immediate TTS")
+            audio_file = tts.speak(latest_response, save_audio=True)
+            if audio_file:
+                print(f"🔍 Debug: TTS generated immediately: {audio_file}")
+                return jsonify({
+                    'success': True,
+                    'audio_file': audio_file,
+                    'message': 'TTS generated successfully'
+                })
+            else:
+                return jsonify({'error': 'Failed to generate TTS'})
+        else:  # Long responses - generate asynchronously
+            print(f"🔍 Debug: Long response - using async TTS")
+            request_id = generate_request_id()
+            audio_file = generate_tts_async(latest_response, save_audio=True, request_id=request_id)
+            if audio_file == "generating":
+                print(f"🔍 Debug: Async TTS started for on-demand request")
+                return jsonify({
+                    'success': True,
+                    'audio_file': 'generating',
+                    'message': 'TTS generation started'
+                })
+            else:
+                return jsonify({'error': 'Failed to start TTS generation'})
+                
+    except Exception as e:
+        print(f"🔍 Debug: Error generating TTS on-demand: {e}")
+        import traceback
+        print(f"🔍 Debug: TTS on-demand error traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Failed to generate TTS: {str(e)}'})
 
 @app.route('/api/debug-info', methods=['GET'])
 def get_debug_info():
