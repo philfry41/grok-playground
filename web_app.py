@@ -554,18 +554,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Build context with recent history for continuity
             context_messages = []
             
-            # Add system message with specific continuity instructions and scene state
+            # Add system message with specific continuity instructions
             if command == 'cont':
                 system_prompt = "You are an explicit storyteller. Continue the story naturally from where it left off. Maintain the exact same characters, location, and situation. Do not introduce new characters or change the setting unless explicitly mentioned in the previous context."
             else:
-                # Get current scene state for continuity
-                try:
-                    state_manager = StoryStateManager()
-                    scene_state_reminder = state_manager.get_state_as_prompt()
-                    system_prompt = f"You are an explicit storyteller. {scene_state_reminder}"
-                except Exception as e:
-                    print(f"🔍 Debug: State manager error in main chat, using fallback: {e}")
-                    system_prompt = "You are an explicit storyteller. Continue the story naturally."
+                system_prompt = "You are an explicit storyteller. Continue the story naturally from where it left off, maintaining character names, locations, and situations."
             
             context_messages.append({"role": "system", "content": system_prompt})
             
