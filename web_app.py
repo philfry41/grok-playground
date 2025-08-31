@@ -379,24 +379,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 'opener_audio_file': None
             }
             
-            # Start TTS generation for opener text in background (if enabled)
-            if tts.enabled and opener.strip():
-                try:
-                    print(f"🔍 Debug: Starting TTS for opener text, length={len(opener)}")
-                    print(f"🔍 Debug: Using voice ID: {tts.voice_id}")
-                    # Always save opener audio file when TTS is enabled (needed for both auto-play and auto-save)
-                    save_audio = True
-                    print(f"🔍 Debug: TTS for opener save_audio parameter: {save_audio}")
-                    opener_audio_file = generate_tts_async(opener, save_audio=save_audio, request_id=request_id)
-                    if opener_audio_file == "generating":
-                        print(f"🔍 Debug: Async TTS started for opener text")
-                        initial_response['opener_audio_file'] = "generating"
-                except Exception as e:
-                    print(f"🔍 Debug: TTS error for opener text: {e}")
-                    import traceback
-                    print(f"🔍 Debug: TTS error traceback for opener: {traceback.format_exc()}")
-            else:
-                print(f"🔍 Debug: TTS not enabled or opener empty for opener text")
+            # TTS will be generated on-demand via button, not automatically for opener text
+            print(f"🔍 Debug: TTS enabled: {tts.enabled}")
+            print(f"🔍 Debug: Opener text length: {len(opener)}")
+            print(f"🔍 Debug: TTS will be generated on-demand when user clicks 'Play TTS' button")
             
             # Generate AI response to continue the story
             try:
@@ -425,7 +411,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: Opener history {i}: {msg['role']} - {msg['content'][:100]}...")
                 
                 # TTS will be generated on-demand via button, not automatically
-                print(f"🔍 Debug: TTS enabled: {tts.enabled}, mode: {tts.mode}")
+                print(f"🔍 Debug: TTS enabled: {tts.enabled}")
                 print(f"🔍 Debug: Reply length: {len(reply)}")
                 print(f"🔍 Debug: TTS will be generated on-demand when user clicks 'Play TTS' button")
                 
@@ -633,7 +619,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
         
         # TTS will be generated on-demand via button, not automatically
-        print(f"🔍 Debug: TTS enabled: {tts.enabled}, mode: {tts.mode}")
+        print(f"🔍 Debug: TTS enabled: {tts.enabled}")
         print(f"🔍 Debug: Reply length: {len(reply)}")
         print(f"🔍 Debug: TTS will be generated on-demand when user clicks 'Play TTS' button")
         
@@ -838,14 +824,13 @@ def get_debug_info():
             },
             'tts_status': {
                 'enabled': tts.enabled,
-                'mode': tts.mode,
                 'api_key_set': bool(tts.api_key)
             },
             'file_system': {
                 'current_dir': os.getcwd(),
                 'files_in_dir': os.listdir('.')[:10],  # First 10 files
                 'audio_dir_exists': os.path.exists('audio_files'),
-                'tts_mode_file_exists': os.path.exists('tts_mode.txt')
+                'voice_id_file_exists': os.path.exists('tts_voice_id.txt')
             },
             'memory_info': {
                 'gc_count': gc.get_count(),
@@ -877,7 +862,7 @@ def get_server_logs():
         logs.append(f"Python Version: {sys.version}")
         logs.append(f"Current Directory: {os.getcwd()}")
         logs.append(f"TTS Enabled: {tts.enabled}")
-        logs.append(f"TTS Mode: {tts.mode}")
+        logs.append(f"TTS Status: {tts.get_mode_display()}")
         logs.append(f"API Key Set: {'Yes' if os.getenv('XAI_API_KEY') else 'No'}")
         logs.append(f"Model: {os.getenv('XAI_MODEL', 'grok-3')}")
         logs.append("")
@@ -885,8 +870,8 @@ def get_server_logs():
         # Check for common issues
         if not os.path.exists('audio_files'):
             logs.append("⚠️ Audio directory missing")
-        if not os.path.exists('tts_mode.txt'):
-            logs.append("⚠️ TTS mode file missing")
+        if not os.path.exists('tts_voice_id.txt'):
+            logs.append("⚠️ TTS voice ID file missing")
         if not tts.api_key:
             logs.append("⚠️ TTS API key not set")
         
