@@ -787,7 +787,8 @@ def generate_tts_on_demand():
                 return jsonify({'error': 'Failed to generate TTS'})
         else:  # Long responses - generate asynchronously
             print(f"🔍 Debug: Long response - using async TTS")
-            request_id = generate_request_id()
+            # Create a simple request ID for TTS generation
+            request_id = hashlib.md5(f"tts_on_demand:{len(latest_response)}:{time.time()}".encode()).hexdigest()[:8]
             audio_file = generate_tts_async(latest_response, save_audio=True, request_id=request_id)
             if audio_file == "generating":
                 print(f"🔍 Debug: Async TTS started for on-demand request")
