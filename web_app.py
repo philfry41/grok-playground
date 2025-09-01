@@ -599,12 +599,19 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 # Add comprehensive system prompt
                 if comprehensive_system_prompt:
                     context_messages.append({"role": "system", "content": f"You are an explicit storyteller. {comprehensive_system_prompt}"})
+                    print(f"🔍 Debug: Added comprehensive system prompt to AI context")
                 else:
                     context_messages.append({"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from the opener text."})
+                    print(f"🔍 Debug: Added fallback system prompt to AI context")
                 
                 # Add opener text
                 if opener_text:
                     context_messages.append({"role": "user", "content": f"Continue this story from where it left off:\n\n{opener_text}"})
+                    print(f"🔍 Debug: Added opener text to AI context")
+                
+                print(f"🔍 Debug: AI context messages count: {len(context_messages)}")
+                for i, msg in enumerate(context_messages):
+                    print(f"🔍 Debug: AI context {i}: {msg['role']} - {msg['content'][:200]}...")
                 
                 reply = chat_with_grok(
                     context_messages,
