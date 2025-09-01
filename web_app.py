@@ -461,6 +461,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         # Handle /loadstory command - get story ID from parsed command
         story_id = data.get('loadstory', 'farm_romance')
         print(f"🔍 Debug: story_id='{story_id}'")
+        print(f"🔍 Debug: data keys: {list(data.keys())}")
+        print(f"🔍 Debug: user_input: {user_input}")
         
         try:
             # Load the story JSON file
