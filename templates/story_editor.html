@@ -500,19 +500,24 @@
         // Load a specific story file
         async function loadStoryFile(filename) {
             try {
+                console.log('🔍 Loading story file:', filename);
                 const response = await fetch(`/api/story-files/${encodeURIComponent(filename)}`);
+                console.log('🔍 Response status:', response.status);
                 const data = await response.json();
+                console.log('🔍 Response data:', data);
                 
                 if (data.success) {
+                    console.log('🔍 Story loaded successfully:', data.story.title);
                     currentStory = data.story;
                     populateForm(data.story);
                     showNewStory();
                     showStatus(`Loaded story: ${data.story.title}`, 'success');
                 } else {
+                    console.log('🔍 Error in response:', data.error);
                     showStatus(`Error loading story: ${data.error}`, 'error');
                 }
             } catch (error) {
-                console.error('Error loading story file:', error);
+                console.error('🔍 Error loading story file:', error);
                 showStatus('Error loading story file', 'error');
             }
         }
