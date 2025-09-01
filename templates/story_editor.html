@@ -590,6 +590,8 @@
             
             const characterSection = document.createElement('div');
             characterSection.className = 'character-section';
+            
+            // Create the HTML structure
             characterSection.innerHTML = `
                 <div class="character-header">
                     <div class="character-name">Character ${charId}</div>
@@ -599,11 +601,11 @@
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Name</label>
-                        <input type="text" class="form-control char-name" value="${escapeHtml(characterData?.name)}" placeholder="Character name">
+                        <input type="text" class="form-control char-name" placeholder="Character name">
                     </div>
                     <div class="form-group">
                         <label>Age</label>
-                        <input type="number" class="form-control char-age" value="${typeof characterData?.age === 'number' ? characterData.age : ''}" placeholder="Age">
+                        <input type="number" class="form-control char-age" placeholder="Age">
                     </div>
                 </div>
                 
@@ -611,14 +613,14 @@
                     <div class="form-group">
                         <label>Gender</label>
                         <select class="form-control char-gender">
-                            <option value="female" ${characterData?.gender === 'female' ? 'selected' : ''}>Female</option>
-                            <option value="male" ${characterData?.gender === 'male' ? 'selected' : ''}>Male</option>
-                            <option value="non-binary" ${characterData?.gender === 'non-binary' ? 'selected' : ''}>Non-binary</option>
+                            <option value="female">Female</option>
+                            <option value="male">Male</option>
+                            <option value="non-binary">Non-binary</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Occupation</label>
-                        <input type="text" class="form-control char-occupation" value="${escapeHtml(characterData?.occupation)}" placeholder="Occupation">
+                        <input type="text" class="form-control char-occupation" placeholder="Occupation">
                     </div>
                 </div>
                 
@@ -628,25 +630,25 @@
                         <div class="grid-3">
                             <div class="form-group">
                                 <label>Height</label>
-                                <input type="text" class="form-control char-height" value="${escapeHtml(characterData?.physical?.height)}" placeholder="e.g., 5'6&quot;">
+                                <input type="text" class="form-control char-height" placeholder="e.g., 5'6&quot;">
                             </div>
                             <div class="form-group">
                                 <label>Build</label>
-                                <input type="text" class="form-control char-build" value="${escapeHtml(characterData?.physical?.build)}" placeholder="e.g., athletic">
+                                <input type="text" class="form-control char-build" placeholder="e.g., athletic">
                             </div>
                             <div class="form-group">
                                 <label>Hair</label>
-                                <input type="text" class="form-control char-hair" value="${escapeHtml(characterData?.physical?.hair)}" placeholder="e.g., auburn, shoulder-length">
+                                <input type="text" class="form-control char-hair" placeholder="e.g., auburn, shoulder-length">
                             </div>
                         </div>
                         <div class="grid-2">
                             <div class="form-group">
                                 <label>Eyes</label>
-                                <input type="text" class="form-control char-eyes" value="${escapeHtml(characterData?.physical?.eyes)}" placeholder="e.g., hazel">
+                                <input type="text" class="form-control char-eyes" placeholder="e.g., hazel">
                             </div>
                             <div class="form-group">
                                 <label>Distinguishing Features</label>
-                                <input type="text" class="form-control char-features" value="${Array.isArray(characterData?.physical?.features) ? characterData.physical.features.join(', ') : ''}" placeholder="e.g., freckles, tattoo">
+                                <input type="text" class="form-control char-features" placeholder="e.g., freckles, tattoo">
                             </div>
                         </div>
                     </div>
@@ -657,20 +659,20 @@
                     <div class="section-content">
                         <div class="form-group">
                             <label>Traits (comma-separated)</label>
-                            <input type="text" class="form-control char-traits" value="${Array.isArray(characterData?.personality?.traits) ? characterData.personality.traits.join(', ') : ''}" placeholder="confident, playful, ambitious">
+                            <input type="text" class="form-control char-traits" placeholder="confident, playful, ambitious">
                         </div>
                         <div class="form-group">
                             <label>Desires (comma-separated)</label>
-                            <input type="text" class="form-control char-desires" value="${Array.isArray(characterData?.personality?.desires) ? characterData.personality.desires.join(', ') : ''}" placeholder="physical intimacy, connection, adventure">
+                            <input type="text" class="form-control char-desires" placeholder="physical intimacy, connection, adventure">
                         </div>
                         <div class="grid-2">
                             <div class="form-group">
                                 <label>Turn-ons (comma-separated)</label>
-                                <input type="text" class="form-control char-turn-ons" value="${Array.isArray(characterData?.personality?.turn_ons) ? characterData.personality.turn_ons.join(', ') : ''}" placeholder="dominance, public risk, slow build-up">
+                                <input type="text" class="form-control char-turn-ons" placeholder="dominance, public risk, slow build-up">
                             </div>
                             <div class="form-group">
                                 <label>Turn-offs (comma-separated)</label>
-                                <input type="text" class="form-control char-turn-offs" value="${Array.isArray(characterData?.personality?.turn_offs) ? characterData.personality.turn_offs.join(', ') : ''}" placeholder="roughness, lack of consent">
+                                <input type="text" class="form-control char-turn-offs" placeholder="roughness, lack of consent">
                             </div>
                         </div>
                     </div>
@@ -680,12 +682,6 @@
                     <div class="section-header">Key Memories</div>
                     <div class="section-content">
                         <div id="memories_${charId}">
-                            ${characterData?.key_memories ? characterData.key_memories.map(memory => `
-                                <div class="memory-item">
-                                    <input type="text" class="form-control char-memory" value="${memory}" placeholder="Key memory or event...">
-                                    <button type="button" class="remove-memory" onclick="removeMemory(this)">🗑️</button>
-                                </div>
-                            `).join('') : ''}
                         </div>
                         <button type="button" class="add-btn" onclick="addMemory('${charId}')">➕ Add Memory</button>
                     </div>
@@ -693,6 +689,56 @@
             `;
             
             container.appendChild(characterSection);
+            
+            // Now set the values programmatically
+            if (characterData) {
+                const nameInput = characterSection.querySelector('.char-name');
+                const ageInput = characterSection.querySelector('.char-age');
+                const genderSelect = characterSection.querySelector('.char-gender');
+                const occupationInput = characterSection.querySelector('.char-occupation');
+                const heightInput = characterSection.querySelector('.char-height');
+                const buildInput = characterSection.querySelector('.char-build');
+                const hairInput = characterSection.querySelector('.char-hair');
+                const eyesInput = characterSection.querySelector('.char-eyes');
+                const featuresInput = characterSection.querySelector('.char-features');
+                const traitsInput = characterSection.querySelector('.char-traits');
+                const desiresInput = characterSection.querySelector('.char-desires');
+                const turnOnsInput = characterSection.querySelector('.char-turn-ons');
+                const turnOffsInput = characterSection.querySelector('.char-turn-offs');
+                const memoriesContainer = characterSection.querySelector(`#memories_${charId}`);
+                
+                // Set basic info
+                if (nameInput) nameInput.value = characterData.name || '';
+                if (ageInput) ageInput.value = typeof characterData.age === 'number' ? characterData.age : '';
+                if (genderSelect) genderSelect.value = characterData.gender || 'female';
+                if (occupationInput) occupationInput.value = characterData.occupation || '';
+                
+                // Set physical description
+                if (heightInput) heightInput.value = characterData.physical?.height || '';
+                if (buildInput) buildInput.value = characterData.physical?.build || '';
+                if (hairInput) hairInput.value = characterData.physical?.hair || '';
+                if (eyesInput) eyesInput.value = characterData.physical?.eyes || '';
+                if (featuresInput) featuresInput.value = Array.isArray(characterData.physical?.features) ? characterData.physical.features.join(', ') : '';
+                
+                // Set personality
+                if (traitsInput) traitsInput.value = Array.isArray(characterData.personality?.traits) ? characterData.personality.traits.join(', ') : '';
+                if (desiresInput) desiresInput.value = Array.isArray(characterData.personality?.desires) ? characterData.personality.desires.join(', ') : '';
+                if (turnOnsInput) turnOnsInput.value = Array.isArray(characterData.personality?.turn_ons) ? characterData.personality.turn_ons.join(', ') : '';
+                if (turnOffsInput) turnOffsInput.value = Array.isArray(characterData.personality?.turn_offs) ? characterData.personality.turn_offs.join(', ') : '';
+                
+                // Set memories
+                if (memoriesContainer && Array.isArray(characterData.key_memories)) {
+                    characterData.key_memories.forEach(memory => {
+                        const memoryItem = document.createElement('div');
+                        memoryItem.className = 'memory-item';
+                        memoryItem.innerHTML = `
+                            <input type="text" class="form-control char-memory" value="${escapeHtml(memory)}" placeholder="Key memory or event...">
+                            <button type="button" class="remove-memory" onclick="removeMemory(this)">🗑️</button>
+                        `;
+                        memoriesContainer.appendChild(memoryItem);
+                    });
+                }
+            }
         }
         
         // Remove a character section
