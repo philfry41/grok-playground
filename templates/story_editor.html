@@ -494,7 +494,7 @@
         function showNewStory() {
             document.getElementById('fileListSection').classList.add('hidden');
             document.getElementById('storyEditorSection').classList.remove('hidden');
-            resetForm();
+            // Don't reset form when loading existing story data
         }
         
         // Load a specific story file
