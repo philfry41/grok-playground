@@ -999,6 +999,15 @@
                     // Check if this was a command response
                     if (isCommand) {
                         addOpenerMessage(data.message, data.type, data.edge_triggered);
+                        
+                        // Handle special response formats for specific commands
+                        if (data.opener_content) {
+                            addOpenerMessage(`📄 Opener content: ${data.opener_content}`, 'user');
+                        }
+                        if (data.ai_response) {
+                            addOpenerMessage(data.ai_response, data.response_type || 'assistant', data.edge_triggered);
+                        }
+                        
                         if (data.audio_file) {
                             if (data.audio_file === 'generating') {
                                 debugLog('Async TTS detected - starting polling');
