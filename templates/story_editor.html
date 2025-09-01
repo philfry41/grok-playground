@@ -524,6 +524,10 @@
         
         // Populate form with story data
         function populateForm(story) {
+            console.log('🔍 Populating form with story:', story);
+            console.log('🔍 Story title:', story.title);
+            console.log('🔍 Characters count:', Object.keys(story.characters || {}).length);
+            
             // Basic info
             document.getElementById('storyId').value = story.story_id || '';
             document.getElementById('storyTitle').value = story.title || '';
@@ -555,11 +559,15 @@
         
         // Populate characters section
         function populateCharacters(characters) {
+            console.log('🔍 Populating characters:', characters);
+            console.log('🔍 Characters container:', document.getElementById('charactersContainer'));
+            
             const container = document.getElementById('charactersContainer');
             container.innerHTML = '';
             characterCounter = 0;
             
             Object.keys(characters).forEach(charKey => {
+                console.log('🔍 Adding character:', charKey, characters[charKey]);
                 addCharacter(characters[charKey], charKey);
             });
         }
