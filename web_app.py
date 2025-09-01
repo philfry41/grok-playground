@@ -488,6 +488,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             setting = story.get('setting', {})
             narrative_guidelines = story.get('narrative_guidelines', {})
             
+            print(f"🔍 Debug: Story data structure - story keys: {list(story.keys())}")
+            print(f"🔍 Debug: Opener text length: {len(opener_text)}")
+            print(f"🔍 Debug: Characters count: {len(characters)}")
+            print(f"🔍 Debug: Setting keys: {list(setting.keys())}")
+            print(f"🔍 Debug: Narrative guidelines keys: {list(narrative_guidelines.keys())}")
+            
             # Build comprehensive system prompt from story data
             system_prompt_parts = []
             
