@@ -484,14 +484,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: Story data type: {type(story_data)}")
             print(f"🔍 Debug: Story data content preview: {str(story_data)[:200]}...")
             
-            # Extract story components
-            story = story_data.get('story', {})
-            opener_text = story.get('opener_text', '')
-            characters = story.get('characters', {})
-            setting = story.get('setting', {})
-            narrative_guidelines = story.get('narrative_guidelines', {})
+            # Extract story components (data is flat, not nested under 'story' key)
+            opener_text = story_data.get('opener_text', '')
+            characters = story_data.get('characters', {})
+            setting = story_data.get('setting', {})
+            narrative_guidelines = story_data.get('narrative_guidelines', {})
             
-            print(f"🔍 Debug: Story data structure - story keys: {list(story.keys())}")
+            print(f"🔍 Debug: Story data structure - story keys: {list(story_data.keys())}")
             print(f"🔍 Debug: Opener text length: {len(opener_text)}")
             print(f"🔍 Debug: Characters count: {len(characters)}")
             print(f"🔍 Debug: Setting keys: {list(setting.keys())}")
