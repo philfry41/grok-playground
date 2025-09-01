@@ -692,6 +692,8 @@
             
             // Now set the values programmatically
             if (characterData) {
+                console.log('🔍 Setting values for character:', characterData.name);
+                
                 const nameInput = characterSection.querySelector('.char-name');
                 const ageInput = characterSection.querySelector('.char-age');
                 const genderSelect = characterSection.querySelector('.char-gender');
@@ -707,8 +709,14 @@
                 const turnOffsInput = characterSection.querySelector('.char-turn-offs');
                 const memoriesContainer = characterSection.querySelector(`#memories_${charId}`);
                 
+                console.log('🔍 Found nameInput:', nameInput);
+                console.log('🔍 Character name:', characterData.name);
+                
                 // Set basic info
-                if (nameInput) nameInput.value = characterData.name || '';
+                if (nameInput) {
+                    nameInput.value = characterData.name || '';
+                    console.log('🔍 Set nameInput.value to:', nameInput.value);
+                }
                 if (ageInput) ageInput.value = typeof characterData.age === 'number' ? characterData.age : '';
                 if (genderSelect) genderSelect.value = characterData.gender || 'female';
                 if (occupationInput) occupationInput.value = characterData.occupation || '';
