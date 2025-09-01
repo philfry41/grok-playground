@@ -456,6 +456,196 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 untrack_request(request_id)
             return jsonify({'error': f"Couldn't read {filename}: {e}"})
     
+    elif command == 'loadstory':
+        print(f"🔍 Debug: loadstory command detected")
+        # Handle /loadstory command - get story ID from parsed command
+        story_id = data.get('loadstory', 'farm_romance')
+        print(f"🔍 Debug: story_id='{story_id}'")
+        
+        try:
+            # Load the story JSON file
+            story_filename = f"story_{story_id}.json"
+            story_path = os.path.abspath(story_filename)
+            print(f"🔍 Debug: story_path='{story_path}'")
+            
+            if not os.path.exists(story_filename):
+                if request_id:
+                    untrack_request(request_id)
+                return jsonify({'error': f'Story file not found: {story_filename}'})
+            
+            # Read and parse the story JSON
+            with open(story_filename, "r", encoding="utf-8") as f:
+                story_data = json.load(f)
+            
+            print(f"🔍 Debug: Loaded story: {story_data.get('title', story_id)}")
+            
+            # Extract story components
+            story = story_data.get('story', {})
+            opener_text = story.get('opener_text', '')
+            characters = story.get('characters', {})
+            setting = story.get('setting', {})
+            narrative_guidelines = story.get('narrative_guidelines', {})
+            
+            # Build comprehensive system prompt from story data
+            system_prompt_parts = []
+            
+            # Add character information
+            if characters:
+                char_info = []
+                for char_key, char_data in characters.items():
+                    char_name = char_data.get('name', 'Unknown')
+                    char_age = char_data.get('age', 'unknown age')
+                    char_occupation = char_data.get('occupation', '')
+                    char_physical = char_data.get('physical', {})
+                    char_personality = char_data.get('personality', {})
+                    
+                    char_desc = f"{char_name} ({char_age})"
+                    if char_occupation:
+                        char_desc += f", {char_occupation}"
+                    
+                    # Add physical description
+                    if char_physical:
+                        physical_parts = []
+                        if char_physical.get('height'): physical_parts.append(char_physical['height'])
+                        if char_physical.get('build'): physical_parts.append(char_physical['build'])
+                        if char_physical.get('hair'): physical_parts.append(char_physical['hair'])
+                        if char_physical.get('eyes'): physical_parts.append(char_physical['eyes'])
+                        if physical_parts:
+                            char_desc += f" - {', '.join(physical_parts)}"
+                    
+                    # Add personality traits
+                    if char_personality:
+                        traits = char_personality.get('traits', [])
+                        if traits:
+                            char_desc += f" - {', '.join(traits)}"
+                    
+                    char_info.append(char_desc)
+                
+                system_prompt_parts.append(f"CHARACTERS:\n" + "\n".join(char_info))
+            
+            # Add setting information
+            if setting:
+                setting_parts = []
+                if setting.get('location'): setting_parts.append(f"Location: {setting['location']}")
+                if setting.get('time'): setting_parts.append(f"Time: {setting['time']}")
+                if setting.get('atmosphere'): setting_parts.append(f"Atmosphere: {setting['atmosphere']}")
+                if setting_parts:
+                    system_prompt_parts.append("SETTING:\n" + "\n".join(setting_parts))
+            
+            # Add narrative guidelines
+            if narrative_guidelines:
+                if narrative_guidelines.get('lexical_contract'):
+                    contract = narrative_guidelines['lexical_contract']
+                    required = contract.get('required', [])
+                    forbidden = contract.get('forbidden', [])
+                    
+                    if required:
+                        system_prompt_parts.append(f"REQUIRED VOCABULARY: {', '.join(required)}")
+                    if forbidden:
+                        system_prompt_parts.append(f"FORBIDDEN TERMS: {', '.join(forbidden)}")
+                
+                if narrative_guidelines.get('tone'):
+                    system_prompt_parts.append(f"TONE: {narrative_guidelines['tone']}")
+                
+                if narrative_guidelines.get('pacing'):
+                    system_prompt_parts.append(f"PACING: {narrative_guidelines['pacing']}")
+            
+            # Combine all parts
+            comprehensive_system_prompt = "\n\n".join(system_prompt_parts)
+            print(f"🔍 Debug: Comprehensive system prompt length: {len(comprehensive_system_prompt)}")
+            
+            # Clear old history and add the story setup
+            session['history'] = []
+            
+            # Add comprehensive system prompt
+            if comprehensive_system_prompt:
+                session['history'].append({"role": "system", "content": comprehensive_system_prompt})
+            
+            # Add opener text as user message
+            if opener_text:
+                session['history'].append({"role": "user", "content": opener_text})
+            
+            print(f"🔍 Debug: Cleared old history and added story setup")
+            
+            # Return story content immediately
+            initial_response = {
+                'message': f'📚 Loaded story: {story_data.get("title", story_id)}',
+                'type': 'system',
+                'opener_content': opener_text,
+                'ai_response': None,
+                'response_type': 'system',
+                'audio_file': None,
+                'opener_audio_file': None
+            }
+            
+            # Generate AI response to continue the story
+            try:
+                print(f"🔍 Debug: Generating AI response for story...")
+                model_env = os.getenv('XAI_MODEL', 'grok-3')
+                
+                # Build context for AI call
+                context_messages = []
+                
+                # Add comprehensive system prompt
+                if comprehensive_system_prompt:
+                    context_messages.append({"role": "system", "content": f"You are an explicit storyteller. {comprehensive_system_prompt}"})
+                else:
+                    context_messages.append({"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from the opener text."})
+                
+                # Add opener text
+                if opener_text:
+                    context_messages.append({"role": "user", "content": f"Continue this story from where it left off:\n\n{opener_text}"})
+                
+                reply = chat_with_grok(
+                    context_messages,
+                    model=model_env,
+                    temperature=0.7,
+                    max_tokens=session.get('max_tokens', 1200)
+                )
+                
+                if reply and reply.strip():
+                    initial_response['ai_response'] = reply
+                    initial_response['response_type'] = 'assistant'
+                    
+                    # Update scene state with AI response
+                    try:
+                        state_manager = StoryStateManager()
+                        state_manager.update_state_from_response(reply)
+                        print(f"🔍 Debug: Updated scene state from AI response")
+                    except Exception as e:
+                        print(f"🔍 Debug: State manager error: {e}")
+                    
+                    print(f"🔍 Debug: AI response generated, length={len(reply)}")
+                else:
+                    initial_response['ai_response'] = 'Click "Send" to continue the story...'
+                    initial_response['response_type'] = 'system'
+                
+                if request_id:
+                    untrack_request(request_id)
+                return jsonify(initial_response)
+                
+            except Exception as ai_error:
+                print(f"🔍 Debug: AI response generation failed: {ai_error}")
+                initial_response['ai_response'] = 'Click "Send" to continue the story...'
+                initial_response['response_type'] = 'system'
+                
+                if request_id:
+                    untrack_request(request_id)
+                return jsonify(initial_response)
+                
+        except FileNotFoundError:
+            if request_id:
+                untrack_request(request_id)
+            return jsonify({'error': f'Story file not found: {story_filename}'})
+        except json.JSONDecodeError as e:
+            if request_id:
+                untrack_request(request_id)
+            return jsonify({'error': f'Invalid JSON in story file: {str(e)}'})
+        except Exception as e:
+            if request_id:
+                untrack_request(request_id)
+            return jsonify({'error': f"Couldn't load story: {str(e)}"})
+    
     elif command == 'cont':
         # Handle /cont command with full context for better story quality
         target = max(250, min(1000, word_count))  # Restored original range
