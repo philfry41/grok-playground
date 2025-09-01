@@ -543,8 +543,8 @@
             
             // Narrative guidelines
             if (story.narrative_guidelines) {
-                document.getElementById('requiredVocabulary').value = story.narrative_guidelines.lexical_contract?.required?.join(', ') || '';
-                document.getElementById('forbiddenEuphemisms').value = story.narrative_guidelines.lexical_contract?.forbidden?.join(', ') || '';
+                document.getElementById('requiredVocabulary').value = Array.isArray(story.narrative_guidelines?.lexical_contract?.required) ? story.narrative_guidelines.lexical_contract.required.join(', ') : '';
+                document.getElementById('forbiddenEuphemisms').value = Array.isArray(story.narrative_guidelines?.lexical_contract?.forbidden) ? story.narrative_guidelines.lexical_contract.forbidden.join(', ') : '';
                 document.getElementById('tone').value = story.narrative_guidelines.tone || '';
                 document.getElementById('pacing').value = story.narrative_guidelines.pacing || '';
             }
@@ -627,7 +627,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Distinguishing Features</label>
-                                <input type="text" class="form-control char-features" value="${characterData?.physical?.features?.join(', ') || ''}" placeholder="e.g., freckles, tattoo">
+                                <input type="text" class="form-control char-features" value="${Array.isArray(characterData?.physical?.features) ? characterData.physical.features.join(', ') : ''}" placeholder="e.g., freckles, tattoo">
                             </div>
                         </div>
                     </div>
@@ -638,20 +638,20 @@
                     <div class="section-content">
                         <div class="form-group">
                             <label>Traits (comma-separated)</label>
-                            <input type="text" class="form-control char-traits" value="${characterData?.personality?.traits?.join(', ') || ''}" placeholder="confident, playful, ambitious">
+                            <input type="text" class="form-control char-traits" value="${Array.isArray(characterData?.personality?.traits) ? characterData.personality.traits.join(', ') : ''}" placeholder="confident, playful, ambitious">
                         </div>
                         <div class="form-group">
                             <label>Desires (comma-separated)</label>
-                            <input type="text" class="form-control char-desires" value="${characterData?.personality?.desires?.join(', ') || ''}" placeholder="physical intimacy, connection, adventure">
+                            <input type="text" class="form-control char-desires" value="${Array.isArray(characterData?.personality?.desires) ? characterData.personality.desires.join(', ') : ''}" placeholder="physical intimacy, connection, adventure">
                         </div>
                         <div class="grid-2">
                             <div class="form-group">
                                 <label>Turn-ons (comma-separated)</label>
-                                <input type="text" class="form-control char-turn-ons" value="${characterData?.personality?.turn_ons?.join(', ') || ''}" placeholder="dominance, public risk, slow build-up">
+                                <input type="text" class="form-control char-turn-ons" value="${Array.isArray(characterData?.personality?.turn_ons) ? characterData.personality.turn_ons.join(', ') : ''}" placeholder="dominance, public risk, slow build-up">
                             </div>
                             <div class="form-group">
                                 <label>Turn-offs (comma-separated)</label>
-                                <input type="text" class="form-control char-turn-offs" value="${characterData?.personality?.turn_offs?.join(', ') || ''}" placeholder="roughness, lack of consent">
+                                <input type="text" class="form-control char-turn-offs" value="${Array.isArray(characterData?.personality?.turn_offs) ? characterData.personality.turn_offs.join(', ') : ''}" placeholder="roughness, lack of consent">
                             </div>
                         </div>
                     </div>
