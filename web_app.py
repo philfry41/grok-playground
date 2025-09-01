@@ -480,6 +480,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 story_data = json.load(f)
             
             print(f"🔍 Debug: Loaded story: {story_data.get('title', story_id)}")
+            print(f"🔍 Debug: Story data keys: {list(story_data.keys())}")
+            print(f"🔍 Debug: Story data type: {type(story_data)}")
+            print(f"🔍 Debug: Story data content preview: {str(story_data)[:200]}...")
             
             # Extract story components
             story = story_data.get('story', {})
