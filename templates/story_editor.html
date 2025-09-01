@@ -572,6 +572,17 @@
             });
         }
         
+        // Helper function to safely escape HTML attributes
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        
         // Add a new character section
         function addCharacter(characterData = null, charKey = null) {
             const container = document.getElementById('charactersContainer');
@@ -588,7 +599,7 @@
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Name</label>
-                        <input type="text" class="form-control char-name" value="${(characterData?.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" placeholder="Character name">
+                        <input type="text" class="form-control char-name" value="${escapeHtml(characterData?.name)}" placeholder="Character name">
                     </div>
                     <div class="form-group">
                         <label>Age</label>
@@ -607,7 +618,7 @@
                     </div>
                     <div class="form-group">
                         <label>Occupation</label>
-                        <input type="text" class="form-control char-occupation" value="${(characterData?.occupation || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" placeholder="Occupation">
+                        <input type="text" class="form-control char-occupation" value="${escapeHtml(characterData?.occupation)}" placeholder="Occupation">
                     </div>
                 </div>
                 
@@ -617,21 +628,21 @@
                         <div class="grid-3">
                             <div class="form-group">
                                 <label>Height</label>
-                                <input type="text" class="form-control char-height" value="${(characterData?.physical?.height || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" placeholder="e.g., 5'6&quot;">
+                                <input type="text" class="form-control char-height" value="${escapeHtml(characterData?.physical?.height)}" placeholder="e.g., 5'6&quot;">
                             </div>
                             <div class="form-group">
                                 <label>Build</label>
-                                <input type="text" class="form-control char-build" value="${(characterData?.physical?.build || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" placeholder="e.g., athletic">
+                                <input type="text" class="form-control char-build" value="${escapeHtml(characterData?.physical?.build)}" placeholder="e.g., athletic">
                             </div>
                             <div class="form-group">
                                 <label>Hair</label>
-                                <input type="text" class="form-control char-hair" value="${(characterData?.physical?.hair || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" placeholder="e.g., auburn, shoulder-length">
+                                <input type="text" class="form-control char-hair" value="${escapeHtml(characterData?.physical?.hair)}" placeholder="e.g., auburn, shoulder-length">
                             </div>
                         </div>
                         <div class="grid-2">
                             <div class="form-group">
                                 <label>Eyes</label>
-                                <input type="text" class="form-control char-eyes" value="${(characterData?.physical?.eyes || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" placeholder="e.g., hazel">
+                                <input type="text" class="form-control char-eyes" value="${escapeHtml(characterData?.physical?.eyes)}" placeholder="e.g., hazel">
                             </div>
                             <div class="form-group">
                                 <label>Distinguishing Features</label>
