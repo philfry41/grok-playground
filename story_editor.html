@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Editor - Grok Playground</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .nav-buttons {
+            margin-top: 15px;
+        }
+        
+        .btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .section-content {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .character-section {
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+        }
+        
+        .character-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .character-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .remove-character {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .memory-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .memory-item input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .remove-memory {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .add-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .action-buttons {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .file-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .file-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .status-message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Story Editor</h1>
+            <div class="nav-buttons">
+                <a href="/" class="btn">← Back to Chat</a>
+                <button class="btn" onclick="showFileList()">📁 Load Story</button>
+                <button class="btn" onclick="showNewStory()">✨ New Story</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- File List Section -->
+            <div id="fileListSection" class="section">
+                <div class="section-header">
+                    📁 Available Stories
+                </div>
+                <div class="section-content">
+                    <div id="fileList" class="file-list">
+                        <div class="file-item">
+                            <div>
+                                <div class="file-name">Loading stories...</div>
+                                <div class="file-info">Please wait</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Story Editor Form -->
+            <div id="storyEditorSection" class="section hidden">
+                <div class="section-header">
+                    ✏️ Story Editor
+                </div>
+                <div class="section-content">
+                    <form id="storyForm">
+                        <!-- Basic Story Info -->
+                        <div class="section">
+                            <div class="section-header">📖 Basic Information</div>
+                            <div class="section-content">
+                                <div class="grid-2">
+                                    <div class="form-group">
+                                        <label for="storyId">Story ID (filename)</label>
+                                        <input type="text" id="storyId" class="form-control" placeholder="e.g., emma_marcus_office" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="storyTitle">Story Title</label>
+                                        <input type="text" id="storyTitle" class="form-control" placeholder="e.g., After Hours Tension" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="storySummary">Story Summary</label>
+                                    <textarea id="storySummary" class="form-control" placeholder="Brief description of the story..." required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="openerText">Opening Text</label>
+                                    <textarea id="openerText" class="form-control" placeholder="The opening scene text..." required></textarea>
+                                </div>
+                                <div class="grid-3">
+                                    <div class="form-group">
+                                        <label for="storyType">Story Type</label>
+                                        <select id="storyType" class="form-control">
+                                            <option value="office_romance">Office Romance</option>
+                                            <option value="party_scene">Party Scene</option>
+                                            <option value="fantasy_adventure">Fantasy Adventure</option>
+                                            <option value="contemporary">Contemporary</option>
+                                            <option value="historical">Historical</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="maturityLevel">Maturity Level</label>
+                                        <select id="maturityLevel" class="form-control">
+                                            <option value="explicit">Explicit</option>
+                                            <option value="moderate">Moderate</option>
+                                            <option value="mild">Mild</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="estimatedDuration">Estimated Duration</label>
+                                        <input type="text" id="estimatedDuration" class="form-control" placeholder="e.g., 45 minutes">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Characters Section -->
+                        <div class="section">
+                            <div class="section-header">👥 Characters</div>
+                            <div class="section-content">
+                                <div id="charactersContainer">
+                                    <!-- Character sections will be added here -->
+                                </div>
+                                <button type="button" class="add-btn" onclick="addCharacter()">➕ Add Character</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Setting Section -->
+                        <div class="section">
+                            <div class="section-header">🏢 Setting & Environment</div>
+                            <div class="section-content">
+                                <div class="grid-2">
+                                    <div class="form-group">
+                                        <label for="location">Location</label>
+                                        <input type="text" id="location" class="form-control" placeholder="e.g., Emma's office, 15th floor">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="timeSetting">Time Setting</label>
+                                        <input type="text" id="timeSetting" class="form-control" placeholder="e.g., 7:30 PM, Thursday evening">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="atmosphere">Atmosphere</label>
+                                    <textarea id="atmosphere" class="form-control" placeholder="Describe the mood, lighting, sounds, smells..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="risks">Risks & Complications</label>
+                                    <textarea id="risks" class="form-control" placeholder="List potential risks, interruptions, complications..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Narrative Guidelines -->
+                        <div class="section">
+                            <div class="section-header">📝 Narrative Guidelines</div>
+                            <div class="section-content">
+                                <div class="form-group">
+                                    <label for="requiredVocabulary">Required Vocabulary (comma-separated)</label>
+                                    <input type="text" id="requiredVocabulary" class="form-control" placeholder="cock, pussy, clit, nipples, thrust, suck, grind, slick, moan, cum">
+                                </div>
+                                <div class="form-group">
+                                    <label for="forbiddenEuphemisms">Forbidden Euphemisms (comma-separated)</label>
+                                    <input type="text" id="forbiddenEuphemisms" class="form-control" placeholder="making love, womanhood, manhood, entered her, flower, core">
+                                </div>
+                                <div class="form-group">
+                                    <label for="tone">Tone & Style</label>
+                                    <textarea id="tone" class="form-control" placeholder="Describe the desired tone, style, and approach..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="pacing">Pacing Guidelines</label>
+                                    <textarea id="pacing" class="form-control" placeholder="Describe pacing preferences, build-up approach..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="action-buttons">
+                            <button type="button" class="btn-primary" onclick="saveStory()">💾 Save Story</button>
+                            <button type="button" class="btn-secondary" onclick="loadStory()">📂 Load Story</button>
+                            <button type="button" class="btn-secondary" onclick="previewStory()">👁️ Preview</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Status Messages -->
+            <div id="statusMessage" class="status-message hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentStory = null;
+        let characterCounter = 0;
+        
+        // Initialize the editor
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStoryList();
+        });
+        
+        // Load list of available story files
+        async function loadStoryList() {
+            try {
+                const response = await fetch('/api/story-files');
+                const data = await response.json();
+                
+                const fileList = document.getElementById('fileList');
+                if (data.story_files && data.story_files.length > 0) {
+                    fileList.innerHTML = data.story_files.map(file => `
+                        <div class="file-item" onclick="loadStoryFile('${file.filename}')">
+                            <div>
+                                <div class="file-name">${file.title || file.filename}</div>
+                                <div class="file-info">${file.characters || 0} characters • ${file.type || 'Unknown type'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    fileList.innerHTML = '<div class="file-item"><div><div class="file-name">No stories found</div><div class="file-info">Create your first story!</div></div></div>';
+                }
+            } catch (error) {
+                console.error('Error loading story list:', error);
+                showStatus('Error loading story list', 'error');
+            }
+        }
+        
+        // Show file list section
+        function showFileList() {
+            document.getElementById('fileListSection').classList.remove('hidden');
+            document.getElementById('storyEditorSection').classList.add('hidden');
+            loadStoryList();
+        }
+        
+        // Show new story form
+        function showNewStory() {
+            document.getElementById('fileListSection').classList.add('hidden');
+            document.getElementById('storyEditorSection').classList.remove('hidden');
+            resetForm();
+        }
+        
+        // Load a specific story file
+        async function loadStoryFile(filename) {
+            try {
+                const response = await fetch(`/api/story-files/${encodeURIComponent(filename)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentStory = data.story;
+                    populateForm(data.story);
+                    showNewStory();
+                    showStatus(`Loaded story: ${data.story.title}`, 'success');
+                } else {
+                    showStatus(`Error loading story: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error loading story file:', error);
+                showStatus('Error loading story file', 'error');
+            }
+        }
+        
+        // Populate form with story data
+        function populateForm(story) {
+            // Basic info
+            document.getElementById('storyId').value = story.story_id || '';
+            document.getElementById('storyTitle').value = story.title || '';
+            document.getElementById('storySummary').value = story.summary || '';
+            document.getElementById('openerText').value = story.opener_text || '';
+            document.getElementById('storyType').value = story.story_type || 'office_romance';
+            document.getElementById('maturityLevel').value = story.maturity_level || 'explicit';
+            document.getElementById('estimatedDuration').value = story.estimated_duration || '';
+            
+            // Setting
+            if (story.setting) {
+                document.getElementById('location').value = story.setting.location || '';
+                document.getElementById('timeSetting').value = story.setting.time || '';
+                document.getElementById('atmosphere').value = story.setting.atmosphere || '';
+                document.getElementById('risks').value = story.setting.risks || '';
+            }
+            
+            // Narrative guidelines
+            if (story.narrative_guidelines) {
+                document.getElementById('requiredVocabulary').value = story.narrative_guidelines.lexical_contract?.required?.join(', ') || '';
+                document.getElementById('forbiddenEuphemisms').value = story.narrative_guidelines.lexical_contract?.forbidden?.join(', ') || '';
+                document.getElementById('tone').value = story.narrative_guidelines.tone || '';
+                document.getElementById('pacing').value = story.narrative_guidelines.pacing || '';
+            }
+            
+            // Characters
+            populateCharacters(story.characters || {});
+        }
+        
+        // Populate characters section
+        function populateCharacters(characters) {
+            const container = document.getElementById('charactersContainer');
+            container.innerHTML = '';
+            characterCounter = 0;
+            
+            Object.keys(characters).forEach(charKey => {
+                addCharacter(characters[charKey], charKey);
+            });
+        }
+        
+        // Add a new character section
+        function addCharacter(characterData = null, charKey = null) {
+            const container = document.getElementById('charactersContainer');
+            const charId = charKey || `character_${characterCounter++}`;
+            
+            const characterSection = document.createElement('div');
+            characterSection.className = 'character-section';
+            characterSection.innerHTML = `
+                <div class="character-header">
+                    <div class="character-name">Character ${charId}</div>
+                    <button type="button" class="remove-character" onclick="removeCharacter(this)">🗑️</button>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" class="form-control char-name" value="${characterData?.name || ''}" placeholder="Character name">
+                    </div>
+                    <div class="form-group">
+                        <label>Age</label>
+                        <input type="number" class="form-control char-age" value="${characterData?.age || ''}" placeholder="Age">
+                    </div>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select class="form-control char-gender">
+                            <option value="female" ${characterData?.gender === 'female' ? 'selected' : ''}>Female</option>
+                            <option value="male" ${characterData?.gender === 'male' ? 'selected' : ''}>Male</option>
+                            <option value="non-binary" ${characterData?.gender === 'non-binary' ? 'selected' : ''}>Non-binary</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Occupation</label>
+                        <input type="text" class="form-control char-occupation" value="${characterData?.occupation || ''}" placeholder="Occupation">
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-header">Physical Description</div>
+                    <div class="section-content">
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label>Height</label>
+                                <input type="text" class="form-control char-height" value="${characterData?.physical?.height || ''}" placeholder="e.g., 5'6\"">
+                            </div>
+                            <div class="form-group">
+                                <label>Build</label>
+                                <input type="text" class="form-control char-build" value="${characterData?.physical?.build || ''}" placeholder="e.g., athletic">
+                            </div>
+                            <div class="form-group">
+                                <label>Hair</label>
+                                <input type="text" class="form-control char-hair" value="${characterData?.physical?.hair || ''}" placeholder="e.g., auburn, shoulder-length">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Eyes</label>
+                                <input type="text" class="form-control char-eyes" value="${characterData?.physical?.eyes || ''}" placeholder="e.g., hazel">
+                            </div>
+                            <div class="form-group">
+                                <label>Distinguishing Features</label>
+                                <input type="text" class="form-control char-features" value="${characterData?.physical?.features?.join(', ') || ''}" placeholder="e.g., freckles, tattoo">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-header">Personality</div>
+                    <div class="section-content">
+                        <div class="form-group">
+                            <label>Traits (comma-separated)</label>
+                            <input type="text" class="form-control char-traits" value="${characterData?.personality?.traits?.join(', ') || ''}" placeholder="confident, playful, ambitious">
+                        </div>
+                        <div class="form-group">
+                            <label>Desires (comma-separated)</label>
+                            <input type="text" class="form-control char-desires" value="${characterData?.personality?.desires?.join(', ') || ''}" placeholder="physical intimacy, connection, adventure">
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Turn-ons (comma-separated)</label>
+                                <input type="text" class="form-control char-turn-ons" value="${characterData?.personality?.turn_ons?.join(', ') || ''}" placeholder="dominance, public risk, slow build-up">
+                            </div>
+                            <div class="form-group">
+                                <label>Turn-offs (comma-separated)</label>
+                                <input type="text" class="form-control char-turn-offs" value="${characterData?.personality?.turn_offs?.join(', ') || ''}" placeholder="roughness, lack of consent">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-header">Key Memories</div>
+                    <div class="section-content">
+                        <div id="memories_${charId}">
+                            ${characterData?.key_memories ? characterData.key_memories.map(memory => `
+                                <div class="memory-item">
+                                    <input type="text" class="form-control char-memory" value="${memory}" placeholder="Key memory or event...">
+                                    <button type="button" class="remove-memory" onclick="removeMemory(this)">🗑️</button>
+                                </div>
+                            `).join('') : ''}
+                        </div>
+                        <button type="button" class="add-btn" onclick="addMemory('${charId}')">➕ Add Memory</button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(characterSection);
+        }
+        
+        // Remove a character section
+        function removeCharacter(button) {
+            button.closest('.character-section').remove();
+        }
+        
+        // Add a memory item
+        function addMemory(charId) {
+            const container = document.getElementById(`memories_${charId}`);
+            const memoryItem = document.createElement('div');
+            memoryItem.className = 'memory-item';
+            memoryItem.innerHTML = `
+                <input type="text" class="form-control char-memory" placeholder="Key memory or event...">
+                <button type="button" class="remove-memory" onclick="removeMemory(this)">🗑️</button>
+            `;
+            container.appendChild(memoryItem);
+        }
+        
+        // Remove a memory item
+        function removeMemory(button) {
+            button.closest('.memory-item').remove();
+        }
+        
+        // Collect form data
+        function collectFormData() {
+            const storyData = {
+                story_id: document.getElementById('storyId').value,
+                title: document.getElementById('storyTitle').value,
+                summary: document.getElementById('storySummary').value,
+                opener_text: document.getElementById('openerText').value,
+                story_type: document.getElementById('storyType').value,
+                maturity_level: document.getElementById('maturityLevel').value,
+                estimated_duration: document.getElementById('estimatedDuration').value,
+                
+                setting: {
+                    location: document.getElementById('location').value,
+                    time: document.getElementById('timeSetting').value,
+                    atmosphere: document.getElementById('atmosphere').value,
+                    risks: document.getElementById('risks').value
+                },
+                
+                narrative_guidelines: {
+                    lexical_contract: {
+                        required: document.getElementById('requiredVocabulary').value.split(',').map(v => v.trim()).filter(v => v),
+                        forbidden: document.getElementById('forbiddenEuphemisms').value.split(',').map(v => v.trim()).filter(v => v)
+                    },
+                    tone: document.getElementById('tone').value,
+                    pacing: document.getElementById('pacing').value
+                },
+                
+                characters: {}
+            };
+            
+            // Collect character data
+            const characterSections = document.querySelectorAll('.character-section');
+            characterSections.forEach((section, index) => {
+                const charKey = `character_${index}`;
+                const charName = section.querySelector('.char-name').value;
+                
+                if (charName) {
+                    storyData.characters[charKey] = {
+                        name: charName,
+                        age: parseInt(section.querySelector('.char-age').value) || null,
+                        gender: section.querySelector('.char-gender').value,
+                        occupation: section.querySelector('.char-occupation').value,
+                        
+                        physical: {
+                            height: section.querySelector('.char-height').value,
+                            build: section.querySelector('.char-build').value,
+                            hair: section.querySelector('.char-hair').value,
+                            eyes: section.querySelector('.char-eyes').value,
+                            features: section.querySelector('.char-features').value.split(',').map(v => v.trim()).filter(v => v)
+                        },
+                        
+                        personality: {
+                            traits: section.querySelector('.char-traits').value.split(',').map(v => v.trim()).filter(v => v),
+                            desires: section.querySelector('.char-desires').value.split(',').map(v => v.trim()).filter(v => v),
+                            turn_ons: section.querySelector('.char-turn-ons').value.split(',').map(v => v.trim()).filter(v => v),
+                            turn_offs: section.querySelector('.char-turn-offs').value.split(',').map(v => v.trim()).filter(v => v)
+                        },
+                        
+                        key_memories: Array.from(section.querySelectorAll('.char-memory')).map(input => input.value).filter(v => v)
+                    };
+                }
+            });
+            
+            return storyData;
+        }
+        
+        // Save story
+        async function saveStory() {
+            try {
+                const storyData = collectFormData();
+                
+                if (!storyData.story_id) {
+                    showStatus('Please enter a Story ID', 'error');
+                    return;
+                }
+                
+                const response = await fetch('/api/story-files', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(storyData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus(`Story saved successfully: ${storyData.title}`, 'success');
+                    currentStory = storyData;
+                    loadStoryList(); // Refresh file list
+                } else {
+                    showStatus(`Error saving story: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving story:', error);
+                showStatus('Error saving story', 'error');
+            }
+        }
+        
+        // Reset form
+        function resetForm() {
+            document.getElementById('storyForm').reset();
+            document.getElementById('charactersContainer').innerHTML = '';
+            characterCounter = 0;
+            currentStory = null;
+            addCharacter(); // Add one default character
+        }
+        
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // Preview story (placeholder)
+        function previewStory() {
+            const storyData = collectFormData();
+            console.log('Story Preview:', storyData);
+            showStatus('Preview functionality coming soon!', 'info');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+Questions for Discussion:
+Context Window: Should we increase the 3-message history limit for better continuity?
+Token Management: Should we dynamically adjust max_tokens based on:
+Story complexity?
+User's word count requests?
+Available context space?
+Temperature Variation: Should we use different creativity levels for:
+Scene setup vs. action scenes?
+Character development vs. plot advancement?
+Different commands (/cont vs. regular chat)?
+State Integration: Should scene state be:
+Injected into user messages instead of system prompts?
+Included as separate context messages?
+Used to dynamically adjust other parameters?
+Presence/Frequency Penalties: Should we:
+Use these more actively to prevent repetition?
+Adjust them based on story length?
+Remove them for certain scenarios?
+Message Structure: Should we:
+Include more metadata in messages?
+Use different role types (system vs. user vs. assistant)?
+Add explicit scene transition markers?
+What aspects of the payload usage would you like to explore or improve? 

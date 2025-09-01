@@ -1087,6 +1087,99 @@ def list_audio_files():
         print(f"🔍 Debug: Unexpected error in list_audio_files: {e}")
         return jsonify({'error': f'Could not list audio files: {e}'}), 500
 
+# Story Editor Routes
+@app.route('/story-editor')
+def story_editor():
+    """Serve the story editor page"""
+    return send_from_directory('.', 'story_editor.html')
+
+@app.route('/api/story-files', methods=['GET'])
+def list_story_files():
+    """List all available story files"""
+    try:
+        import glob
+        story_files = glob.glob("story_*.json")
+        story_files.sort()
+        
+        file_list = []
+        for filename in story_files:
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    story_data = json.load(f)
+                    file_list.append({
+                        'filename': filename,
+                        'title': story_data.get('title', filename),
+                        'characters': len(story_data.get('characters', {})),
+                        'type': story_data.get('story_type', 'Unknown')
+                    })
+            except Exception as e:
+                print(f"🔍 Debug: Error reading story file {filename}: {e}")
+                file_list.append({
+                    'filename': filename,
+                    'title': filename,
+                    'characters': 0,
+                    'type': 'Error'
+                })
+        
+        return jsonify({'story_files': file_list})
+    except Exception as e:
+        print(f"🔍 Debug: Error listing story files: {e}")
+        return jsonify({'error': f'Could not list story files: {e}'}), 500
+
+@app.route('/api/story-files/<filename>', methods=['GET'])
+def get_story_file(filename):
+    """Get a specific story file"""
+    try:
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        file_path = f"story_{filename}" if not filename.startswith('story_') else filename
+        
+        if not os.path.exists(file_path):
+            return jsonify({'error': f'Story file not found: {file_path}'}), 404
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            story_data = json.load(f)
+        
+        return jsonify({
+            'success': True,
+            'story': story_data
+        })
+    except Exception as e:
+        print(f"🔍 Debug: Error reading story file {filename}: {e}")
+        return jsonify({'error': f'Could not read story file: {e}'}), 500
+
+@app.route('/api/story-files', methods=['POST'])
+def save_story_file():
+    """Save a story file"""
+    try:
+        story_data = request.get_json()
+        
+        if not story_data or 'story_id' not in story_data:
+            return jsonify({'error': 'Invalid story data'}), 400
+        
+        filename = f"story_{story_data['story_id']}.json"
+        
+        # Add metadata
+        story_data['metadata'] = {
+            'created': datetime.now().isoformat(),
+            'last_updated': datetime.now().isoformat(),
+            'version': '1.0'
+        }
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(story_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"🔍 Debug: Story saved: {filename}")
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'message': f'Story saved successfully: {story_data.get("title", story_data["story_id"])}'
+        })
+    except Exception as e:
+        print(f"🔍 Debug: Error saving story file: {e}")
+        return jsonify({'error': f'Could not save story file: {e}'}), 500
+
 if __name__ == '__main__':
     # Set timeout for requests to prevent hung processes
     import signal
@@ -1094,9 +1187,9 @@ if __name__ == '__main__':
     def timeout_handler(signum, frame):
         print("⏰ Request timeout - cleaning up...")
         cleanup_resources()
-        raise TimeoutError("Request timed out")
+        raise TimeoutError("Request timeout")
     
-        # Set 5-minute timeout for requests
+    # Set 5-minute timeout for requests
     signal.signal(signal.SIGALRM, timeout_handler)
     
     port = int(os.environ.get('PORT', 8080))
