@@ -1091,7 +1091,7 @@ def list_audio_files():
 @app.route('/story-editor')
 def story_editor():
     """Serve the story editor page"""
-    return send_from_directory('.', 'story_editor.html')
+    return send_from_directory('templates', 'story_editor.html')
 
 @app.route('/api/story-files', methods=['GET'])
 def list_story_files():
