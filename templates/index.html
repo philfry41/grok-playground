@@ -551,6 +551,8 @@
                     <div class="word-count-input">
                         <button class="btn btn-secondary" onclick="openOpenerModal()">📄 Select Opener</button>
                         <button class="btn btn-secondary" onclick="toggleHistoryPanel()">📚 History</button>
+                        <button class="btn btn-info" onclick="loadConversationHistory()">🔄 Load Conversation</button>
+                        <button class="btn btn-success" onclick="saveCurrentConversation()">💾 Save Conversation</button>
                     </div>
                 </div>
             </div>
@@ -766,6 +768,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadTTSStatus();
+            loadConversationHistory(); // Load conversation history on page load
             
             // Initialize history panel
             const historyPanel = document.getElementById('historyPanel');
@@ -1264,6 +1267,92 @@
                 await updateVoiceDropdown(data);
             } catch (error) {
                 document.getElementById('ttsStatus').innerHTML = '❌ TTS Error';
+            }
+        }
+
+        async function loadConversationHistory() {
+            try {
+                console.log('🔄 Loading conversation history...');
+                const response = await fetch('/api/load-conversation');
+                const data = await response.json();
+                
+                if (data.success && data.history && data.history.length > 0) {
+                    console.log(`✅ Loaded ${data.history.length} messages from conversation history`);
+                    
+                    // Clear current interaction area
+                    const currentInteraction = document.getElementById('currentInteraction');
+                    currentInteraction.innerHTML = '';
+                    
+                    // Display loaded conversation history
+                    data.history.forEach(message => {
+                        if (message.role === 'user' || message.role === 'assistant') {
+                            addMessage(message.content, message.role);
+                        }
+                    });
+                    
+                    // Show success message
+                    addMessage(`🔄 Restored conversation with ${data.history.length} messages`, 'system`);
+                    
+                } else {
+                    console.log('ℹ️ No conversation history found or empty history');
+                }
+            } catch (error) {
+                console.error('❌ Error loading conversation history:', error);
+                // Don't show error to user - just log it
+            }
+        }
+
+        async function saveCurrentConversation() {
+            try {
+                console.log('💾 Saving current conversation...');
+                
+                // Get all messages from the current interaction area
+                const currentInteraction = document.getElementById('currentInteraction');
+                const messages = currentInteraction.querySelectorAll('.message');
+                
+                if (messages.length === 0) {
+                    addMessage('ℹ️ No conversation to save', 'system');
+                    return;
+                }
+                
+                // Convert DOM messages to conversation format
+                const conversation = [];
+                messages.forEach(message => {
+                    const role = message.classList.contains('user') ? 'user' : 
+                               message.classList.contains('assistant') ? 'assistant' : 'system';
+                    const content = message.querySelector('div')?.textContent || '';
+                    
+                    if (content.trim()) {
+                        conversation.push({
+                            role: role,
+                            content: content.trim(),
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                });
+                
+                // Send to server to save
+                const response = await fetch('/api/save-conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        history: conversation
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage(`💾 Conversation saved successfully (${conversation.length} messages)`, 'system');
+                } else {
+                    addMessage(`❌ Failed to save conversation: ${data.error || 'Unknown error'}`, 'system');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error saving conversation:', error);
+                addMessage(`❌ Error saving conversation: ${error.message}`, 'system');
             }
         }
 

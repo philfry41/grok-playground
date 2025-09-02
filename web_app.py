@@ -1240,6 +1240,81 @@ def get_debug_info():
             'traceback': traceback.format_exc()
         })
 
+@app.route('/api/load-conversation', methods=['GET'])
+def load_conversation():
+    """Load the most recent conversation history"""
+    try:
+        # Get current story ID from session if available
+        story_id = get_current_story_id()
+        
+        # Load conversation history
+        history = load_conversation_history(story_id)
+        
+        if history:
+            # Update session with loaded history
+            session['history'] = history
+            print(f"🔍 Debug: Loaded conversation history into session ({len(history)} messages)")
+            
+            return jsonify({
+                'success': True,
+                'history': history,
+                'message': f'Loaded {len(history)} messages from conversation history'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'No conversation history found'
+            })
+            
+    except Exception as e:
+        print(f"🔍 Debug: Error loading conversation: {e}")
+        import traceback
+        return jsonify({
+            'error': f'Failed to load conversation: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
+@app.route('/api/save-conversation', methods=['POST'])
+def save_conversation():
+    """Save the current conversation from the frontend"""
+    try:
+        data = request.get_json()
+        if not data or 'history' not in data:
+            return jsonify({'error': 'No conversation history provided'})
+        
+        history = data['history']
+        if not history or len(history) == 0:
+            return jsonify({'error': 'Empty conversation history'})
+        
+        # Get current story ID or create a general one
+        story_id = get_current_story_id()
+        if not story_id:
+            story_id = f"conversation_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Save conversation history
+        success = save_conversation_history(history, story_id)
+        
+        if success:
+            # Update session with the saved history
+            session['history'] = history
+            print(f"🔍 Debug: Saved and updated session with {len(history)} messages")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Conversation saved successfully ({len(history)} messages)',
+                'story_id': story_id
+            })
+        else:
+            return jsonify({'error': 'Failed to save conversation to file'})
+            
+    except Exception as e:
+        print(f"🔍 Debug: Error saving conversation: {e}")
+        import traceback
+        return jsonify({
+            'error': f'Failed to save conversation: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
 @app.route('/api/server-logs', methods=['GET'])
 def get_server_logs():
     """Get recent server logs and error information"""
