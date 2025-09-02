@@ -87,6 +87,11 @@ def generate_tts_async(text, save_audio=True, request_id=None):
             print(f"🔍 Debug: Starting async TTS generation {tts_id} for {len(text)} characters")
             start_time = time.time()
             
+            # Ensure voice ID is loaded fresh from file before generating TTS
+            print(f"🔍 Debug: Ensuring voice ID is loaded from file before async TTS generation")
+            tts.voice_id = tts._load_voice_id()
+            print(f"🔍 Debug: Using voice ID for async TTS: {tts.voice_id}")
+            
             # Always save audio files when TTS is enabled
             print(f"🔍 Debug: TTS mode - generating .mp3 file")
             print(f"🔍 Debug: Text to convert: {text[:100]}{'...' if len(text) > 100 else ''}")
@@ -1153,6 +1158,11 @@ def generate_tts_on_demand():
         
         latest_response = assistant_messages[-1]['content']
         print(f"🔍 Debug: Generating TTS on-demand for response length: {len(latest_response)}")
+        
+        # Ensure voice ID is loaded fresh from file before generating TTS
+        print(f"🔍 Debug: Ensuring voice ID is loaded from file before TTS generation")
+        tts.voice_id = tts._load_voice_id()
+        print(f"🔍 Debug: Using voice ID: {tts.voice_id}")
         
         # Generate TTS for the response
         if len(latest_response) < 2000:  # Short responses - generate immediately

@@ -201,6 +201,10 @@ class TTSHelper:
         if not self.enabled or not text.strip():
             return
         
+        # Ensure voice ID is loaded fresh from file before each TTS generation
+        self.voice_id = self._load_voice_id()
+        print(f"🔍 Debug: TTS speak() called with voice_id: {self.voice_id}")
+        
         try:
             # Clean text for TTS (remove markdown, etc.)
             clean_text = self._clean_text_for_tts(text)
