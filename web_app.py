@@ -35,7 +35,6 @@ def signal_handler(signum, frame):
     """Handle shutdown signals gracefully"""
     print(f"🛑 Received signal {signum}, cleaning up...")
     cleanup_resources()
-    exit(0)
 
 # Register cleanup handlers
 atexit.register(cleanup_resources)
@@ -199,6 +198,105 @@ def log_edge_trigger(text: str, start: int, end: int):
         print(f"⚠️ Could not log edge trigger: {e}")
     
     return log_entry
+
+# Conversation persistence
+CONVERSATIONS_DIR = "conversations"
+
+def ensure_conversations_dir():
+    """Ensure the conversations directory exists"""
+    if not os.path.exists(CONVERSATIONS_DIR):
+        os.makedirs(CONVERSATIONS_DIR)
+        print(f"🔍 Debug: Created conversations directory: {CONVERSATIONS_DIR}")
+
+def get_conversation_filename(story_id=None):
+    """Generate filename for conversation history"""
+    if story_id:
+        return f"conversation_{story_id}_{datetime.now().strftime('%Y%m%d')}.json"
+    else:
+        return f"conversation_general_{datetime.now().strftime('%Y%m%d')}.json"
+
+def save_conversation_history(history, story_id=None, user_input=None, ai_response=None):
+    """Save conversation history to file"""
+    try:
+        ensure_conversations_dir()
+        
+        # Add current interaction if provided
+        current_conversation = history.copy()
+        if user_input:
+            current_conversation.append({"role": "user", "content": user_input, "timestamp": datetime.now().isoformat()})
+        if ai_response:
+            current_conversation.append({"role": "assistant", "content": ai_response, "timestamp": datetime.now().isoformat()})
+        
+        # Create conversation data
+        conversation_data = {
+            "story_id": story_id,
+            "last_updated": datetime.now().isoformat(),
+            "message_count": len(current_conversation),
+            "history": current_conversation
+        }
+        
+        # Save to file
+        filename = get_conversation_filename(story_id)
+        filepath = os.path.join(CONVERSATIONS_DIR, filename)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(conversation_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"🔍 Debug: Saved conversation history to {filepath} ({len(current_conversation)} messages)")
+        return True
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error saving conversation history: {e}")
+        return False
+
+def load_conversation_history(story_id=None):
+    """Load conversation history from file"""
+    try:
+        ensure_conversations_dir()
+        
+        # Look for the most recent conversation file for this story
+        if story_id:
+            pattern = f"conversation_{story_id}_*.json"
+        else:
+            pattern = "conversation_general_*.json"
+        
+        import glob
+        files = glob.glob(os.path.join(CONVERSATIONS_DIR, pattern))
+        
+        if not files:
+            print(f"🔍 Debug: No conversation history found for story_id: {story_id}")
+            return []
+        
+        # Get the most recent file
+        latest_file = max(files, key=os.path.getctime)
+        
+        with open(latest_file, 'r', encoding='utf-8') as f:
+            conversation_data = json.load(f)
+        
+        history = conversation_data.get('history', [])
+        print(f"🔍 Debug: Loaded conversation history from {latest_file} ({len(history)} messages)")
+        return history
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error loading conversation history: {e}")
+        return []
+
+def get_current_story_id():
+    """Extract current story ID from session history"""
+    try:
+        if 'history' in session:
+            for msg in session['history']:
+                if msg.get('role') == 'system' and 'CHARACTERS:' in msg.get('content', ''):
+                    # This is likely a story system prompt, extract story ID
+                    if 'story_id' in session:
+                        return session.get('story_id')
+                    # Try to extract from the first system message
+                    if session['history'] and 'story_id' in session['history'][0]:
+                        return session['history'][0].get('story_id')
+        return None
+    except Exception as e:
+        print(f"🔍 Debug: Error getting current story ID: {e}")
+        return None
 
 @app.route('/')
 def index():
@@ -564,18 +662,31 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             comprehensive_system_prompt = "\n\n".join(system_prompt_parts)
             print(f"🔍 Debug: Comprehensive system prompt length: {len(comprehensive_system_prompt)}")
             
-            # Clear old history and add the story setup
-            session['history'] = []
+            # Store story ID in session for persistence
+            session['story_id'] = story_id
             
-            # Add comprehensive system prompt
-            if comprehensive_system_prompt:
-                session['history'].append({"role": "system", "content": comprehensive_system_prompt})
+            # Try to load existing conversation history for this story
+            existing_history = load_conversation_history(story_id)
             
-            # Add opener text as user message
-            if opener_text:
-                session['history'].append({"role": "user", "content": opener_text})
+            if existing_history:
+                # Use existing conversation history
+                session['history'] = existing_history
+                print(f"🔍 Debug: Loaded existing conversation history ({len(existing_history)} messages)")
+            else:
+                # Start fresh with the story setup
+                session['history'] = []
+                
+                # Add comprehensive system prompt
+                if comprehensive_system_prompt:
+                    session['history'].append({"role": "system", "content": comprehensive_system_prompt})
+                
+                # Add opener text as user message
+                if opener_text:
+                    session['history'].append({"role": "user", "content": opener_text})
+                
+                print(f"🔍 Debug: Started fresh conversation history")
             
-            print(f"🔍 Debug: Cleared old history and added story setup")
+            print(f"🔍 Debug: Session history now has {len(session['history'])} messages")
             
             # Return story content immediately
             initial_response = {
@@ -624,6 +735,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     initial_response['ai_response'] = reply
                     initial_response['response_type'] = 'assistant'
                     
+                    # Add AI response to session history
+                    session['history'].append({"role": "assistant", "content": reply})
+                    
                     # Update scene state with AI response
                     try:
                         state_manager = StoryStateManager()
@@ -631,6 +745,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                         print(f"🔍 Debug: Updated scene state from AI response")
                     except Exception as e:
                         print(f"🔍 Debug: State manager error: {e}")
+                    
+                    # Save conversation history for persistence
+                    save_conversation_history(session['history'], story_id, None, reply)
                     
                     print(f"🔍 Debug: AI response generated, length={len(reply)}")
                 else:
@@ -793,6 +910,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         # Add response to history with overflow protection
         session['history'].append({"role": "assistant", "content": reply})
         
+        # Save conversation history for persistence
+        current_story_id = get_current_story_id()
+        save_conversation_history(session['history'], current_story_id, user_input, reply)
+        
         # Clean up session to prevent cookie overflow
         if len(session['history']) > 3:
             print(f"🔍 Debug: Cleaning up session history to prevent cookie overflow")
@@ -872,6 +993,60 @@ def toggle_tts():
     except Exception as e:
         print(f"🔍 Debug: Error checking TTS status: {e}")
         return jsonify({'error': f'Failed to check TTS status: {str(e)}'})
+
+@app.route('/api/conversations', methods=['GET'])
+def get_conversations():
+    """Get list of available conversation history files"""
+    try:
+        ensure_conversations_dir()
+        import glob
+        
+        # Get all conversation files
+        conversation_files = glob.glob(os.path.join(CONVERSATIONS_DIR, "conversation_*.json"))
+        conversation_files.sort(key=os.path.getctime, reverse=True)  # Sort by most recent
+        
+        conversations = []
+        for filepath in conversation_files:
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                filename = os.path.basename(filepath)
+                conversations.append({
+                    'filename': filename,
+                    'story_id': data.get('story_id', 'general'),
+                    'last_updated': data.get('last_updated', ''),
+                    'message_count': data.get('message_count', 0),
+                    'title': f"Story: {data.get('story_id', 'general').replace('_', ' ').title()}" if data.get('story_id') else "General Chat"
+                })
+            except Exception as e:
+                print(f"🔍 Debug: Error reading conversation file {filepath}: {e}")
+                continue
+        
+        return jsonify({'conversations': conversations})
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error listing conversations: {e}")
+        return jsonify({'error': f'Failed to list conversations: {str(e)}'})
+
+@app.route('/api/conversations/<filename>', methods=['GET'])
+def get_conversation(filename):
+    """Get a specific conversation file"""
+    try:
+        ensure_conversations_dir()
+        filepath = os.path.join(CONVERSATIONS_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Conversation file not found'})
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        return jsonify(data)
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error reading conversation file: {e}")
+        return jsonify({'error': f'Failed to read conversation: {str(e)}'})
 
 @app.route('/api/opener-files', methods=['GET'])
 def get_opener_files():
