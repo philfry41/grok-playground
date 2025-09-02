@@ -303,6 +303,70 @@ def get_current_story_id():
         print(f"🔍 Debug: Error getting current story ID: {e}")
         return None
 
+def extract_key_story_points(history):
+    """Extract key plot points and story milestones from conversation history"""
+    try:
+        key_points = []
+        
+        # Look for story milestones in conversation
+        for msg in history:
+            if msg['role'] == 'assistant':
+                content = msg['content'].lower()
+                
+                # Extract key character developments
+                if any(phrase in content for phrase in ['first time', 'never done', 'never tried']):
+                    key_points.append("Character experiencing new sexual activity")
+                
+                # Extract relationship developments
+                if 'phil' in content and any(phrase in content for phrase in ['support', 'watched', 'encouraged']):
+                    key_points.append("Phil supports Stephanie's sexual exploration")
+                
+                # Extract location developments
+                if any(location in content for location in ['lake', 'cabin', 'boat', 'kitchen', 'bedroom']):
+                    key_points.append(f"Story location: {extract_location_from_content(content)}")
+                
+                # Extract sexual encounters
+                if any(phrase in content for phrase in ['sucked', 'fucked', 'came', 'climaxed', 'orgasm']):
+                    key_points.append("Sexual encounter occurred")
+                
+                # Extract character growth
+                if any(phrase in content for phrase in ['confidence', 'aroused', 'desire', 'hungry']):
+                    key_points.append("Character sexual confidence growing")
+                
+                # Extract emotional developments
+                if any(phrase in content for phrase in ['guilt', 'shame', 'liberated', 'free']):
+                    key_points.append("Character emotional transformation")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_points = []
+        for point in key_points:
+            if point not in seen:
+                seen.add(point)
+                unique_points.append(point)
+        
+        print(f"🔍 Debug: Extracted {len(unique_points)} key story points")
+        return unique_points[:5]  # Limit to 5 most important points
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error extracting key story points: {e}")
+        return []
+
+def extract_location_from_content(content):
+    """Extract specific location from content"""
+    if 'lake' in content and 'cabin' in content:
+        return "Lake cabin"
+    elif 'boat' in content:
+        return "Boat"
+    elif 'kitchen' in content:
+        return "Kitchen"
+    elif 'bedroom' in content:
+        return "Bedroom"
+    elif 'farm' in content:
+        return "Farm"
+    else:
+        return "Various locations"
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -836,29 +900,48 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         try:
             print(f"🔍 Debug: Attempting AI call with continuity...")
             
-            # Build context with recent history for continuity
+            # Build context with hybrid approach: scene state + key memories + recent history
             context_messages = []
             
-            # Add system message with specific continuity instructions and scene state
-            if command == 'cont':
-                system_prompt = "You are an explicit storyteller. Continue the story naturally from where it left off. Maintain the exact same characters, location, and situation. Do not introduce new characters or change the setting unless explicitly mentioned in the previous context."
-            else:
-                # Get current scene state for continuity
-                try:
-                    state_manager = StoryStateManager()
-                    current_state = state_manager.get_current_state()
-                    if current_state.get("characters"):
-                        scene_state_reminder = state_manager.get_state_as_prompt()
-                        system_prompt = f"You are an explicit storyteller. {scene_state_reminder}"
-                    else:
-                        system_prompt = "You are an explicit storyteller. Continue the story naturally from where it left off, maintaining character names, locations, and situations."
-                except Exception as e:
-                    print(f"🔍 Debug: State manager error in main chat, using fallback: {e}")
-                    system_prompt = "You are an explicit storyteller. Continue the story naturally from where it left off, maintaining character names, locations, and situations."
+            # 1. Core system prompt
+            context_messages.append({
+                "role": "system", 
+                "content": "You are an explicit storyteller. Maintain story continuity."
+            })
             
-            context_messages.append({"role": "system", "content": system_prompt})
+            # 2. Scene state (always included) - "What's happening now"
+            try:
+                state_manager = StoryStateManager()
+                current_state = state_manager.get_current_state()
+                
+                if current_state.get("characters"):
+                    scene_state_prompt = state_manager.get_state_as_prompt()
+                    context_messages.append({
+                        "role": "system", 
+                        "content": f"SCENE STATE TO MAINTAIN:\n{scene_state_prompt}"
+                    })
+                    print(f"🔍 Debug: Added scene state to AI context ({len(scene_state_prompt)} chars)")
+                else:
+                    print(f"🔍 Debug: No scene state available, skipping scene state injection")
+            except Exception as e:
+                print(f"🔍 Debug: State manager error in main chat: {e}")
             
-            # Add recent history for continuity (with cookie overflow protection)
+            # 3. Key story points (memory) - "What led to this moment"
+            try:
+                key_memories = extract_key_story_points(session['history'])
+                if key_memories:
+                    memories_prompt = "\n".join([f"- {memory}" for memory in key_memories])
+                    context_messages.append({
+                        "role": "system", 
+                        "content": f"KEY STORY POINTS:\n{memories_prompt}"
+                    })
+                    print(f"🔍 Debug: Added {len(key_memories)} key story points to AI context")
+                else:
+                    print(f"🔍 Debug: No key story points extracted")
+            except Exception as e:
+                print(f"🔍 Debug: Error extracting key story points: {e}")
+            
+            # 4. Recent conversation (last 2-3 messages) - "What just happened"
             if len(session['history']) > 0:
                 print(f"🔍 Debug: Session history has {len(session['history'])} messages")
                 for i, msg in enumerate(session['history']):
@@ -869,7 +952,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
             
-            # Add current user input
+            # 5. Current user input
             context_messages.append({"role": "user", "content": user_input})
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
