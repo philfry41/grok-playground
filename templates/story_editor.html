@@ -437,6 +437,7 @@
                         <!-- Action Buttons -->
                         <div class="action-buttons">
                             <button type="button" class="btn-primary" onclick="saveStory()">💾 Save Story</button>
+                            <button type="button" class="btn-success" onclick="loadInChat()">🚀 Load in Chat</button>
                             <button type="button" class="btn-secondary" onclick="loadStory()">📂 Load Story</button>
                             <button type="button" class="btn-secondary" onclick="previewStory()">👁️ Preview</button>
                         </div>
@@ -769,6 +770,36 @@
         // Remove a memory item
         function removeMemory(button) {
             button.closest('.memory-item').remove();
+        }
+        
+        // Load story in main chat
+        function loadInChat() {
+            if (!currentStory || !currentStory.story_id) {
+                showStatus('No story loaded or story ID missing', 'error');
+                return;
+            }
+            
+            const command = `/loadstory ${currentStory.story_id}`;
+            
+            // Try to copy to clipboard first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(command).then(() => {
+                    showStatus(`Command copied to clipboard: ${command}`, 'success');
+                    
+                    // Open main chat in new tab
+                    setTimeout(() => {
+                        window.open('/', '_blank');
+                    }, 1000);
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                    // Fallback: just open chat
+                    window.open('/', '_blank');
+                });
+            } else {
+                // Fallback for older browsers
+                showStatus(`Command: ${command}`, 'success');
+                window.open('/', '_blank');
+            }
         }
         
         // Collect form data
