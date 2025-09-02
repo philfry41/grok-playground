@@ -367,6 +367,80 @@ def extract_location_from_content(content):
     else:
         return "Various locations"
 
+def get_core_story_context(story_id):
+    """Get compressed core story context that should always be included"""
+    try:
+        if not story_id:
+            return None
+            
+        story_filename = f"story_{story_id}.json"
+        if not os.path.exists(story_filename):
+            return None
+            
+        with open(story_filename, "r", encoding="utf-8") as f:
+            story_data = json.load(f)
+        
+        # Build compressed core context
+        core_parts = []
+        
+        # Characters (compressed)
+        if story_data.get('characters'):
+            char_summaries = []
+            for char_key, char_data in story_data['characters'].items():
+                name = char_data.get('name', 'Unknown')
+                age = char_data.get('age', 'unknown age')
+                role = char_data.get('role', '')
+                arc = char_data.get('sexual_growth_arc', '')
+                
+                char_summary = f"{name} ({age})"
+                if role:
+                    char_summary += f" - {role}"
+                if arc:
+                    char_summary += f" - {arc}"
+                
+                char_summaries.append(char_summary)
+            
+            core_parts.append(f"CHARACTERS:\n" + "\n".join(char_summaries))
+        
+        # Setting (compressed)
+        if story_data.get('setting'):
+            setting = story_data['setting']
+            setting_summary = f"SETTING: {setting.get('location', 'Unknown')}"
+            if setting.get('time'):
+                setting_summary += f" | Time: {setting['time']}"
+            if setting.get('atmosphere'):
+                setting_summary += f" | Mood: {setting['atmosphere']}"
+            core_parts.append(setting_summary)
+        
+        # Narrative guidelines (compressed)
+        if story_data.get('narrative_guidelines'):
+            guidelines = story_data['narrative_guidelines']
+            
+            if guidelines.get('lexical_contract'):
+                contract = guidelines['lexical_contract']
+                required = contract.get('required', [])
+                forbidden = contract.get('forbidden', [])
+                
+                if required:
+                    core_parts.append(f"REQUIRED VOCABULARY: {', '.join(required[:5])}")  # Limit to 5
+                if forbidden:
+                    core_parts.append(f"FORBIDDEN TERMS: {', '.join(forbidden[:5])}")  # Limit to 5
+            
+            if guidelines.get('tone'):
+                core_parts.append(f"TONE: {guidelines['tone']}")
+            
+            if guidelines.get('pacing'):
+                core_parts.append(f"PACING: {guidelines['pacing']}")
+        
+        core_context = "\n".join(core_parts)
+        print(f"🔍 Debug: Core story context length: {len(core_context)} chars")
+        
+        return core_context
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error getting core story context: {e}")
+        return None
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -900,7 +974,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         try:
             print(f"🔍 Debug: Attempting AI call with continuity...")
             
-            # Build context with hybrid approach: scene state + key memories + recent history
+            # Build context with hybrid approach: core story context + scene state + key memories + recent history
             context_messages = []
             
             # 1. Core system prompt
@@ -909,7 +983,23 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 "content": "You are an explicit storyteller. Maintain story continuity."
             })
             
-            # 2. Scene state (always included) - "What's happening now"
+            # 2. CORE STORY CONTEXT (always included) - "Story foundation"
+            try:
+                current_story_id = get_current_story_id()
+                core_story_context = get_core_story_context(current_story_id)
+                
+                if core_story_context:
+                    context_messages.append({
+                        "role": "system", 
+                        "content": f"CORE STORY CONTEXT:\n{core_story_context}"
+                    })
+                    print(f"🔍 Debug: Added core story context to AI context ({len(core_story_context)} chars)")
+                else:
+                    print(f"🔍 Debug: No core story context available, skipping core context injection")
+            except Exception as e:
+                print(f"🔍 Debug: Error getting core story context: {e}")
+            
+            # 3. Scene state (always included) - "What's happening now"
             try:
                 state_manager = StoryStateManager()
                 current_state = state_manager.get_current_state()
@@ -926,7 +1016,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: State manager error in main chat: {e}")
             
-            # 3. Key story points (memory) - "What led to this moment"
+            # 4. Key story points (memory) - "What led to this moment"
             try:
                 key_memories = extract_key_story_points(session['history'])
                 if key_memories:
@@ -941,7 +1031,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error extracting key story points: {e}")
             
-            # 4. Recent conversation (last 2-3 messages) - "What just happened"
+            # 5. Recent conversation (last 2-3 messages) - "What just happened"
             if len(session['history']) > 0:
                 print(f"🔍 Debug: Session history has {len(session['history'])} messages")
                 for i, msg in enumerate(session['history']):
@@ -952,7 +1042,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
             
-            # 5. Current user input
+            # 6. Current user input
             context_messages.append({"role": "user", "content": user_input})
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
