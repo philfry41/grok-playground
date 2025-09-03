@@ -297,7 +297,7 @@
             <div class="nav-buttons">
                 <a href="/" class="btn">← Back to Chat</a>
                 <button class="btn" onclick="showFileList()">📁 Load Story</button>
-                <button class="btn" onclick="showNewStory()">✨ New Story</button>
+                                        <button class="btn" onclick="showNewStoryForm()">✨ New Story</button>
             </div>
         </div>
         
@@ -457,6 +457,8 @@
         // Initialize the editor
         document.addEventListener('DOMContentLoaded', function() {
             loadStoryList();
+            // Add a default character when creating a new story
+            addCharacter();
         });
         
         // Load list of available story files
@@ -496,6 +498,14 @@
             document.getElementById('fileListSection').classList.add('hidden');
             document.getElementById('storyEditorSection').classList.remove('hidden');
             // Don't reset form when loading existing story data
+        }
+        
+        // Show new story form (reset for new story)
+        function showNewStoryForm() {
+            document.getElementById('fileListSection').classList.add('hidden');
+            document.getElementById('storyEditorSection').classList.remove('hidden');
+            // Reset form and add default character for new stories
+            resetForm();
         }
         
         // Load a specific story file
@@ -871,13 +881,26 @@
         // Save story
         async function saveStory() {
             try {
+                console.log('🔍 Starting story save...');
                 const storyData = collectFormData();
+                console.log('🔍 Collected story data:', storyData);
                 
                 if (!storyData.story_id) {
                     showStatus('Please enter a Story ID', 'error');
                     return;
                 }
                 
+                if (!storyData.title) {
+                    showStatus('Please enter a Story Title', 'error');
+                    return;
+                }
+                
+                if (!storyData.opener_text) {
+                    showStatus('Please enter Opening Text', 'error');
+                    return;
+                }
+                
+                console.log('🔍 Sending story data to server...');
                 const response = await fetch('/api/story-files', {
                     method: 'POST',
                     headers: {
@@ -886,7 +909,9 @@
                     body: JSON.stringify(storyData)
                 });
                 
+                console.log('🔍 Server response status:', response.status);
                 const data = await response.json();
+                console.log('🔍 Server response data:', data);
                 
                 if (data.success) {
                     showStatus(`Story saved successfully: ${storyData.title}`, 'success');
@@ -896,7 +921,7 @@
                     showStatus(`Error saving story: ${data.error}`, 'error');
                 }
             } catch (error) {
-                console.error('Error saving story:', error);
+                console.error('🔍 Error saving story:', error);
                 showStatus('Error saving story', 'error');
             }
         }
