@@ -1,6 +1,6 @@
 requests==2.32.3
 elevenlabs==2.11.0
-flask==3.0.0
+flask==2.3.3
 gunicorn==21.2.0
 Flask-SQLAlchemy==3.0.5
 Flask-Migrate==4.0.5
