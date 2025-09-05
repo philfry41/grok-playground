@@ -613,12 +613,16 @@ if OAUTH_AVAILABLE:
                 return jsonify({'error': 'Failed to get user info from Google'}), 400
             
             print(f"🔍 Debug: Google user info: {user_info}")
+            print(f"🔍 Debug: Google user info keys: {list(user_info.keys()) if user_info else 'None'}")
+            print(f"🔍 Debug: Full token response: {token}")
             
             # Extract user data
             google_id = user_info.get('sub')
             email = user_info.get('email')
             name = user_info.get('name')
             avatar_url = user_info.get('picture')
+            
+            print(f"🔍 Debug: Extracted data - ID: {google_id}, Email: {email}, Name: {name}")
             
             if not google_id or not email:
                 return jsonify({'error': 'Invalid user data from Google'}), 400
@@ -647,6 +651,7 @@ if OAUTH_AVAILABLE:
                         db.session.add(user)
                         db.session.commit()
                         print(f"🔍 Debug: Created new user: {name} ({email}) with ID: {user.id}")
+                        print(f"🔍 Debug: User email in database: {user.email}")
                     else:
                         # Update existing user
                         user.email = email
@@ -654,6 +659,7 @@ if OAUTH_AVAILABLE:
                         user.avatar_url = avatar_url
                         db.session.commit()
                         print(f"🔍 Debug: Updated existing user: {name} ({email}) with ID: {user.id}")
+                        print(f"🔍 Debug: User email in database after update: {user.email}")
                     
                     session['db_user_id'] = user.id
                     print(f"🔍 Debug: Set session db_user_id to: {user.id}")
