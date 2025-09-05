@@ -1583,6 +1583,70 @@ def get_server_logs():
             'logs': [f"Error getting logs: {e}"]
         })
 
+@app.route('/api/test-database', methods=['GET'])
+def test_database():
+    """Test endpoint to verify database connection and tables"""
+    try:
+        # Test database connection
+        db_info = {
+            'database_url_set': bool(os.getenv('DATABASE_URL')),
+            'database_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'Not set'),
+            'connection_test': False,
+            'tables_exist': False,
+            'user_count': 0,
+            'story_count': 0
+        }
+        
+        try:
+            # Test database connection
+            db.session.execute('SELECT 1')
+            db_info['connection_test'] = True
+            print(f"🔍 Debug: Database connection successful")
+            
+            # Check if tables exist (works for both SQLite and PostgreSQL)
+            if 'sqlite' in app.config.get('SQLALCHEMY_DATABASE_URI', ''):
+                # SQLite
+                result = db.session.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name IN ('users', 'stories')
+                """)
+            else:
+                # PostgreSQL
+                result = db.session.execute("""
+                    SELECT table_name FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name IN ('users', 'stories')
+                """)
+            
+            tables = [row[0] for row in result.fetchall()]
+            db_info['tables_exist'] = len(tables) == 2
+            db_info['existing_tables'] = tables
+            print(f"🔍 Debug: Tables found: {tables}")
+            
+            # Count records
+            if 'users' in tables:
+                user_count = db.session.execute('SELECT COUNT(*) FROM users').scalar()
+                db_info['user_count'] = user_count
+                print(f"🔍 Debug: User count: {user_count}")
+            
+            if 'stories' in tables:
+                story_count = db.session.execute('SELECT COUNT(*) FROM stories').scalar()
+                db_info['story_count'] = story_count
+                print(f"🔍 Debug: Story count: {story_count}")
+                
+        except Exception as db_error:
+            db_info['database_error'] = str(db_error)
+            print(f"🔍 Debug: Database test failed: {db_error}")
+        
+        return jsonify({
+            'success': True,
+            'database_test': db_info,
+            'message': 'Database test completed'
+        })
+        
+    except Exception as e:
+        print(f"🔍 Debug: Database test error: {e}")
+        return jsonify({'error': f'Database test failed: {str(e)}'})
+
 @app.route('/api/test-api', methods=['GET'])
 def test_api():
     """Test endpoint to verify API key and basic connectivity"""
