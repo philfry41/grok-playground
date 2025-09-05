@@ -636,20 +636,27 @@ if OAUTH_AVAILABLE:
                         )
                         db.session.add(user)
                         db.session.commit()
-                        print(f"🔍 Debug: Created new user: {name} ({email})")
+                        print(f"🔍 Debug: Created new user: {name} ({email}) with ID: {user.id}")
                     else:
                         # Update existing user
                         user.email = email
                         user.name = name
                         user.avatar_url = avatar_url
                         db.session.commit()
-                        print(f"🔍 Debug: Updated existing user: {name} ({email})")
+                        print(f"🔍 Debug: Updated existing user: {name} ({email}) with ID: {user.id}")
                     
                     session['db_user_id'] = user.id
+                    print(f"🔍 Debug: Set session db_user_id to: {user.id}")
                     
                 except Exception as db_error:
                     print(f"🔍 Debug: Database error during user save: {db_error}")
+                    import traceback
+                    print(f"🔍 Debug: Database error traceback: {traceback.format_exc()}")
                     # Continue without database save
+                    session['db_user_id'] = None
+            else:
+                print("🔍 Debug: Database not available, setting db_user_id to None")
+                session['db_user_id'] = None
             
             print(f"🔍 Debug: User logged in successfully: {name} ({email})")
             
@@ -964,10 +971,17 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         try:
             # Get current user from session
             user_id = session.get('db_user_id')
-            if not user_id:
+            google_id = session.get('user_id')  # Fallback to Google ID
+            
+            if not user_id and not google_id:
                 if request_id:
                     untrack_request(request_id)
                 return jsonify({'error': 'User not found in session'})
+            
+            # Use Google ID as fallback if database user ID not available
+            if not user_id:
+                print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
+                user_id = google_id
             
             # Load story from database
             if DATABASE_AVAILABLE:
@@ -2088,8 +2102,15 @@ def list_story_files():
     try:
         # Get current user from session
         user_id = session.get('db_user_id')
-        if not user_id:
+        google_id = session.get('user_id')  # Fallback to Google ID
+        
+        if not user_id and not google_id:
             return jsonify({'error': 'User not found in session'}), 401
+        
+        # Use Google ID as fallback if database user ID not available
+        if not user_id:
+            print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
+            user_id = google_id
         
         if DATABASE_AVAILABLE:
             # Get user's stories from database
@@ -2148,8 +2169,15 @@ def get_story_file(story_id):
     try:
         # Get current user from session
         user_id = session.get('db_user_id')
-        if not user_id:
+        google_id = session.get('user_id')  # Fallback to Google ID
+        
+        if not user_id and not google_id:
             return jsonify({'error': 'User not found in session'}), 401
+        
+        # Use Google ID as fallback if database user ID not available
+        if not user_id:
+            print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
+            user_id = google_id
         
         if DATABASE_AVAILABLE:
             # Get story from database
@@ -2203,8 +2231,15 @@ def save_story_file():
         
         # Get current user from session
         user_id = session.get('db_user_id')
-        if not user_id:
+        google_id = session.get('user_id')  # Fallback to Google ID
+        
+        if not user_id and not google_id:
             return jsonify({'error': 'User not found in session'}), 401
+        
+        # Use Google ID as fallback if database user ID not available
+        if not user_id:
+            print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
+            user_id = google_id
         
         # Extract story information
         story_id = story_data['story_id']
