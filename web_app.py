@@ -8,7 +8,7 @@ import atexit
 import threading
 import time
 import hashlib
-from flask import Flask, render_template, request, jsonify, session, send_from_directory
+from flask import Flask, render_template, request, jsonify, session, send_from_directory, redirect, url_for
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
 from tts_helper import tts
@@ -654,15 +654,7 @@ if OAUTH_AVAILABLE:
             print(f"🔍 Debug: User logged in successfully: {name} ({email})")
             
             # Redirect to main page
-            return jsonify({
-                'success': True,
-                'message': f'Welcome, {name}!',
-                'user': {
-                    'name': name,
-                    'email': email,
-                    'avatar': avatar_url
-                }
-            })
+            return redirect('/')
             
         except Exception as e:
             print(f"🔍 Debug: OAuth callback error: {e}")
