@@ -60,8 +60,20 @@ if DATABASE_AVAILABLE:
     # Initialize database tables immediately
     try:
         with app.app_context():
+            # Test database connection first
+            db.engine.execute('SELECT 1')
+            print("✅ Database connection test successful")
+            
+            # Create all tables
             db.create_all()
             print("✅ Database tables created successfully")
+            
+            # Verify tables exist
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            print(f"✅ Database tables verified: {tables}")
+            
     except Exception as e:
         print(f"❌ Database table creation failed: {e}")
         import traceback
@@ -1001,6 +1013,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # Load story from database
             if DATABASE_AVAILABLE:
+                # Ensure tables exist before querying
+                if not ensure_tables_exist():
+                    if request_id:
+                        untrack_request(request_id)
+                    return jsonify({'error': 'Database tables not available'})
+                
                 story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
                 
                 if not story:
@@ -2129,6 +2147,10 @@ def list_story_files():
             user_id = google_id
         
         if DATABASE_AVAILABLE:
+            # Ensure tables exist before querying
+            if not ensure_tables_exist():
+                return jsonify({'error': 'Database tables not available'}), 500
+            
             # Get user's stories from database
             user_stories = Story.query.filter_by(user_id=user_id).order_by(Story.updated_at.desc()).all()
             
@@ -2196,6 +2218,10 @@ def get_story_file(story_id):
             user_id = google_id
         
         if DATABASE_AVAILABLE:
+            # Ensure tables exist before querying
+            if not ensure_tables_exist():
+                return jsonify({'error': 'Database tables not available'}), 500
+            
             # Get story from database
             story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
             
@@ -2270,6 +2296,10 @@ def save_story_file():
         }
         
         if DATABASE_AVAILABLE:
+            # Ensure tables exist before querying
+            if not ensure_tables_exist():
+                return jsonify({'error': 'Database tables not available'}), 500
+            
             # Check if story already exists
             existing_story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
             
@@ -2326,6 +2356,30 @@ def save_story_file():
     except Exception as e:
         print(f"🔍 Debug: Error saving story file: {e}")
         return jsonify({'error': f'Could not save story file: {e}'}), 500
+
+def ensure_tables_exist():
+    """Ensure database tables exist, create them if they don't"""
+    if not DATABASE_AVAILABLE:
+        return False
+        
+    try:
+        with app.app_context():
+            # Test if tables exist by trying to query them
+            try:
+                db.engine.execute('SELECT 1 FROM users LIMIT 1')
+                db.engine.execute('SELECT 1 FROM stories LIMIT 1')
+                print("✅ Database tables already exist")
+                return True
+            except Exception:
+                print("⚠️ Database tables don't exist, creating them...")
+                db.create_all()
+                print("✅ Database tables created successfully")
+                return True
+    except Exception as e:
+        print(f"❌ Failed to ensure tables exist: {e}")
+        import traceback
+        print(f"Database error traceback: {traceback.format_exc()}")
+        return False
 
 def init_database():
     """Initialize database and run migrations"""
