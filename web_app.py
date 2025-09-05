@@ -553,8 +553,20 @@ def get_core_story_context(story_id):
         print(f"🔍 Debug: Error getting core story context: {e}")
         return None
 
+def require_auth(f):
+    """Decorator to require authentication for protected routes"""
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return jsonify({'error': 'Authentication required', 'login_url': '/auth/google'}), 401
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
 @app.route('/')
 def index():
+    # Check if user is logged in
+    if not session.get('logged_in'):
+        return render_template('login_required.html')
     return render_template('index.html')
 
 @app.route('/api/oauth-test')
@@ -697,6 +709,7 @@ if OAUTH_AVAILABLE:
             return jsonify({'error': f'Auth status check failed: {str(e)}'}), 500
 
 @app.route('/api/chat', methods=['POST'])
+@require_auth
 def chat():
     print(f"🔍 Debug: /api/chat endpoint called")
     print(f"🔍 Debug: Session ID: {session.get('_id', 'No session ID')}")
@@ -2052,11 +2065,13 @@ def list_audio_files():
 
 # Story Editor Routes
 @app.route('/story-editor')
+@require_auth
 def story_editor():
     """Serve the story editor page"""
     return send_from_directory('templates', 'story_editor.html')
 
 @app.route('/api/story-files', methods=['GET'])
+@require_auth
 def list_story_files():
     """List all available story files"""
     try:
@@ -2090,6 +2105,7 @@ def list_story_files():
         return jsonify({'error': f'Could not list story files: {e}'}), 500
 
 @app.route('/api/story-files/<filename>', methods=['GET'])
+@require_auth
 def get_story_file(filename):
     """Get a specific story file"""
     try:
@@ -2113,6 +2129,7 @@ def get_story_file(filename):
         return jsonify({'error': f'Could not read story file: {e}'}), 500
 
 @app.route('/api/story-files', methods=['POST'])
+@require_auth
 def save_story_file():
     """Save a story file"""
     try:

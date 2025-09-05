@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Required - Grok Playground</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+        .login-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.2s;
+        }
+        .login-btn:hover {
+            background: #3367d6;
+        }
+        .features {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            color: #666;
+        }
+        .feature::before {
+            content: "✓";
+            color: #4caf50;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🎭 Grok Playground</div>
+        <div class="subtitle">
+            Please sign in with your Google account to access the NSFW storytelling playground.
+        </div>
+        <a href="/auth/google" class="login-btn">Sign in with Google</a>
+        
+        <div class="features">
+            <div class="feature">Multi-user story management</div>
+            <div class="feature">Persistent story storage</div>
+            <div class="feature">AI-powered storytelling</div>
+            <div class="feature">Text-to-speech narration</div>
+        </div>
+    </div>
+</body>
+</html>
