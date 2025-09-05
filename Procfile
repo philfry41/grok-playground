@@ -1,2 +1,1 @@
-web: python startup.py
-release: python startup.py
+web: gunicorn web_app:app

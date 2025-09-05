@@ -1946,14 +1946,6 @@ def init_database():
         with app.app_context():
             db.create_all()
             print("✅ Database tables created successfully")
-            
-            # Check if we need to run migrations
-            try:
-                from flask_migrate import upgrade
-                upgrade()
-                print("✅ Database migrations applied successfully")
-            except Exception as migration_error:
-                print(f"⚠️ Migration error (may be normal on first run): {migration_error}")
                 
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
