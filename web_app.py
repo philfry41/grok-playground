@@ -56,6 +56,16 @@ if DATABASE_AVAILABLE:
     db = SQLAlchemy(app)
     migrate = Migrate(app, db)
     print("✅ Database initialized successfully")
+    
+    # Initialize database tables immediately
+    try:
+        with app.app_context():
+            db.create_all()
+            print("✅ Database tables created successfully")
+    except Exception as e:
+        print(f"❌ Database table creation failed: {e}")
+        import traceback
+        print(f"Database error traceback: {traceback.format_exc()}")
 else:
     print("⚠️ Database not available - running without database features")
     db = None
