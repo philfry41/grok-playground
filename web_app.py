@@ -124,9 +124,6 @@ if DATABASE_AVAILABLE:
         avatar_url = db.Column(db.String(200))
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         
-        # Relationship to stories
-        stories = db.relationship('Story', backref='owner', lazy=True)
-        
         def __repr__(self):
             return f'<User {self.name} ({self.email})>'
 
@@ -137,7 +134,7 @@ if DATABASE_AVAILABLE:
         id = db.Column(db.Integer, primary_key=True)
         story_id = db.Column(db.String(80), unique=True, nullable=False)
         title = db.Column(db.String(200), nullable=False)
-        user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+        user_id = db.Column(db.String(120), nullable=False)  # Store Google ID as string
         content = db.Column(db.JSON, nullable=False)  # Store story data as JSON
         is_public = db.Column(db.Boolean, default=False)
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -998,18 +995,15 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         
         try:
             # Get current user from session
-            user_id = session.get('db_user_id')
-            google_id = session.get('user_id')  # Fallback to Google ID
+            google_id = session.get('user_id')
             
-            if not user_id and not google_id:
+            if not google_id:
                 if request_id:
                     untrack_request(request_id)
                 return jsonify({'error': 'User not found in session'})
             
-            # Use Google ID as fallback if database user ID not available
-            if not user_id:
-                print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
-                user_id = google_id
+            print(f"🔍 Debug: Using Google ID: {google_id}")
+            user_id = google_id
             
             # Load story from database
             if DATABASE_AVAILABLE:
@@ -2135,16 +2129,13 @@ def list_story_files():
     """List user's stories from database"""
     try:
         # Get current user from session
-        user_id = session.get('db_user_id')
-        google_id = session.get('user_id')  # Fallback to Google ID
+        google_id = session.get('user_id')
         
-        if not user_id and not google_id:
+        if not google_id:
             return jsonify({'error': 'User not found in session'}), 401
         
-        # Use Google ID as fallback if database user ID not available
-        if not user_id:
-            print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
-            user_id = google_id
+        print(f"🔍 Debug: Using Google ID: {google_id}")
+        user_id = google_id
         
         if DATABASE_AVAILABLE:
             # Ensure tables exist before querying
@@ -2206,16 +2197,13 @@ def get_story_file(story_id):
     """Get a specific story from database"""
     try:
         # Get current user from session
-        user_id = session.get('db_user_id')
-        google_id = session.get('user_id')  # Fallback to Google ID
+        google_id = session.get('user_id')
         
-        if not user_id and not google_id:
+        if not google_id:
             return jsonify({'error': 'User not found in session'}), 401
         
-        # Use Google ID as fallback if database user ID not available
-        if not user_id:
-            print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
-            user_id = google_id
+        print(f"🔍 Debug: Using Google ID: {google_id}")
+        user_id = google_id
         
         if DATABASE_AVAILABLE:
             # Ensure tables exist before querying
@@ -2272,16 +2260,13 @@ def save_story_file():
             return jsonify({'error': 'Invalid story data'}), 400
         
         # Get current user from session
-        user_id = session.get('db_user_id')
-        google_id = session.get('user_id')  # Fallback to Google ID
+        google_id = session.get('user_id')
         
-        if not user_id and not google_id:
+        if not google_id:
             return jsonify({'error': 'User not found in session'}), 401
         
-        # Use Google ID as fallback if database user ID not available
-        if not user_id:
-            print(f"🔍 Debug: Using Google ID as fallback: {google_id}")
-            user_id = google_id
+        print(f"🔍 Debug: Using Google ID: {google_id}")
+        user_id = google_id
         
         # Extract story information
         story_id = story_data['story_id']
