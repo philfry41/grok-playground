@@ -2065,60 +2065,112 @@ def story_editor():
 @app.route('/api/story-files', methods=['GET'])
 @require_auth
 def list_story_files():
-    """List all available story files"""
+    """List user's stories from database"""
     try:
-        import glob
-        story_files = glob.glob("story_*.json")
-        story_files.sort()
+        # Get current user from session
+        user_id = session.get('db_user_id')
+        if not user_id:
+            return jsonify({'error': 'User not found in session'}), 401
         
-        file_list = []
-        for filename in story_files:
-            try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    story_data = json.load(f)
+        if DATABASE_AVAILABLE:
+            # Get user's stories from database
+            user_stories = Story.query.filter_by(user_id=user_id).order_by(Story.updated_at.desc()).all()
+            
+            story_list = []
+            for story in user_stories:
+                content = story.content or {}
+                story_list.append({
+                    'story_id': story.story_id,
+                    'title': story.title,
+                    'characters': len(content.get('characters', {})),
+                    'type': content.get('story_type', 'Unknown'),
+                    'is_public': story.is_public,
+                    'created_at': story.created_at.isoformat() if story.created_at else None,
+                    'updated_at': story.updated_at.isoformat() if story.updated_at else None
+                })
+            
+            print(f"🔍 Debug: Listed {len(story_list)} stories for user {user_id}")
+            return jsonify({'story_files': story_list})
+        else:
+            # Fallback to file system if database not available
+            import glob
+            story_files = glob.glob("story_*.json")
+            story_files.sort()
+            
+            file_list = []
+            for filename in story_files:
+                try:
+                    with open(filename, 'r', encoding='utf-8') as f:
+                        story_data = json.load(f)
+                        file_list.append({
+                            'filename': filename,
+                            'title': story_data.get('title', filename),
+                            'characters': len(story_data.get('characters', {})),
+                            'type': story_data.get('story_type', 'Unknown')
+                        })
+                except Exception as e:
+                    print(f"🔍 Debug: Error reading story file {filename}: {e}")
                     file_list.append({
                         'filename': filename,
-                        'title': story_data.get('title', filename),
-                        'characters': len(story_data.get('characters', {})),
-                        'type': story_data.get('story_type', 'Unknown')
+                        'title': filename,
+                        'characters': 0,
+                        'type': 'Error'
                     })
-            except Exception as e:
-                print(f"🔍 Debug: Error reading story file {filename}: {e}")
-                file_list.append({
-                    'filename': filename,
-                    'title': filename,
-                    'characters': 0,
-                    'type': 'Error'
-                })
-        
-        return jsonify({'story_files': file_list})
+            
+            return jsonify({'story_files': file_list})
     except Exception as e:
         print(f"🔍 Debug: Error listing story files: {e}")
         return jsonify({'error': f'Could not list story files: {e}'}), 500
 
-@app.route('/api/story-files/<filename>', methods=['GET'])
+@app.route('/api/story-files/<story_id>', methods=['GET'])
 @require_auth
-def get_story_file(filename):
-    """Get a specific story file"""
+def get_story_file(story_id):
+    """Get a specific story from database"""
     try:
-        if not filename.endswith('.json'):
-            filename += '.json'
+        # Get current user from session
+        user_id = session.get('db_user_id')
+        if not user_id:
+            return jsonify({'error': 'User not found in session'}), 401
         
-        file_path = f"story_{filename}" if not filename.startswith('story_') else filename
-        
-        if not os.path.exists(file_path):
-            return jsonify({'error': f'Story file not found: {file_path}'}), 404
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
-            story_data = json.load(f)
-        
-        return jsonify({
-            'success': True,
-            'story': story_data
-        })
+        if DATABASE_AVAILABLE:
+            # Get story from database
+            story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
+            
+            if not story:
+                return jsonify({'error': f'Story not found: {story_id}'}), 404
+            
+            print(f"🔍 Debug: Retrieved story {story_id} for user {user_id}")
+            
+            return jsonify({
+                'success': True,
+                'story': story.content,
+                'metadata': {
+                    'title': story.title,
+                    'is_public': story.is_public,
+                    'created_at': story.created_at.isoformat() if story.created_at else None,
+                    'updated_at': story.updated_at.isoformat() if story.updated_at else None
+                }
+            })
+        else:
+            # Fallback to file system if database not available
+            if not story_id.endswith('.json'):
+                story_id += '.json'
+            
+            file_path = f"story_{story_id}" if not story_id.startswith('story_') else story_id
+            
+            if not os.path.exists(file_path):
+                return jsonify({'error': f'Story file not found: {file_path}'}), 404
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                story_data = json.load(f)
+            
+            return jsonify({
+                'success': True,
+                'story': story_data
+            })
     except Exception as e:
-        print(f"🔍 Debug: Error reading story file {filename}: {e}")
-        return jsonify({'error': f'Could not read story file: {e}'}), 500
+        print(f"🔍 Debug: Error reading story {story_id}: {e}")
+        return jsonify({'error': f'Could not read story: {e}'}), 500
 
 @app.route('/api/story-files', methods=['POST'])
 @require_auth
@@ -2130,7 +2182,15 @@ def save_story_file():
         if not story_data or 'story_id' not in story_data:
             return jsonify({'error': 'Invalid story data'}), 400
         
-        filename = f"story_{story_data['story_id']}.json"
+        # Get current user from session
+        user_id = session.get('db_user_id')
+        if not user_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        # Extract story information
+        story_id = story_data['story_id']
+        title = story_data.get('title', f'Story {story_id}')
+        is_public = story_data.get('is_public', False)
         
         # Add metadata
         story_data['metadata'] = {
@@ -2139,15 +2199,60 @@ def save_story_file():
             'version': '1.0'
         }
         
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(story_data, f, indent=2, ensure_ascii=False)
-        
-        print(f"🔍 Debug: Story saved: {filename}")
-        return jsonify({
-            'success': True,
-            'filename': filename,
-            'message': f'Story saved successfully: {story_data.get("title", story_data["story_id"])}'
-        })
+        if DATABASE_AVAILABLE:
+            # Check if story already exists
+            existing_story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
+            
+            if existing_story:
+                # Update existing story
+                existing_story.title = title
+                existing_story.content = story_data
+                existing_story.is_public = is_public
+                existing_story.updated_at = datetime.utcnow()
+                db.session.commit()
+                
+                print(f"🔍 Debug: Story updated in database: {story_id} by user {user_id}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Story updated: {title}',
+                    'story_id': story_id,
+                    'action': 'updated'
+                })
+            else:
+                # Create new story
+                new_story = Story(
+                    story_id=story_id,
+                    title=title,
+                    user_id=user_id,
+                    content=story_data,
+                    is_public=is_public
+                )
+                db.session.add(new_story)
+                db.session.commit()
+                
+                print(f"🔍 Debug: Story saved to database: {story_id} by user {user_id}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Story saved: {title}',
+                    'story_id': story_id,
+                    'action': 'created'
+                })
+        else:
+            # Fallback to file system if database not available
+            filename = f"story_{story_id}.json"
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(story_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"🔍 Debug: Story saved to file (database unavailable): {filename}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Story saved as {filename} (database unavailable)',
+                'filename': filename,
+                'action': 'created_file'
+            })
     except Exception as e:
         print(f"🔍 Debug: Error saving story file: {e}")
         return jsonify({'error': f'Could not save story file: {e}'}), 500
