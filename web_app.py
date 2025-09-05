@@ -77,7 +77,8 @@ if OAUTH_AVAILABLE:
             server_metadata_url='https://accounts.google.com/.well-known/openid_configuration',
             client_kwargs={
                 'scope': 'openid email profile'
-            }
+            },
+            redirect_uri='https://grok-playground.onrender.com/auth/google/callback'
         )
         print("✅ Google OAuth configured successfully")
     else:
@@ -573,11 +574,10 @@ if OAUTH_AVAILABLE:
     def google_login():
         """Initiate Google OAuth login"""
         try:
-            redirect_uri = url_for('google_callback', _external=True)
-            return google.authorize_redirect(redirect_uri)
+            return google.authorize_redirect()
         except Exception as e:
             print(f"🔍 Debug: Google login error: {e}")
-            return jsonify({'error': 'Google login failed'}), 500
+            return jsonify({'error': f'Google login failed: {str(e)}'}), 500
 
     @app.route('/auth/google/callback')
     def google_callback():
