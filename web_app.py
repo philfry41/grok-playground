@@ -555,6 +555,16 @@ def get_core_story_context(story_id):
 def index():
     return render_template('index.html')
 
+@app.route('/api/oauth-test')
+def oauth_test():
+    """Test endpoint to check OAuth availability"""
+    return jsonify({
+        'oauth_available': OAUTH_AVAILABLE,
+        'google_bp_available': google_bp is not None if OAUTH_AVAILABLE else False,
+        'client_id_set': bool(os.getenv('GOOGLE_OAUTH_CLIENT_ID')),
+        'client_secret_set': bool(os.getenv('GOOGLE_OAUTH_CLIENT_SECRET'))
+    })
+
 # OAuth routes (only if OAuth is available)
 if OAUTH_AVAILABLE:
     @app.route('/auth/google_callback')
