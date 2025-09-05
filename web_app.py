@@ -1937,7 +1937,34 @@ def save_story_file():
         print(f"🔍 Debug: Error saving story file: {e}")
         return jsonify({'error': f'Could not save story file: {e}'}), 500
 
+def init_database():
+    """Initialize database and run migrations"""
+    try:
+        print("🗄️ Initializing database...")
+        
+        # Create all tables
+        with app.app_context():
+            db.create_all()
+            print("✅ Database tables created successfully")
+            
+            # Check if we need to run migrations
+            try:
+                from flask_migrate import upgrade
+                upgrade()
+                print("✅ Database migrations applied successfully")
+            except Exception as migration_error:
+                print(f"⚠️ Migration error (may be normal on first run): {migration_error}")
+                
+    except Exception as e:
+        print(f"❌ Database initialization failed: {e}")
+        # Don't fail the app startup, just log the error
+        import traceback
+        print(f"Database error traceback: {traceback.format_exc()}")
+
 if __name__ == '__main__':
+    # Initialize database before starting the app
+    init_database()
+    
     # Set timeout for requests to prevent hung processes
     import signal
     
