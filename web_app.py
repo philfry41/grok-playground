@@ -962,19 +962,38 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: user_input: {user_input}")
         
         try:
-            # Load the story JSON file
-            story_filename = f"story_{story_id}.json"
-            story_path = os.path.abspath(story_filename)
-            print(f"🔍 Debug: story_path='{story_path}'")
-            
-            if not os.path.exists(story_filename):
+            # Get current user from session
+            user_id = session.get('db_user_id')
+            if not user_id:
                 if request_id:
                     untrack_request(request_id)
-                return jsonify({'error': f'Story file not found: {story_filename}'})
+                return jsonify({'error': 'User not found in session'})
             
-            # Read and parse the story JSON
-            with open(story_filename, "r", encoding="utf-8") as f:
-                story_data = json.load(f)
+            # Load story from database
+            if DATABASE_AVAILABLE:
+                story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
+                
+                if not story:
+                    if request_id:
+                        untrack_request(request_id)
+                    return jsonify({'error': f'Story not found: {story_id}'})
+                
+                story_data = story.content
+                print(f"🔍 Debug: Loaded story from database: {story.title}")
+            else:
+                # Fallback to file system if database not available
+                story_filename = f"story_{story_id}.json"
+                story_path = os.path.abspath(story_filename)
+                print(f"🔍 Debug: story_path='{story_path}'")
+                
+                if not os.path.exists(story_filename):
+                    if request_id:
+                        untrack_request(request_id)
+                    return jsonify({'error': f'Story file not found: {story_filename}'})
+                
+                # Read and parse the story JSON
+                with open(story_filename, "r", encoding="utf-8") as f:
+                    story_data = json.load(f)
             
             print(f"🔍 Debug: Loaded story: {story_data.get('title', story_id)}")
             print(f"🔍 Debug: Story data keys: {list(story_data.keys())}")
