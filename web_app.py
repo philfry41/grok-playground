@@ -26,6 +26,16 @@ except ImportError as e:
     SQLAlchemy = None
     Migrate = None
 
+# Try to import OAuth packages
+try:
+    from flask_dance.contrib.google import make_google_blueprint, google
+    OAUTH_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ OAuth packages not available: {e}")
+    OAUTH_AVAILABLE = False
+    make_google_blueprint = None
+    google = None
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
 
@@ -51,6 +61,31 @@ else:
     print("⚠️ Database not available - running without database features")
     db = None
     migrate = None
+
+# OAuth configuration (only if OAuth packages are available)
+if OAUTH_AVAILABLE:
+    # Google OAuth configuration
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
+    
+    if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+        # Create Google OAuth blueprint
+        google_bp = make_google_blueprint(
+            client_id=GOOGLE_CLIENT_ID,
+            client_secret=GOOGLE_CLIENT_SECRET,
+            scope=['openid', 'email', 'profile'],
+            redirect_to='auth.google_callback'
+        )
+        
+        # Register the blueprint
+        app.register_blueprint(google_bp, url_prefix='/auth')
+        print("✅ Google OAuth configured successfully")
+    else:
+        print("⚠️ Google OAuth credentials not found in environment variables")
+        google_bp = None
+else:
+    print("⚠️ OAuth not available - running without authentication features")
+    google_bp = None
 
 # Database Models (only if database is available)
 if DATABASE_AVAILABLE:
@@ -519,6 +554,127 @@ def get_core_story_context(story_id):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# OAuth routes (only if OAuth is available)
+if OAUTH_AVAILABLE:
+    @app.route('/auth/google_callback')
+    def google_callback():
+        """Handle Google OAuth callback"""
+        try:
+            if not google.authorized:
+                return jsonify({'error': 'OAuth authorization failed'}), 400
+            
+            # Get user info from Google
+            resp = google.get('/oauth2/v2/userinfo')
+            if not resp.ok:
+                return jsonify({'error': 'Failed to get user info from Google'}), 400
+            
+            user_info = resp.json()
+            print(f"🔍 Debug: Google user info: {user_info}")
+            
+            # Extract user data
+            google_id = user_info.get('id')
+            email = user_info.get('email')
+            name = user_info.get('name')
+            avatar_url = user_info.get('picture')
+            
+            if not google_id or not email:
+                return jsonify({'error': 'Invalid user data from Google'}), 400
+            
+            # Store user info in session
+            session['user_id'] = google_id
+            session['user_email'] = email
+            session['user_name'] = name
+            session['user_avatar'] = avatar_url
+            session['logged_in'] = True
+            
+            # Save user to database if available
+            if DATABASE_AVAILABLE:
+                try:
+                    # Check if user exists
+                    user = User.query.filter_by(google_id=google_id).first()
+                    
+                    if not user:
+                        # Create new user
+                        user = User(
+                            google_id=google_id,
+                            email=email,
+                            name=name,
+                            avatar_url=avatar_url
+                        )
+                        db.session.add(user)
+                        db.session.commit()
+                        print(f"🔍 Debug: Created new user: {name} ({email})")
+                    else:
+                        # Update existing user
+                        user.email = email
+                        user.name = name
+                        user.avatar_url = avatar_url
+                        db.session.commit()
+                        print(f"🔍 Debug: Updated existing user: {name} ({email})")
+                    
+                    session['db_user_id'] = user.id
+                    
+                except Exception as db_error:
+                    print(f"🔍 Debug: Database error during user save: {db_error}")
+                    # Continue without database save
+            
+            print(f"🔍 Debug: User logged in successfully: {name} ({email})")
+            
+            # Redirect to main page
+            return jsonify({
+                'success': True,
+                'message': f'Welcome, {name}!',
+                'user': {
+                    'name': name,
+                    'email': email,
+                    'avatar': avatar_url
+                }
+            })
+            
+        except Exception as e:
+            print(f"🔍 Debug: OAuth callback error: {e}")
+            return jsonify({'error': f'OAuth callback failed: {str(e)}'}), 500
+    
+    @app.route('/auth/logout')
+    def logout():
+        """Logout user"""
+        try:
+            # Clear session
+            session.clear()
+            print("🔍 Debug: User logged out")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Logged out successfully'
+            })
+            
+        except Exception as e:
+            print(f"🔍 Debug: Logout error: {e}")
+            return jsonify({'error': f'Logout failed: {str(e)}'}), 500
+    
+    @app.route('/auth/status')
+    def auth_status():
+        """Get current authentication status"""
+        try:
+            if session.get('logged_in'):
+                return jsonify({
+                    'logged_in': True,
+                    'user': {
+                        'name': session.get('user_name'),
+                        'email': session.get('user_email'),
+                        'avatar': session.get('user_avatar')
+                    }
+                })
+            else:
+                return jsonify({
+                    'logged_in': False,
+                    'user': None
+                })
+                
+        except Exception as e:
+            print(f"🔍 Debug: Auth status error: {e}")
+            return jsonify({'error': f'Auth status check failed: {str(e)}'}), 500
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
