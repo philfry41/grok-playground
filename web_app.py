@@ -9,67 +9,89 @@ import threading
 import time
 import hashlib
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
 from tts_helper import tts
 import re
 from datetime import datetime
 
+# Try to import database packages, but don't fail if they're not available
+try:
+    from flask_sqlalchemy import SQLAlchemy
+    from flask_migrate import Migrate
+    DATABASE_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Database packages not available: {e}")
+    DATABASE_AVAILABLE = False
+    SQLAlchemy = None
+    Migrate = None
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
 
-# Database configuration
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
-    # Handle PostgreSQL URL format for SQLAlchemy
-    if DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+# Database configuration (only if database packages are available)
+if DATABASE_AVAILABLE:
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if DATABASE_URL:
+        # Handle PostgreSQL URL format for SQLAlchemy
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    else:
+        # Fallback to SQLite for local development
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grok_playground.db'
+
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Initialize database
+    db = SQLAlchemy(app)
+    migrate = Migrate(app, db)
+    print("✅ Database initialized successfully")
 else:
-    # Fallback to SQLite for local development
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grok_playground.db'
+    print("⚠️ Database not available - running without database features")
+    db = None
+    migrate = None
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Database Models (only if database is available)
+if DATABASE_AVAILABLE:
+    class User(db.Model):
+        """User model for authentication and story ownership"""
+        __tablename__ = 'users'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        google_id = db.Column(db.String(120), unique=True, nullable=False)
+        email = db.Column(db.String(120), unique=True, nullable=False)
+        name = db.Column(db.String(120), nullable=False)
+        avatar_url = db.Column(db.String(200))
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        # Relationship to stories
+        stories = db.relationship('Story', backref='owner', lazy=True)
+        
+        def __repr__(self):
+            return f'<User {self.name} ({self.email})>'
 
-# Initialize database
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-
-# Database Models
-class User(db.Model):
-    """User model for authentication and story ownership"""
-    __tablename__ = 'users'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    google_id = db.Column(db.String(120), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    name = db.Column(db.String(120), nullable=False)
-    avatar_url = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationship to stories
-    stories = db.relationship('Story', backref='owner', lazy=True)
-    
-    def __repr__(self):
-        return f'<User {self.name} ({self.email})>'
-
-class Story(db.Model):
-    """Story model for storing story data"""
-    __tablename__ = 'stories'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    story_id = db.Column(db.String(80), unique=True, nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    content = db.Column(db.JSON, nullable=False)  # Store story data as JSON
-    is_public = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<Story {self.title} ({self.story_id})>'
+    class Story(db.Model):
+        """Story model for storing story data"""
+        __tablename__ = 'stories'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        story_id = db.Column(db.String(80), unique=True, nullable=False)
+        title = db.Column(db.String(200), nullable=False)
+        user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+        content = db.Column(db.JSON, nullable=False)  # Store story data as JSON
+        is_public = db.Column(db.Boolean, default=False)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        
+        def __repr__(self):
+            return f'<Story {self.title} ({self.story_id})>'
+else:
+    # Dummy classes when database is not available
+    class User:
+        pass
+    class Story:
+        pass
 
 # Request deduplication tracking
 active_requests = {}  # Track active requests to prevent duplicates
@@ -1587,8 +1609,16 @@ def get_server_logs():
 def test_database():
     """Test endpoint to verify database connection and tables"""
     try:
+        if not DATABASE_AVAILABLE:
+            return jsonify({
+                'success': False,
+                'message': 'Database packages not available',
+                'database_available': False
+            })
+        
         # Test database connection
         db_info = {
+            'database_available': True,
             'database_url_set': bool(os.getenv('DATABASE_URL')),
             'database_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'Not set'),
             'connection_test': False,
@@ -1939,6 +1969,10 @@ def save_story_file():
 
 def init_database():
     """Initialize database and run migrations"""
+    if not DATABASE_AVAILABLE:
+        print("⚠️ Database not available - skipping database initialization")
+        return
+        
     try:
         print("🗄️ Initializing database...")
         
