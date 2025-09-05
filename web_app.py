@@ -9,6 +9,8 @@ import threading
 import time
 import hashlib
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
 from tts_helper import tts
@@ -17,6 +19,57 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
+
+# Database configuration
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    # Handle PostgreSQL URL format for SQLAlchemy
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # Fallback to SQLite for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grok_playground.db'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize database
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+# Database Models
+class User(db.Model):
+    """User model for authentication and story ownership"""
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    google_id = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    avatar_url = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship to stories
+    stories = db.relationship('Story', backref='owner', lazy=True)
+    
+    def __repr__(self):
+        return f'<User {self.name} ({self.email})>'
+
+class Story(db.Model):
+    """Story model for storing story data"""
+    __tablename__ = 'stories'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    story_id = db.Column(db.String(80), unique=True, nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    content = db.Column(db.JSON, nullable=False)  # Store story data as JSON
+    is_public = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Story {self.title} ({self.story_id})>'
 
 # Request deduplication tracking
 active_requests = {}  # Track active requests to prevent duplicates
