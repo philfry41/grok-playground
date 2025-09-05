@@ -28,13 +28,12 @@ except ImportError as e:
 
 # Try to import OAuth packages
 try:
-    from flask_dance.contrib.google import make_google_blueprint, google
+    from authlib.integrations.flask_client import OAuth
     OAUTH_AVAILABLE = True
 except ImportError as e:
     print(f"⚠️ OAuth packages not available: {e}")
     OAUTH_AVAILABLE = False
-    make_google_blueprint = None
-    google = None
+    OAuth = None
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
@@ -69,23 +68,26 @@ if OAUTH_AVAILABLE:
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
     
     if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
-        # Create Google OAuth blueprint
-        google_bp = make_google_blueprint(
+        # Create OAuth client
+        oauth = OAuth(app)
+        google = oauth.register(
+            name='google',
             client_id=GOOGLE_CLIENT_ID,
             client_secret=GOOGLE_CLIENT_SECRET,
-            scope=['openid', 'email', 'profile'],
-            redirect_to='auth.google_callback'
+            server_metadata_url='https://accounts.google.com/.well-known/openid_configuration',
+            client_kwargs={
+                'scope': 'openid email profile'
+            }
         )
-        
-        # Register the blueprint
-        app.register_blueprint(google_bp, url_prefix='/auth')
         print("✅ Google OAuth configured successfully")
     else:
         print("⚠️ Google OAuth credentials not found in environment variables")
-        google_bp = None
+        oauth = None
+        google = None
 else:
     print("⚠️ OAuth not available - running without authentication features")
-    google_bp = None
+    oauth = None
+    google = None
 
 # Database Models (only if database is available)
 if DATABASE_AVAILABLE:
@@ -560,30 +562,38 @@ def oauth_test():
     """Test endpoint to check OAuth availability"""
     return jsonify({
         'oauth_available': OAUTH_AVAILABLE,
-        'google_bp_available': google_bp is not None if OAUTH_AVAILABLE else False,
+        'google_available': google is not None if OAUTH_AVAILABLE else False,
         'client_id_set': bool(os.getenv('GOOGLE_OAUTH_CLIENT_ID')),
         'client_secret_set': bool(os.getenv('GOOGLE_OAUTH_CLIENT_SECRET'))
     })
 
 # OAuth routes (only if OAuth is available)
 if OAUTH_AVAILABLE:
-    @app.route('/auth/google_callback')
+    @app.route('/auth/google')
+    def google_login():
+        """Initiate Google OAuth login"""
+        try:
+            redirect_uri = url_for('google_callback', _external=True)
+            return google.authorize_redirect(redirect_uri)
+        except Exception as e:
+            print(f"🔍 Debug: Google login error: {e}")
+            return jsonify({'error': 'Google login failed'}), 500
+
+    @app.route('/auth/google/callback')
     def google_callback():
         """Handle Google OAuth callback"""
         try:
-            if not google.authorized:
-                return jsonify({'error': 'OAuth authorization failed'}), 400
+            # Get the authorization code from the callback
+            token = google.authorize_access_token()
+            user_info = token.get('userinfo')
             
-            # Get user info from Google
-            resp = google.get('/oauth2/v2/userinfo')
-            if not resp.ok:
+            if not user_info:
                 return jsonify({'error': 'Failed to get user info from Google'}), 400
             
-            user_info = resp.json()
             print(f"🔍 Debug: Google user info: {user_info}")
             
             # Extract user data
-            google_id = user_info.get('id')
+            google_id = user_info.get('sub')
             email = user_info.get('email')
             name = user_info.get('name')
             avatar_url = user_info.get('picture')
