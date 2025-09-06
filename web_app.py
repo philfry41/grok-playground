@@ -2355,25 +2355,18 @@ def save_story_file():
         return jsonify({'error': f'Could not save story file: {e}'}), 500
 
 def ensure_tables_exist():
-    """Ensure database tables exist"""
+    """Ensure database tables exist with correct schema"""
     if not DATABASE_AVAILABLE:
         return False
         
     try:
         with app.app_context():
-            # Test if tables exist by trying to query them
-            try:
-                from sqlalchemy import text
-                with db.engine.connect() as conn:
-                    conn.execute(text('SELECT 1 FROM users LIMIT 1'))
-                    conn.execute(text('SELECT 1 FROM stories LIMIT 1'))
-                print("✅ Database tables exist")
-                return True
-            except Exception:
-                print("⚠️ Database tables don't exist, creating them...")
-                db.create_all()
-                print("✅ Database tables created successfully")
-                return True
+            # Always recreate tables to ensure correct schema
+            print("🔄 Ensuring database tables have correct schema...")
+            db.drop_all()
+            db.create_all()
+            print("✅ Database tables recreated with correct schema")
+            return True
     except Exception as e:
         print(f"❌ Failed to ensure tables exist: {e}")
         import traceback
