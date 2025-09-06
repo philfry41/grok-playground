@@ -61,7 +61,9 @@ if DATABASE_AVAILABLE:
     try:
         with app.app_context():
             # Test database connection first
-            db.engine.execute('SELECT 1')
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                conn.execute(text('SELECT 1'))
             print("✅ Database connection test successful")
             
             # Force recreate tables to ensure correct schema
@@ -70,11 +72,19 @@ if DATABASE_AVAILABLE:
             db.create_all()
             print("✅ Database tables recreated successfully")
             
-            # Verify tables exist
+            # Verify tables exist and check schema
             from sqlalchemy import inspect
             inspector = inspect(db.engine)
             tables = inspector.get_table_names()
             print(f"✅ Database tables verified: {tables}")
+            
+            # Check the actual schema of the stories table
+            if 'stories' in tables:
+                columns = inspector.get_columns('stories')
+                for col in columns:
+                    if col['name'] == 'user_id':
+                        print(f"✅ Stories.user_id column type: {col['type']}")
+                        break
             
     except Exception as e:
         print(f"❌ Database table creation failed: {e}")
@@ -2353,8 +2363,10 @@ def ensure_tables_exist():
         with app.app_context():
             # Test if tables exist by trying to query them
             try:
-                db.engine.execute('SELECT 1 FROM users LIMIT 1')
-                db.engine.execute('SELECT 1 FROM stories LIMIT 1')
+                from sqlalchemy import text
+                with db.engine.connect() as conn:
+                    conn.execute(text('SELECT 1 FROM users LIMIT 1'))
+                    conn.execute(text('SELECT 1 FROM stories LIMIT 1'))
                 print("✅ Database tables exist")
                 return True
             except Exception:
