@@ -1025,7 +1025,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                         untrack_request(request_id)
                     return jsonify({'error': 'Database tables not available'})
                 
-                story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
+                story = Story.query.filter_by(user_id=user_id).filter(Story.story_id.ilike(story_id)).first()
                 
                 if not story:
                     if request_id:
@@ -1036,17 +1036,24 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: Loaded story from database: {story.title}")
             else:
                 # Fallback to file system if database not available
+                # Try both exact case and lowercase versions
                 story_filename = f"story_{story_id}.json"
+                story_filename_lower = f"story_{story_id.lower()}.json"
                 story_path = os.path.abspath(story_filename)
                 print(f"🔍 Debug: story_path='{story_path}'")
                 
-                if not os.path.exists(story_filename):
+                # Try exact case first, then lowercase
+                if os.path.exists(story_filename):
+                    actual_filename = story_filename
+                elif os.path.exists(story_filename_lower):
+                    actual_filename = story_filename_lower
+                else:
                     if request_id:
                         untrack_request(request_id)
-                    return jsonify({'error': f'Story file not found: {story_filename}'})
+                    return jsonify({'error': f'Story file not found: {story_filename} or {story_filename_lower}'})
                 
                 # Read and parse the story JSON
-                with open(story_filename, "r", encoding="utf-8") as f:
+                with open(actual_filename, "r", encoding="utf-8") as f:
                     story_data = json.load(f)
             
             print(f"🔍 Debug: Loaded story: {story_data.get('title', story_id)}")
@@ -2222,8 +2229,8 @@ def get_story_file(story_id):
             if not ensure_tables_exist():
                 return jsonify({'error': 'Database tables not available'}), 500
             
-            # Get story from database
-            story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
+            # Get story from database (case-insensitive)
+            story = Story.query.filter_by(user_id=user_id).filter(Story.story_id.ilike(story_id)).first()
             
             if not story:
                 return jsonify({'error': f'Story not found: {story_id}'}), 404
@@ -2246,11 +2253,17 @@ def get_story_file(story_id):
                 story_id += '.json'
             
             file_path = f"story_{story_id}" if not story_id.startswith('story_') else story_id
+            file_path_lower = f"story_{story_id.lower()}" if not story_id.startswith('story_') else story_id.lower()
             
-            if not os.path.exists(file_path):
-                return jsonify({'error': f'Story file not found: {file_path}'}), 404
+            # Try exact case first, then lowercase
+            if os.path.exists(file_path):
+                actual_file_path = file_path
+            elif os.path.exists(file_path_lower):
+                actual_file_path = file_path_lower
+            else:
+                return jsonify({'error': f'Story file not found: {file_path} or {file_path_lower}'}), 404
             
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(actual_file_path, 'r', encoding='utf-8') as f:
                 story_data = json.load(f)
             
             return jsonify({
