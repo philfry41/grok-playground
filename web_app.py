@@ -2343,20 +2343,35 @@ def save_story_file():
         return jsonify({'error': f'Could not save story file: {e}'}), 500
 
 def ensure_tables_exist():
-    """Ensure database tables exist, create them if they don't"""
+    """Ensure database tables exist with correct schema"""
     if not DATABASE_AVAILABLE:
         return False
         
     try:
         with app.app_context():
-            # Test if tables exist by trying to query them
+            # Test if tables exist and have correct schema
             try:
-                db.engine.execute('SELECT 1 FROM users LIMIT 1')
-                db.engine.execute('SELECT 1 FROM stories LIMIT 1')
-                print("✅ Database tables already exist")
-                return True
-            except Exception:
-                print("⚠️ Database tables don't exist, creating them...")
+                # Test if stories table exists and has correct user_id type
+                result = db.engine.execute("""
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'stories' AND column_name = 'user_id'
+                """).fetchone()
+                
+                if result and result[1] == 'character varying':
+                    print("✅ Database tables exist with correct schema")
+                    return True
+                else:
+                    print("⚠️ Database tables exist but have wrong schema, recreating...")
+                    # Drop and recreate tables
+                    db.drop_all()
+                    db.create_all()
+                    print("✅ Database tables recreated with correct schema")
+                    return True
+                    
+            except Exception as e:
+                print(f"⚠️ Database tables don't exist or schema check failed, creating them...")
+                print(f"Schema check error: {e}")
                 db.create_all()
                 print("✅ Database tables created successfully")
                 return True
