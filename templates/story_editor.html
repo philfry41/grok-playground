@@ -459,6 +459,14 @@
             loadStoryList();
             // Add a default character when creating a new story
             addCharacter();
+            
+            // Check if we should load a specific story from URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const storyId = urlParams.get('story');
+            if (storyId) {
+                console.log('🔍 Loading story from URL parameter:', storyId);
+                loadStoryById(storyId);
+            }
         });
         
         // Load list of available story files
@@ -508,6 +516,29 @@
             resetForm();
         }
         
+        // Load a story by ID
+        async function loadStoryById(storyId) {
+            try {
+                console.log('🔍 Loading story by ID:', storyId);
+                const response = await fetch(`/api/story-files/${encodeURIComponent(storyId)}`);
+                console.log('🔍 Response status:', response.status);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    console.log('🔍 Story loaded successfully:', data.story);
+                    populateForm(data.story);
+                    showNewStory(); // Switch to the editor view
+                    showStatus(`Story loaded: ${data.story.title}`, 'success');
+                } else {
+                    console.log('🔍 Error in response:', data);
+                    showStatus(`Error loading story: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('🔍 Error loading story by ID:', error);
+                showStatus(`Error loading story: ${error.message}`, 'error');
+            }
+        }
+
         // Load a specific story file
         async function loadStoryFile(filename) {
             try {
