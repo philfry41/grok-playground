@@ -2375,12 +2375,36 @@ def ensure_tables_exist():
         
     try:
         with app.app_context():
-            # Always recreate tables to ensure correct schema
-            print("🔄 Ensuring database tables have correct schema...")
-            db.drop_all()
-            db.create_all()
-            print("✅ Database tables recreated with correct schema")
-            return True
+            # Check if tables exist first
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+            
+            if 'stories' in existing_tables and 'users' in existing_tables:
+                # Tables exist, check if schema is correct
+                columns = inspector.get_columns('stories')
+                for col in columns:
+                    if col['name'] == 'user_id':
+                        if str(col['type']) == 'VARCHAR(120)':
+                            print("✅ Database tables exist with correct schema")
+                            return True
+                        else:
+                            print(f"⚠️ Schema mismatch: user_id is {col['type']}, need VARCHAR(120)")
+                            break
+                
+                # Schema is wrong, need to recreate
+                print("🔄 Schema mismatch detected, recreating tables...")
+                db.drop_all()
+                db.create_all()
+                print("✅ Database tables recreated with correct schema")
+                return True
+            else:
+                # Tables don't exist, create them
+                print("🔄 Creating missing database tables...")
+                db.create_all()
+                print("✅ Database tables created")
+                return True
+                
     except Exception as e:
         print(f"❌ Failed to ensure tables exist: {e}")
         import traceback
