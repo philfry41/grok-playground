@@ -1017,44 +1017,27 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: Using Google ID: {google_id}")
             user_id = google_id
             
-            # Load story from database
-            if DATABASE_AVAILABLE:
-                # Ensure tables exist before querying
-                if not ensure_tables_exist():
-                    if request_id:
-                        untrack_request(request_id)
-                    return jsonify({'error': 'Database tables not available'})
-                
-                story = Story.query.filter_by(user_id=user_id).filter(Story.story_id.ilike(story_id)).first()
-                
-                if not story:
-                    if request_id:
-                        untrack_request(request_id)
-                    return jsonify({'error': f'Story not found: {story_id}'})
-                
-                story_data = story.content
-                print(f"🔍 Debug: Loaded story from database: {story.title}")
-            else:
-                # Fallback to file system if database not available
-                # Try both exact case and lowercase versions
-                story_filename = f"story_{story_id}.json"
-                story_filename_lower = f"story_{story_id.lower()}.json"
-                story_path = os.path.abspath(story_filename)
-                print(f"🔍 Debug: story_path='{story_path}'")
-                
-                # Try exact case first, then lowercase
-                if os.path.exists(story_filename):
-                    actual_filename = story_filename
-                elif os.path.exists(story_filename_lower):
-                    actual_filename = story_filename_lower
-                else:
-                    if request_id:
-                        untrack_request(request_id)
-                    return jsonify({'error': f'Story file not found: {story_filename} or {story_filename_lower}'})
-                
-                # Read and parse the story JSON
-                with open(actual_filename, "r", encoding="utf-8") as f:
-                    story_data = json.load(f)
+            # Load story from database only
+            if not DATABASE_AVAILABLE:
+                if request_id:
+                    untrack_request(request_id)
+                return jsonify({'error': 'Database not available'})
+            
+            # Ensure tables exist before querying
+            if not ensure_tables_exist():
+                if request_id:
+                    untrack_request(request_id)
+                return jsonify({'error': 'Database tables not available'})
+            
+            story = Story.query.filter_by(user_id=user_id).filter(Story.story_id.ilike(story_id)).first()
+            
+            if not story:
+                if request_id:
+                    untrack_request(request_id)
+                return jsonify({'error': f'Story not found: {story_id}'})
+            
+            story_data = story.content
+            print(f"🔍 Debug: Loaded story from database: {story.title}")
             
             print(f"🔍 Debug: Loaded story: {story_data.get('title', story_id)}")
             print(f"🔍 Debug: Story data keys: {list(story_data.keys())}")
@@ -2156,56 +2139,31 @@ def list_story_files():
         print(f"🔍 Debug: Using Google ID: {google_id}")
         user_id = google_id
         
-        if DATABASE_AVAILABLE:
-            # Ensure tables exist before querying
-            if not ensure_tables_exist():
-                return jsonify({'error': 'Database tables not available'}), 500
-            
-            # Get user's stories from database
-            user_stories = Story.query.filter_by(user_id=user_id).order_by(Story.updated_at.desc()).all()
-            
-            story_list = []
-            for story in user_stories:
-                content = story.content or {}
-                story_list.append({
-                    'story_id': story.story_id,
-                    'title': story.title,
-                    'characters': len(content.get('characters', {})),
-                    'type': content.get('story_type', 'Unknown'),
-                    'is_public': story.is_public,
-                    'created_at': story.created_at.isoformat() if story.created_at else None,
-                    'updated_at': story.updated_at.isoformat() if story.updated_at else None
-                })
-            
-            print(f"🔍 Debug: Listed {len(story_list)} stories for user {user_id}")
-            return jsonify({'story_files': story_list})
-        else:
-            # Fallback to file system if database not available
-            import glob
-            story_files = glob.glob("story_*.json")
-            story_files.sort()
-            
-            file_list = []
-            for filename in story_files:
-                try:
-                    with open(filename, 'r', encoding='utf-8') as f:
-                        story_data = json.load(f)
-                        file_list.append({
-                            'filename': filename,
-                            'title': story_data.get('title', filename),
-                            'characters': len(story_data.get('characters', {})),
-                            'type': story_data.get('story_type', 'Unknown')
-                        })
-                except Exception as e:
-                    print(f"🔍 Debug: Error reading story file {filename}: {e}")
-                    file_list.append({
-                        'filename': filename,
-                        'title': filename,
-                        'characters': 0,
-                        'type': 'Error'
-                    })
-            
-            return jsonify({'story_files': file_list})
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get user's stories from database
+        user_stories = Story.query.filter_by(user_id=user_id).order_by(Story.updated_at.desc()).all()
+        
+        story_list = []
+        for story in user_stories:
+            content = story.content or {}
+            story_list.append({
+                'story_id': story.story_id,
+                'title': story.title,
+                'characters': len(content.get('characters', {})),
+                'type': content.get('story_type', 'Unknown'),
+                'is_public': story.is_public,
+                'created_at': story.created_at.isoformat() if story.created_at else None,
+                'updated_at': story.updated_at.isoformat() if story.updated_at else None
+            })
+        
+        print(f"🔍 Debug: Listed {len(story_list)} stories for user {user_id}")
+        return jsonify({'story_files': story_list})
     except Exception as e:
         print(f"🔍 Debug: Error listing story files: {e}")
         return jsonify({'error': f'Could not list story files: {e}'}), 500
@@ -2224,52 +2182,31 @@ def get_story_file(story_id):
         print(f"🔍 Debug: Using Google ID: {google_id}")
         user_id = google_id
         
-        if DATABASE_AVAILABLE:
-            # Ensure tables exist before querying
-            if not ensure_tables_exist():
-                return jsonify({'error': 'Database tables not available'}), 500
-            
-            # Get story from database (case-insensitive)
-            story = Story.query.filter_by(user_id=user_id).filter(Story.story_id.ilike(story_id)).first()
-            
-            if not story:
-                return jsonify({'error': f'Story not found: {story_id}'}), 404
-            
-            print(f"🔍 Debug: Retrieved story {story_id} for user {user_id}")
-            
-            return jsonify({
-                'success': True,
-                'story': story.content,
-                'metadata': {
-                    'title': story.title,
-                    'is_public': story.is_public,
-                    'created_at': story.created_at.isoformat() if story.created_at else None,
-                    'updated_at': story.updated_at.isoformat() if story.updated_at else None
-                }
-            })
-        else:
-            # Fallback to file system if database not available
-            if not story_id.endswith('.json'):
-                story_id += '.json'
-            
-            file_path = f"story_{story_id}" if not story_id.startswith('story_') else story_id
-            file_path_lower = f"story_{story_id.lower()}" if not story_id.startswith('story_') else story_id.lower()
-            
-            # Try exact case first, then lowercase
-            if os.path.exists(file_path):
-                actual_file_path = file_path
-            elif os.path.exists(file_path_lower):
-                actual_file_path = file_path_lower
-            else:
-                return jsonify({'error': f'Story file not found: {file_path} or {file_path_lower}'}), 404
-            
-            with open(actual_file_path, 'r', encoding='utf-8') as f:
-                story_data = json.load(f)
-            
-            return jsonify({
-                'success': True,
-                'story': story_data
-            })
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get story from database (case-insensitive)
+        story = Story.query.filter_by(user_id=user_id).filter(Story.story_id.ilike(story_id)).first()
+        
+        if not story:
+            return jsonify({'error': f'Story not found: {story_id}'}), 404
+        
+        print(f"🔍 Debug: Retrieved story {story_id} for user {user_id}")
+        
+        return jsonify({
+            'success': True,
+            'story': story.content,
+            'metadata': {
+                'title': story.title,
+                'is_public': story.is_public,
+                'created_at': story.created_at.isoformat() if story.created_at else None,
+                'updated_at': story.updated_at.isoformat() if story.updated_at else None
+            }
+        })
     except Exception as e:
         print(f"🔍 Debug: Error reading story {story_id}: {e}")
         return jsonify({'error': f'Could not read story: {e}'}), 500
@@ -2305,63 +2242,51 @@ def save_story_file():
             'version': '1.0'
         }
         
-        if DATABASE_AVAILABLE:
-            # Ensure tables exist before querying
-            if not ensure_tables_exist():
-                return jsonify({'error': 'Database tables not available'}), 500
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Check if story already exists
+        existing_story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
+        
+        if existing_story:
+            # Update existing story
+            existing_story.title = title
+            existing_story.content = story_data
+            existing_story.is_public = is_public
+            existing_story.updated_at = datetime.utcnow()
+            db.session.commit()
             
-            # Check if story already exists
-            existing_story = Story.query.filter_by(story_id=story_id, user_id=user_id).first()
-            
-            if existing_story:
-                # Update existing story
-                existing_story.title = title
-                existing_story.content = story_data
-                existing_story.is_public = is_public
-                existing_story.updated_at = datetime.utcnow()
-                db.session.commit()
-                
-                print(f"🔍 Debug: Story updated in database: {story_id} by user {user_id}")
-                
-                return jsonify({
-                    'success': True,
-                    'message': f'Story updated: {title}',
-                    'story_id': story_id,
-                    'action': 'updated'
-                })
-            else:
-                # Create new story
-                new_story = Story(
-                    story_id=story_id,
-                    title=title,
-                    user_id=user_id,
-                    content=story_data,
-                    is_public=is_public
-                )
-                db.session.add(new_story)
-                db.session.commit()
-                
-                print(f"🔍 Debug: Story saved to database: {story_id} by user {user_id}")
-                
-                return jsonify({
-                    'success': True,
-                    'message': f'Story saved: {title}',
-                    'story_id': story_id,
-                    'action': 'created'
-                })
-        else:
-            # Fallback to file system if database not available
-            filename = f"story_{story_id}.json"
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(story_data, f, indent=2, ensure_ascii=False)
-            
-            print(f"🔍 Debug: Story saved to file (database unavailable): {filename}")
+            print(f"🔍 Debug: Story updated in database: {story_id} by user {user_id}")
             
             return jsonify({
                 'success': True,
-                'message': f'Story saved as {filename} (database unavailable)',
-                'filename': filename,
-                'action': 'created_file'
+                'message': f'Story updated: {title}',
+                'story_id': story_id,
+                'action': 'updated'
+            })
+        else:
+            # Create new story
+            new_story = Story(
+                story_id=story_id,
+                title=title,
+                user_id=user_id,
+                content=story_data,
+                is_public=is_public
+            )
+            db.session.add(new_story)
+            db.session.commit()
+            
+            print(f"🔍 Debug: Story saved to database: {story_id} by user {user_id}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Story saved: {title}',
+                'story_id': story_id,
+                'action': 'created'
             })
     except Exception as e:
         print(f"🔍 Debug: Error saving story file: {e}")
