@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Story to Database</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        button { padding: 10px 20px; font-size: 16px; margin: 10px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Upload Story to Database</h1>
+    <p>This will upload your local story_farm_romance.json file to the Render database.</p>
+    
+    <button onclick="uploadStory()">Upload Farm Romance Story</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function uploadStory() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p class="info">Uploading story...</p>';
+            
+            try {
+                const response = await fetch('/api/upload-story', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: 'story_farm_romance.json'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p class="success">✅ ${data.message}</p>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

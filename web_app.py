@@ -2211,6 +2211,12 @@ def get_story_file(story_id):
         print(f"🔍 Debug: Error reading story {story_id}: {e}")
         return jsonify({'error': f'Could not read story: {e}'}), 500
 
+@app.route('/upload-story')
+@require_auth
+def upload_story_page():
+    """Serve the upload story page"""
+    return render_template('upload_story.html')
+
 @app.route('/api/upload-story', methods=['POST'])
 @require_auth
 def upload_story_from_file():
