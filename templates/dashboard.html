@@ -351,7 +351,12 @@
         function displayStories(stories) {
             const container = document.getElementById('storiesContainer');
             
-            const storiesHTML = stories.map(story => `
+            // Debug: Log the stories data
+            console.log('🔍 Debug: Stories data:', stories);
+            
+            const storiesHTML = stories.map(story => {
+                console.log('🔍 Debug: Individual story:', story);
+                return `
                 <div class="story-card">
                     <div class="story-title">${story.title}</div>
                     <div class="story-meta">
@@ -362,21 +367,22 @@
                         </span>
                     </div>
                     <div class="story-actions">
-                        <button onclick="playStory('${story.story_id}')" class="btn btn-primary btn-small">
+                        <button onclick="playStory('${story.story_id || 'unknown'}')" class="btn btn-primary btn-small">
                             🎮 Play
                         </button>
-                        <button onclick="editStory('${story.story_id}')" class="btn btn-secondary btn-small">
+                        <button onclick="editStory('${story.story_id || 'unknown'}')" class="btn btn-secondary btn-small">
                             ✏️ Edit
                         </button>
-                        <button onclick="togglePublic('${story.story_id}', ${story.is_public})" class="btn btn-secondary btn-small">
+                        <button onclick="togglePublic('${story.story_id || 'unknown'}', ${story.is_public})" class="btn btn-secondary btn-small">
                             ${story.is_public ? '🔒 Make Private' : '🌐 Make Public'}
                         </button>
-                        <button onclick="deleteStory('${story.story_id}')" class="btn btn-danger btn-small">
+                        <button onclick="deleteStory('${story.story_id || 'unknown'}')" class="btn btn-danger btn-small">
                             🗑️ Delete
                         </button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             
             container.innerHTML = `<div class="stories-grid">${storiesHTML}</div>`;
         }
@@ -388,6 +394,11 @@
         
         // Edit story
         function editStory(storyId) {
+            console.log('🔍 Debug: editStory called with storyId:', storyId);
+            if (!storyId || storyId === 'unknown') {
+                showMessage('Error: Story ID not found', 'error');
+                return;
+            }
             window.location.href = `/story-editor?story=${storyId}`;
         }
         
