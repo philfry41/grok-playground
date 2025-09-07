@@ -1815,6 +1815,32 @@ def save_conversation():
             'traceback': traceback.format_exc()
         })
 
+@app.route('/api/clear-conversation', methods=['POST'])
+def clear_conversation():
+    """Clear the current conversation from session and files"""
+    try:
+        # Clear session history
+        session['history'] = []
+        
+        # Clear any story state
+        if 'current_story_id' in session:
+            del session['current_story_id']
+        
+        print("🔍 Debug: Cleared conversation from session")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Conversation cleared successfully'
+        })
+            
+    except Exception as e:
+        print(f"🔍 Debug: Error clearing conversation: {e}")
+        import traceback
+        return jsonify({
+            'error': f'Failed to clear conversation: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
 @app.route('/api/server-logs', methods=['GET'])
 def get_server_logs():
     """Get recent server logs and error information"""

@@ -572,6 +572,7 @@
                         <button class="btn btn-secondary" onclick="toggleHistoryPanel()">📚 History</button>
                         <button class="btn btn-info" onclick="loadConversationHistory()">🔄 Load Conversation</button>
                         <button class="btn btn-success" onclick="saveCurrentConversation()">💾 Save Conversation</button>
+                        <button class="btn btn-warning" onclick="clearConversation()">🧹 Clear Conversation</button>
                     </div>
                 </div>
             </div>
@@ -1393,6 +1394,35 @@
             } catch (error) {
                 console.error('❌ Error saving conversation:', error);
                 addMessage(`❌ Error saving conversation: ${error.message}`, 'system');
+            }
+        }
+
+        async function clearConversation() {
+            try {
+                console.log('🧹 Clearing conversation...');
+                
+                // Clear the current interaction area
+                const currentInteraction = document.getElementById('currentInteraction');
+                currentInteraction.innerHTML = '';
+                
+                // Clear the session history on the server
+                const response = await fetch('/api/clear-conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage('🧹 Conversation cleared successfully', 'system');
+                } else {
+                    addMessage(`❌ Error clearing conversation: ${data.error}`, 'system');
+                }
+            } catch (error) {
+                console.error('❌ Error clearing conversation:', error);
+                addMessage(`❌ Error clearing conversation: ${error.message}`, 'system');
             }
         }
 
