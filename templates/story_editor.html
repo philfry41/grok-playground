@@ -478,9 +478,9 @@
                 const fileList = document.getElementById('fileList');
                 if (data.story_files && data.story_files.length > 0) {
                     fileList.innerHTML = data.story_files.map(file => `
-                        <div class="file-item" onclick="loadStoryFile('${file.filename}')">
+                        <div class="file-item" onclick="loadStoryFile('${file.story_id}')">
                             <div>
-                                <div class="file-name">${file.title || file.filename}</div>
+                                <div class="file-name">${file.title || file.story_id}</div>
                                 <div class="file-info">${file.characters || 0} characters • ${file.type || 'Unknown type'}</div>
                             </div>
                         </div>
@@ -540,10 +540,10 @@
         }
 
         // Load a specific story file
-        async function loadStoryFile(filename) {
+        async function loadStoryFile(storyId) {
             try {
-                console.log('🔍 Loading story file:', filename);
-                const response = await fetch(`/api/story-files/${encodeURIComponent(filename)}`);
+                console.log('🔍 Loading story file:', storyId);
+                const response = await fetch(`/api/story-files/${encodeURIComponent(storyId)}`);
                 console.log('🔍 Response status:', response.status);
                 const data = await response.json();
                 console.log('🔍 Response data:', data);
