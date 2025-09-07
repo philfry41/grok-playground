@@ -2211,6 +2211,76 @@ def get_story_file(story_id):
         print(f"🔍 Debug: Error reading story {story_id}: {e}")
         return jsonify({'error': f'Could not read story: {e}'}), 500
 
+@app.route('/api/upload-story', methods=['POST'])
+@require_auth
+def upload_story_from_file():
+    """Upload a story from a local file to the database"""
+    try:
+        story_filename = request.json.get('filename')
+        if not story_filename:
+            return jsonify({'error': 'Filename required'}), 400
+        
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Read the story file
+        if not os.path.exists(story_filename):
+            return jsonify({'error': f'Story file not found: {story_filename}'}), 404
+        
+        with open(story_filename, 'r', encoding='utf-8') as f:
+            story_data = json.load(f)
+        
+        story_id = story_data.get('story_id', 'unknown')
+        title = story_data.get('title', story_id)
+        
+        # Check if story already exists
+        existing_story = Story.query.filter_by(story_id=story_id, user_id=google_id).first()
+        
+        if existing_story:
+            # Update existing story
+            existing_story.title = title
+            existing_story.content = story_data
+            existing_story.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Story updated: {title}',
+                'story_id': story_id,
+                'action': 'updated'
+            })
+        else:
+            # Create new story
+            new_story = Story(
+                story_id=story_id,
+                title=title,
+                user_id=google_id,
+                content=story_data,
+                is_public=False
+            )
+            db.session.add(new_story)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Story uploaded: {title}',
+                'story_id': story_id,
+                'action': 'created'
+            })
+            
+    except Exception as e:
+        print(f"🔍 Debug: Error uploading story: {e}")
+        return jsonify({'error': f'Could not upload story: {e}'}), 500
+
 @app.route('/api/story-files', methods=['POST'])
 @require_auth
 def save_story_file():
