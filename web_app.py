@@ -51,6 +51,14 @@ if DATABASE_AVAILABLE:
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grok_playground.db'
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # Configure connection pool for better reliability
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,  # Verify connections before use
+        'pool_recycle': 300,    # Recycle connections every 5 minutes
+        'pool_timeout': 20,     # Timeout for getting connection from pool
+        'max_overflow': 0,      # Don't allow overflow connections
+    }
 
     # Initialize database
     db = SQLAlchemy(app)
@@ -2461,6 +2469,15 @@ def ensure_tables_exist():
         
     try:
         with app.app_context():
+            # Test database connection first
+            from sqlalchemy import text
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(text('SELECT 1'))
+            except Exception as conn_error:
+                print(f"❌ Database connection failed: {conn_error}")
+                return False
+            
             # Check if tables exist first
             from sqlalchemy import inspect
             inspector = inspect(db.engine)
@@ -2468,22 +2485,31 @@ def ensure_tables_exist():
             
             if 'stories' in existing_tables and 'users' in existing_tables:
                 # Tables exist, check if schema is correct
-                columns = inspector.get_columns('stories')
-                for col in columns:
-                    if col['name'] == 'user_id':
-                        if str(col['type']) == 'VARCHAR(120)':
-                            print("✅ Database tables exist with correct schema")
-                            return True
-                        else:
-                            print(f"⚠️ Schema mismatch: user_id is {col['type']}, need VARCHAR(120)")
-                            break
-                
-                # Schema is wrong, need to recreate
-                print("🔄 Schema mismatch detected, recreating tables...")
-                db.drop_all()
-                db.create_all()
-                print("✅ Database tables recreated with correct schema")
-                return True
+                try:
+                    columns = inspector.get_columns('stories')
+                    for col in columns:
+                        if col['name'] == 'user_id':
+                            if str(col['type']) == 'VARCHAR(120)':
+                                print("✅ Database tables exist with correct schema")
+                                return True
+                            else:
+                                print(f"⚠️ Schema mismatch: user_id is {col['type']}, need VARCHAR(120)")
+                                break
+                    
+                    # Schema is wrong, need to recreate
+                    print("🔄 Schema mismatch detected, recreating tables...")
+                    db.drop_all()
+                    db.create_all()
+                    print("✅ Database tables recreated with correct schema")
+                    return True
+                except Exception as schema_error:
+                    print(f"❌ Schema check failed: {schema_error}")
+                    # Try to recreate tables
+                    print("🔄 Attempting to recreate tables due to schema error...")
+                    db.drop_all()
+                    db.create_all()
+                    print("✅ Database tables recreated")
+                    return True
             else:
                 # Tables don't exist, create them
                 print("🔄 Creating missing database tables...")
@@ -2495,7 +2521,18 @@ def ensure_tables_exist():
         print(f"❌ Failed to ensure tables exist: {e}")
         import traceback
         print(f"Database error traceback: {traceback.format_exc()}")
-        return False
+        
+        # Try one more time with a fresh connection
+        try:
+            print("🔄 Attempting database recovery...")
+            with app.app_context():
+                db.drop_all()
+                db.create_all()
+                print("✅ Database recovery successful")
+                return True
+        except Exception as recovery_error:
+            print(f"❌ Database recovery failed: {recovery_error}")
+            return False
 
 def init_database():
     """Initialize database and run migrations"""
