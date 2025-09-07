@@ -534,6 +534,25 @@
         </div>
         
         <div class="sidebar">
+            <div class="panel" id="userPanel">
+                <h3>👤 User</h3>
+                <div id="userInfo" style="margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <img id="userAvatar" src="" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #667eea;">
+                        <div>
+                            <div id="userName" style="font-weight: bold; color: #2d3748;">Loading...</div>
+                            <div id="userEmail" style="font-size: 0.9em; color: #718096;">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="command-buttons">
+                        <a href="/dashboard" class="btn btn-primary" style="text-decoration: none; display: block; text-align: center; margin-bottom: 5px;">📚 Dashboard</a>
+                        <a href="/story-editor" class="btn btn-secondary" style="text-decoration: none; display: block; text-align: center; margin-bottom: 5px;">✏️ Create Story</a>
+                        <a href="/upload-story" class="btn btn-secondary" style="text-decoration: none; display: block; text-align: center; margin-bottom: 5px;">📤 Upload Story</a>
+                        <a href="/auth/logout" class="btn btn-danger" style="text-decoration: none; display: block; text-align: center;">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+            
             <div class="panel">
                 <h3>🎛️ Commands</h3>
                 <div class="command-buttons">
@@ -767,6 +786,7 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            loadUserInfo();
             loadTTSStatus();
             loadConversationHistory(); // Load conversation history on page load
             
@@ -1224,6 +1244,26 @@
                 addOpenerMessage(`Error: ${error.message}`, 'system');
             } finally {
                 hideLoading();
+            }
+        }
+
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/auth/status');
+                const data = await response.json();
+                
+                if (data.logged_in) {
+                    document.getElementById('userName').textContent = data.user.name;
+                    document.getElementById('userEmail').textContent = data.user.email;
+                    document.getElementById('userAvatar').src = data.user.avatar;
+                } else {
+                    // Redirect to login if not authenticated
+                    window.location.href = '/auth/google';
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                document.getElementById('userName').textContent = 'Error loading user';
+                document.getElementById('userEmail').textContent = 'Please refresh the page';
             }
         }
 

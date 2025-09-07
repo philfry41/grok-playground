@@ -2211,6 +2211,92 @@ def get_story_file(story_id):
         print(f"🔍 Debug: Error reading story {story_id}: {e}")
         return jsonify({'error': f'Could not read story: {e}'}), 500
 
+@app.route('/api/story-files/<story_id>', methods=['PATCH'])
+@require_auth
+def update_story_metadata(story_id):
+    """Update story metadata (like public/private status)"""
+    try:
+        # Get current user from session
+        google_id = session.get('user_id')
+        
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get story from database
+        story = Story.query.filter_by(story_id=story_id, user_id=google_id).first()
+        
+        if not story:
+            return jsonify({'error': f'Story not found: {story_id}'}), 404
+        
+        # Update story metadata
+        data = request.get_json()
+        if 'is_public' in data:
+            story.is_public = data['is_public']
+        if 'title' in data:
+            story.title = data['title']
+        
+        story.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Story updated successfully'
+        })
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error updating story {story_id}: {e}")
+        return jsonify({'error': f'Could not update story: {e}'}), 500
+
+@app.route('/api/story-files/<story_id>', methods=['DELETE'])
+@require_auth
+def delete_story(story_id):
+    """Delete a story"""
+    try:
+        # Get current user from session
+        google_id = session.get('user_id')
+        
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get story from database
+        story = Story.query.filter_by(story_id=story_id, user_id=google_id).first()
+        
+        if not story:
+            return jsonify({'error': f'Story not found: {story_id}'}), 404
+        
+        # Delete the story
+        db.session.delete(story)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Story deleted successfully'
+        })
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error deleting story {story_id}: {e}")
+        return jsonify({'error': f'Could not delete story: {e}'}), 500
+
+@app.route('/dashboard')
+@require_auth
+def dashboard():
+    """Serve the user dashboard"""
+    return render_template('dashboard.html')
+
 @app.route('/upload-story')
 @require_auth
 def upload_story_page():
