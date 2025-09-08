@@ -1560,24 +1560,7 @@ def get_conversations():
         print(f"🔍 Debug: Error listing conversations: {e}")
         return jsonify({'error': f'Failed to list conversations: {str(e)}'})
 
-@app.route('/api/conversations/<filename>', methods=['GET'])
-def get_conversation(filename):
-    """Get a specific conversation file"""
-    try:
-        ensure_conversations_dir()
-        filepath = os.path.join(CONVERSATIONS_DIR, filename)
-        
-        if not os.path.exists(filepath):
-            return jsonify({'error': 'Conversation file not found'})
-        
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        return jsonify(data)
-        
-    except Exception as e:
-        print(f"🔍 Debug: Error reading conversation file: {e}")
-        return jsonify({'error': f'Failed to read conversation: {str(e)}'})
+# Old file-based conversation route removed - using database-only approach
 
 @app.route('/api/opener-files', methods=['GET'])
 def get_opener_files():
