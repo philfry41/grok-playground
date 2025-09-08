@@ -1898,7 +1898,7 @@ def get_story_conversations(story_id):
 
 @app.route('/api/conversations/<story_id>/<int:conversation_id>', methods=['GET'])
 @require_auth
-def get_conversation(story_id, conversation_id):
+def get_story_conversation(story_id, conversation_id):
     """Get a specific conversation"""
     try:
         # Get current user from session
