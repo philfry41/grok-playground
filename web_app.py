@@ -459,12 +459,17 @@ def load_conversation_history(story_id=None):
         return []
 
 def get_current_story_id():
-    """Extract current story ID from session history"""
+    """Extract current story ID from session"""
     try:
+        # First check if story_id is directly stored in session
+        if 'story_id' in session:
+            return session.get('story_id')
+        
+        # Fallback: try to extract from session history (legacy support)
         if 'history' in session:
             for msg in session['history']:
                 if msg.get('role') == 'system' and 'CHARACTERS:' in msg.get('content', ''):
-                    # This is likely a story system prompt, extract story ID
+                    # This is likely a story system prompt, but story_id should be in session
                     if 'story_id' in session:
                         return session.get('story_id')
                     # Try to extract from the first system message
