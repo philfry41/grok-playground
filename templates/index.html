@@ -753,7 +753,8 @@
                 if (edgeTriggered) {
                     messageDiv.classList.add('edge-triggered');
                 }
-                messageDiv.textContent = content;
+                // Convert newlines to <br> tags for proper display
+                messageDiv.innerHTML = content.replace(/\n/g, '<br>');
                 currentInteraction.appendChild(messageDiv);
                 currentInteraction.scrollTop = currentInteraction.scrollHeight;
                 
@@ -865,7 +866,8 @@
                 
                 // Create text content
                 const textDiv = document.createElement('div');
-                textDiv.textContent = content;
+                // Convert newlines to <br> tags for proper display
+                textDiv.innerHTML = content.replace(/\n/g, '<br>');
                 messageDiv.appendChild(textDiv);
                 
                 // Add TTS button for assistant messages if TTS is enabled
