@@ -1884,10 +1884,10 @@ def get_story_conversations(story_id):
         if not ensure_tables_exist():
             return jsonify({'error': 'Database tables not available'}), 500
         
-        # Get conversations for this story and user
-        conversations = Conversation.query.filter_by(
-            story_id=story_id, 
-            user_id=google_id
+        # Get conversations for this story and user (case-insensitive)
+        conversations = Conversation.query.filter(
+            Conversation.story_id.ilike(story_id),
+            Conversation.user_id == google_id
         ).order_by(Conversation.updated_at.desc()).all()
         
         conversation_list = []
@@ -1900,7 +1900,8 @@ def get_story_conversations(story_id):
                 'updated_at': conv.updated_at.isoformat() if conv.updated_at else None
             })
         
-        print(f"🔍 Debug: Found {len(conversation_list)} conversations for story {story_id}")
+        print(f"🔍 Debug: Found {len(conversation_list)} conversations for story {story_id} (user: {google_id})")
+        print(f"🔍 Debug: Query was for story_id='{story_id}' (case-insensitive)")
         return jsonify({'conversations': conversation_list})
         
     except Exception as e:
@@ -2012,7 +2013,8 @@ def save_story_conversation(story_id):
         db.session.add(new_conversation)
         db.session.commit()
         
-        print(f"🔍 Debug: Saved conversation for story {story_id} with {len(history)} messages")
+        print(f"🔍 Debug: Saved conversation for story '{story_id}' with {len(history)} messages (user: {google_id})")
+        print(f"🔍 Debug: Conversation ID: {new_conversation.id}, Title: '{title}'")
         
         return jsonify({
             'success': True,
