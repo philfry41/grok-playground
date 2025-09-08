@@ -159,6 +159,19 @@ if DATABASE_AVAILABLE:
         is_public = db.Column(db.Boolean, default=False)
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    class Conversation(db.Model):
+        """Conversation model for storing chat conversations linked to stories"""
+        __tablename__ = 'conversations'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        story_id = db.Column(db.String(80), nullable=False)  # Link to story
+        user_id = db.Column(db.String(120), nullable=False)  # Store Google ID as string
+        title = db.Column(db.String(200), nullable=False)  # User-friendly conversation title
+        history = db.Column(db.JSON, nullable=False)  # Store conversation history as JSON
+        message_count = db.Column(db.Integer, default=0)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
         
         def __repr__(self):
             return f'<Story {self.title} ({self.story_id})>'
@@ -167,6 +180,8 @@ else:
     class User:
         pass
     class Story:
+        pass
+    class Conversation:
         pass
 
 # Request deduplication tracking
@@ -1840,6 +1855,143 @@ def clear_conversation():
             'error': f'Failed to clear conversation: {str(e)}',
             'traceback': traceback.format_exc()
         })
+
+@app.route('/api/conversations/<story_id>', methods=['GET'])
+@require_auth
+def get_story_conversations(story_id):
+    """Get all conversations for a specific story"""
+    try:
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get conversations for this story and user
+        conversations = Conversation.query.filter_by(
+            story_id=story_id, 
+            user_id=google_id
+        ).order_by(Conversation.updated_at.desc()).all()
+        
+        conversation_list = []
+        for conv in conversations:
+            conversation_list.append({
+                'id': conv.id,
+                'title': conv.title,
+                'message_count': conv.message_count,
+                'created_at': conv.created_at.isoformat() if conv.created_at else None,
+                'updated_at': conv.updated_at.isoformat() if conv.updated_at else None
+            })
+        
+        print(f"🔍 Debug: Found {len(conversation_list)} conversations for story {story_id}")
+        return jsonify({'conversations': conversation_list})
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error getting story conversations: {e}")
+        return jsonify({'error': f'Could not get conversations: {e}'}), 500
+
+@app.route('/api/conversations/<story_id>/<int:conversation_id>', methods=['GET'])
+@require_auth
+def get_conversation(story_id, conversation_id):
+    """Get a specific conversation"""
+    try:
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get the specific conversation
+        conversation = Conversation.query.filter_by(
+            id=conversation_id,
+            story_id=story_id,
+            user_id=google_id
+        ).first()
+        
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        # Update session with this conversation
+        session['history'] = conversation.history
+        session['current_story_id'] = story_id
+        
+        print(f"🔍 Debug: Loaded conversation {conversation_id} for story {story_id}")
+        
+        return jsonify({
+            'success': True,
+            'conversation': {
+                'id': conversation.id,
+                'title': conversation.title,
+                'history': conversation.history,
+                'message_count': conversation.message_count,
+                'created_at': conversation.created_at.isoformat() if conversation.created_at else None,
+                'updated_at': conversation.updated_at.isoformat() if conversation.updated_at else None
+            }
+        })
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error getting conversation: {e}")
+        return jsonify({'error': f'Could not get conversation: {e}'}), 500
+
+@app.route('/api/conversations/<story_id>', methods=['POST'])
+@require_auth
+def save_story_conversation(story_id):
+    """Save a conversation for a specific story"""
+    try:
+        data = request.get_json()
+        if not data or 'history' not in data:
+            return jsonify({'error': 'No conversation history provided'}), 400
+        
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist before querying
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        history = data['history']
+        title = data.get('title', f'Conversation {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+        
+        # Create new conversation
+        new_conversation = Conversation(
+            story_id=story_id,
+            user_id=google_id,
+            title=title,
+            history=history,
+            message_count=len(history)
+        )
+        
+        db.session.add(new_conversation)
+        db.session.commit()
+        
+        print(f"🔍 Debug: Saved conversation for story {story_id} with {len(history)} messages")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Conversation saved successfully',
+            'conversation_id': new_conversation.id
+        })
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error saving conversation: {e}")
+        return jsonify({'error': f'Could not save conversation: {e}'}), 500
 
 @app.route('/api/server-logs', methods=['GET'])
 def get_server_logs():

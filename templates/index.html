@@ -570,9 +570,11 @@
                     <div class="word-count-input">
                         <button class="btn btn-secondary" onclick="openOpenerModal()">📄 Select Opener</button>
                         <button class="btn btn-secondary" onclick="toggleHistoryPanel()">📚 History</button>
-                        <button class="btn btn-info" onclick="loadConversationHistory()">🔄 Load Conversation</button>
-                        <button class="btn btn-success" onclick="saveCurrentConversation()">💾 Save Conversation</button>
-                        <button class="btn btn-warning" onclick="clearConversation()">🧹 Clear Conversation</button>
+                        <div class="conversation-controls">
+                            <button class="btn btn-info" onclick="showConversationSelector()">🔄 Load Conversation</button>
+                            <button class="btn btn-success" onclick="saveCurrentConversation()">💾 Save Conversation</button>
+                            <button class="btn btn-warning" onclick="clearConversation()">🧹 Clear Conversation</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -626,6 +628,21 @@
             <div class="opener-list" id="openerList">
                 <div style="text-align: center; padding: 20px; color: #666;">
                     Loading openers...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversation Selection Modal -->
+    <div id="conversationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔄 Select Conversation</h2>
+                <span class="close" onclick="closeConversationModal()">&times;</span>
+            </div>
+            <div class="conversation-list" id="conversationList">
+                <div style="text-align: center; padding: 20px; color: #666;">
+                    Loading conversations...
                 </div>
             </div>
         </div>
@@ -1347,6 +1364,13 @@
             try {
                 console.log('💾 Saving current conversation...');
                 
+                // Get current story ID
+                const currentStoryId = getCurrentStoryId();
+                if (!currentStoryId) {
+                    addMessage('❌ No story loaded. Please load a story first.', 'system');
+                    return;
+                }
+                
                 // Get all messages from the current interaction area
                 const currentInteraction = document.getElementById('currentInteraction');
                 const messages = currentInteraction.querySelectorAll('.message');
@@ -1372,21 +1396,29 @@
                     }
                 });
                 
+                // Prompt for conversation title
+                const title = prompt('Enter a title for this conversation:', `Conversation ${new Date().toLocaleDateString()}`);
+                if (!title) {
+                    addMessage('💾 Save cancelled', 'system');
+                    return;
+                }
+                
                 // Send to server to save
-                const response = await fetch('/api/save-conversation', {
+                const response = await fetch(`/api/conversations/${currentStoryId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        history: conversation
+                        history: conversation,
+                        title: title
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    addMessage(`💾 Conversation saved successfully (${conversation.length} messages)`, 'system');
+                    addMessage(`💾 Conversation saved successfully: "${title}" (${conversation.length} messages)`, 'system');
                 } else {
                     addMessage(`❌ Failed to save conversation: ${data.error || 'Unknown error'}`, 'system');
                 }
@@ -2112,6 +2144,97 @@
             document.getElementById('openerModal').style.display = 'none';
         }
 
+        // Conversation Modal Functions
+        async function showConversationSelector() {
+            const modal = document.getElementById('conversationModal');
+            const conversationList = document.getElementById('conversationList');
+            
+            // Show loading state
+            conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Loading conversations...</div>';
+            modal.style.display = 'block';
+            
+            try {
+                // Get current story ID from session or URL
+                const currentStoryId = getCurrentStoryId();
+                if (!currentStoryId) {
+                    conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No story loaded. Please load a story first.</div>';
+                    return;
+                }
+                
+                const response = await fetch(`/api/conversations/${currentStoryId}`);
+                const data = await response.json();
+                
+                if (data.conversations && data.conversations.length > 0) {
+                    conversationList.innerHTML = data.conversations.map(conv => `
+                        <div class="file-item" onclick="loadConversation(${conv.id})">
+                            <div>
+                                <div class="file-name">${conv.title}</div>
+                                <div class="file-info">${conv.message_count} messages • ${new Date(conv.updated_at).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No conversations found for this story.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+                conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff6b6b;">Error loading conversations</div>';
+            }
+        }
+
+        function closeConversationModal() {
+            document.getElementById('conversationModal').style.display = 'none';
+        }
+
+        async function loadConversation(conversationId) {
+            try {
+                closeConversationModal();
+                
+                const currentStoryId = getCurrentStoryId();
+                if (!currentStoryId) {
+                    addMessage('❌ No story loaded', 'system');
+                    return;
+                }
+                
+                const response = await fetch(`/api/conversations/${currentStoryId}/${conversationId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Clear current interaction area
+                    const currentInteraction = document.getElementById('currentInteraction');
+                    currentInteraction.innerHTML = '';
+                    
+                    // Display loaded conversation history
+                    data.conversation.history.forEach(message => {
+                        if (message.role === 'user' || message.role === 'assistant') {
+                            addMessage(message.content, message.role);
+                        }
+                    });
+                    
+                    // Show success message
+                    addMessage(`🔄 Loaded conversation: ${data.conversation.title}`, 'system');
+                } else {
+                    addMessage(`❌ Error loading conversation: ${data.error}`, 'system');
+                }
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+                addMessage(`❌ Error loading conversation: ${error.message}`, 'system');
+            }
+        }
+
+        function getCurrentStoryId() {
+            // Try to get story ID from URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const loadstory = urlParams.get('loadstory');
+            if (loadstory) {
+                return loadstory;
+            }
+            
+            // Try to get from session (this would need to be set by the backend)
+            // For now, we'll return null if not in URL
+            return null;
+        }
+
         async function selectOpener(filename) {
             console.log('🔍 selectOpener function called with filename: ' + filename);
             closeOpenerModal();
@@ -2236,9 +2359,14 @@
 
         // Close modal when clicking outside of it
         window.onclick = function(event) {
-            const modal = document.getElementById('openerModal');
-            if (event.target === modal) {
+            const openerModal = document.getElementById('openerModal');
+            const conversationModal = document.getElementById('conversationModal');
+            
+            if (event.target === openerModal) {
                 closeOpenerModal();
+            }
+            if (event.target === conversationModal) {
+                closeConversationModal();
             }
         }
         
