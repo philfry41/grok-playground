@@ -1406,6 +1406,10 @@
                 }
                 
                 // Send to server to save
+                console.log(`🔍 Debug: Saving conversation for story: ${currentStoryId}`);
+                console.log(`🔍 Debug: Conversation has ${conversation.length} messages`);
+                console.log(`🔍 Debug: Title: "${title}"`);
+                
                 const response = await fetch(`/api/conversations/${currentStoryId}`, {
                     method: 'POST',
                     headers: {
@@ -1417,7 +1421,9 @@
                     })
                 });
                 
+                console.log(`🔍 Debug: Save response status: ${response.status}`);
                 const data = await response.json();
+                console.log(`🔍 Debug: Save response data:`, data);
                 
                 if (data.success) {
                     addMessage(`💾 Conversation saved successfully: "${title}" (${conversation.length} messages)`, 'system');
@@ -2163,8 +2169,11 @@
                     return;
                 }
                 
+                console.log(`🔍 Debug: Loading conversations for story: ${currentStoryId}`);
                 const response = await fetch(`/api/conversations/${currentStoryId}`);
+                console.log(`🔍 Debug: Load response status: ${response.status}`);
                 const data = await response.json();
+                console.log(`🔍 Debug: Load response data:`, data);
                 
                 if (data.conversations && data.conversations.length > 0) {
                     conversationList.innerHTML = data.conversations.map(conv => `
