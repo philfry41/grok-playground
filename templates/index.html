@@ -1367,7 +1367,7 @@
                 console.log('💾 Saving current conversation...');
                 
                 // Get current story ID
-                const currentStoryId = getCurrentStoryId();
+                const currentStoryId = await getCurrentStoryId();
                 if (!currentStoryId) {
                     addMessage('❌ No story loaded. Please load a story first.', 'system');
                     return;
@@ -2157,7 +2157,7 @@
             
             try {
                 // Get current story ID from session or URL
-                const currentStoryId = getCurrentStoryId();
+                const currentStoryId = await getCurrentStoryId();
                 if (!currentStoryId) {
                     conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No story loaded. Please load a story first.</div>';
                     return;
@@ -2192,7 +2192,7 @@
             try {
                 closeConversationModal();
                 
-                const currentStoryId = getCurrentStoryId();
+                const currentStoryId = await getCurrentStoryId();
                 if (!currentStoryId) {
                     addMessage('❌ No story loaded', 'system');
                     return;
@@ -2224,16 +2224,25 @@
             }
         }
 
-        function getCurrentStoryId() {
-            // Try to get story ID from URL parameter
+        async function getCurrentStoryId() {
+            // Try to get story ID from URL parameter first
             const urlParams = new URLSearchParams(window.location.search);
             const loadstory = urlParams.get('loadstory');
             if (loadstory) {
                 return loadstory;
             }
             
-            // Try to get from session (this would need to be set by the backend)
-            // For now, we'll return null if not in URL
+            // Try to get from session via API
+            try {
+                const response = await fetch('/api/current-story-id');
+                const data = await response.json();
+                if (data.success && data.story_id) {
+                    return data.story_id;
+                }
+            } catch (error) {
+                console.error('Error getting current story ID from session:', error);
+            }
+            
             return null;
         }
 

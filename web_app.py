@@ -1951,6 +1951,26 @@ def get_story_conversation(story_id, conversation_id):
         print(f"🔍 Debug: Error getting conversation: {e}")
         return jsonify({'error': f'Could not get conversation: {e}'}), 500
 
+@app.route('/api/current-story-id', methods=['GET'])
+@require_auth
+def get_current_story_id_api():
+    """Get the current story ID from session"""
+    try:
+        story_id = get_current_story_id()
+        if story_id:
+            return jsonify({
+                'success': True,
+                'story_id': story_id
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'No story currently loaded'
+            })
+    except Exception as e:
+        print(f"🔍 Debug: Error getting current story ID: {e}")
+        return jsonify({'error': f'Could not get current story ID: {e}'}), 500
+
 @app.route('/api/conversations/<story_id>', methods=['POST'])
 @require_auth
 def save_story_conversation(story_id):
