@@ -94,6 +94,12 @@ if DATABASE_AVAILABLE:
                         print(f"✅ Stories.user_id column type: {col['type']}")
                         break
             
+            # Check if conversations table exists
+            if 'conversations' in tables:
+                print("✅ Conversations table exists")
+            else:
+                print("⚠️ Conversations table missing - will be created on next request")
+            
     except Exception as e:
         print(f"❌ Database table creation failed: {e}")
         import traceback
@@ -2661,7 +2667,7 @@ def ensure_tables_exist():
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
             
-            if 'stories' in existing_tables and 'users' in existing_tables:
+            if 'stories' in existing_tables and 'users' in existing_tables and 'conversations' in existing_tables:
                 # Tables exist, check if schema is correct
                 try:
                     columns = inspector.get_columns('stories')
