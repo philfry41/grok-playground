@@ -2613,9 +2613,28 @@ def save_story_file():
                 is_public=is_public
             )
             db.session.add(new_story)
+            db.session.flush()  # Flush to get the story ID
+            
+            # Create "Opening" scene for the new story
+            opening_scene = Scene(
+                story_id=story_id,
+                user_id=user_id,
+                title="Opening",
+                history=[],  # Empty history - just the story context
+                message_count=0,
+                is_default=True,
+                is_active=True
+            )
+            db.session.add(opening_scene)
+            db.session.flush()  # Flush to get the scene ID
+            
+            # Update story with default scene reference
+            new_story.default_scene_id = opening_scene.id
+            
             db.session.commit()
             
             print(f"🔍 Debug: Story saved to database: {story_id} by user {user_id}")
+            print(f"🔍 Debug: Created Opening scene (ID: {opening_scene.id}) for story {story_id}")
             
             return jsonify({
                 'success': True,
