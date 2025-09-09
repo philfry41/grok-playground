@@ -94,11 +94,11 @@ if DATABASE_AVAILABLE:
                         print(f"✅ Stories.user_id column type: {col['type']}")
                         break
             
-            # Check if conversations table exists
-            if 'conversations' in tables:
-                print("✅ Conversations table exists")
+            # Check if scenes table exists
+            if 'scenes' in tables:
+                print("✅ Scenes table exists")
             else:
-                print("⚠️ Conversations table missing - will be created on next request")
+                print("⚠️ Scenes table missing - will be created on next request")
             
     except Exception as e:
         print(f"❌ Database table creation failed: {e}")
@@ -1525,40 +1525,7 @@ def toggle_tts():
         print(f"🔍 Debug: Error checking TTS status: {e}")
         return jsonify({'error': f'Failed to check TTS status: {str(e)}'})
 
-@app.route('/api/conversations', methods=['GET'])
-def get_conversations():
-    """Get list of available conversation history files"""
-    try:
-        ensure_conversations_dir()
-        import glob
-        
-        # Get all conversation files
-        conversation_files = glob.glob(os.path.join(CONVERSATIONS_DIR, "conversation_*.json"))
-        conversation_files.sort(key=os.path.getctime, reverse=True)  # Sort by most recent
-        
-        conversations = []
-        for filepath in conversation_files:
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                
-                filename = os.path.basename(filepath)
-                conversations.append({
-                    'filename': filename,
-                    'story_id': data.get('story_id', 'general'),
-                    'last_updated': data.get('last_updated', ''),
-                    'message_count': data.get('message_count', 0),
-                    'title': f"Story: {data.get('story_id', 'general').replace('_', ' ').title()}" if data.get('story_id') else "General Chat"
-                })
-            except Exception as e:
-                print(f"🔍 Debug: Error reading conversation file {filepath}: {e}")
-                continue
-        
-        return jsonify({'conversations': conversations})
-        
-    except Exception as e:
-        print(f"🔍 Debug: Error listing conversations: {e}")
-        return jsonify({'error': f'Failed to list conversations: {str(e)}'})
+# Old file-based conversations endpoint removed - using database-only scenes approach
 
 # Old file-based conversation route removed - using database-only approach
 
