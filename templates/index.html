@@ -1332,33 +1332,44 @@
 
         async function loadSceneHistory() {
             try {
-                console.log('🔄 Loading scene history...');
-                const response = await fetch('/api/load-conversation');
+                console.log('🔄 Loading active session...');
+                const response = await fetch('/api/active-session');
                 const data = await response.json();
                 
-                if (data.success && data.history && data.history.length > 0) {
-                    console.log(`✅ Loaded ${data.history.length} messages from scene history`);
+                if (data.success && data.story_id && data.scene_id) {
+                    console.log(`✅ Loaded active session: ${data.story_id} (scene: ${data.scene_title})`);
                     
-                    // Clear current interaction area
-                    const currentInteraction = document.getElementById('currentInteraction');
-                    currentInteraction.innerHTML = '';
+                    // Load the active scene
+                    const sceneResponse = await fetch(`/api/scenes/${data.story_id}/${data.scene_id}`);
+                    const sceneData = await sceneResponse.json();
                     
-                    // Display loaded scene history
-                    data.history.forEach(message => {
-                        if (message.role === 'user' || message.role === 'assistant') {
-                            addMessage(message.content, message.role);
-                        }
-                    });
-                    
-                    // Show success message
-                    addMessage(`🔄 Restored scene with ${data.history.length} messages`, 'system');
-                    
+                    if (sceneData.success && sceneData.history && sceneData.history.length > 0) {
+                        console.log(`✅ Loaded ${sceneData.history.length} messages from active scene`);
+                        
+                        // Clear current interaction area
+                        const currentInteraction = document.getElementById('currentInteraction');
+                        currentInteraction.innerHTML = '';
+                        
+                        // Display loaded scene history
+                        sceneData.history.forEach(message => {
+                            if (message.role === 'user' || message.role === 'assistant') {
+                                addMessage(message.content, message.role);
+                            }
+                        });
+                        
+                        // Show success message
+                        addMessage(`🔄 Restored active scene "${data.scene_title}" with ${sceneData.history.length} messages`, 'system');
+                    } else {
+                        console.log('ℹ️ Active scene has no history');
+                        addMessage(`🔄 Loaded active story "${data.story_id}" - ready to continue`, 'system');
+                    }
                 } else {
-                    console.log('ℹ️ No scene history found or empty history');
+                    console.log('ℹ️ No active session found');
+                    addMessage('ℹ️ No active story found. Create or load a story to begin.', 'system');
                 }
             } catch (error) {
-                console.error('❌ Error loading scene history:', error);
-                // Don't show error to user - just log it
+                console.error('❌ Error loading active session:', error);
+                addMessage('❌ Error loading active session. Please refresh the page.', 'system');
             }
         }
 
@@ -1439,14 +1450,10 @@
 
         async function clearScene() {
             try {
-                console.log('🧹 Clearing scene...');
+                console.log('🧹 Clearing active scene...');
                 
-                // Clear the current interaction area
-                const currentInteraction = document.getElementById('currentInteraction');
-                currentInteraction.innerHTML = '';
-                
-                // Clear the session history on the server
-                const response = await fetch('/api/clear-scene', {
+                // Clear the active scene on the server
+                const response = await fetch('/api/clear-active-scene', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1456,13 +1463,18 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    addMessage('🧹 Scene cleared successfully', 'system');
+                    // Clear the current interaction area
+                    const currentInteraction = document.getElementById('currentInteraction');
+                    currentInteraction.innerHTML = '';
+                    
+                    addMessage(`🧹 Active scene cleared and reset to "${data.scene_title}"`, 'system');
+                    console.log(`✅ Cleared active scene, reset to: ${data.scene_title}`);
                 } else {
                     addMessage(`❌ Error clearing scene: ${data.error}`, 'system');
                 }
             } catch (error) {
                 console.error('❌ Error clearing scene:', error);
-                addMessage(`❌ Error clearing scene: ${error.message}`, 'system');
+                addMessage('❌ Error clearing scene. Please try again.', 'system');
             }
         }
 
