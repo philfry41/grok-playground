@@ -148,6 +148,7 @@ if DATABASE_AVAILABLE:
         email = db.Column(db.String(120), unique=True, nullable=False)
         name = db.Column(db.String(120), nullable=False)
         avatar_url = db.Column(db.String(200))
+        active_story_id = db.Column(db.String(80))  # Current active story
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         
         def __repr__(self):
@@ -162,6 +163,7 @@ if DATABASE_AVAILABLE:
         title = db.Column(db.String(200), nullable=False)
         user_id = db.Column(db.String(120), nullable=False)  # Store Google ID as string
         content = db.Column(db.JSON, nullable=False)  # Store story data as JSON
+        default_scene_id = db.Column(db.Integer)  # Reference to "Opening" scene
         is_public = db.Column(db.Boolean, default=False)
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -176,6 +178,8 @@ if DATABASE_AVAILABLE:
         title = db.Column(db.String(200), nullable=False)  # User-friendly scene title
         history = db.Column(db.JSON, nullable=False)  # Store scene history as JSON
         message_count = db.Column(db.Integer, default=0)
+        is_default = db.Column(db.Boolean, default=False)  # Is this the "Opening" scene?
+        is_active = db.Column(db.Boolean, default=False)   # Is this the current active scene?
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
         
