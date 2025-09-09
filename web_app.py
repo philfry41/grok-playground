@@ -166,28 +166,28 @@ if DATABASE_AVAILABLE:
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    class Conversation(db.Model):
-        """Conversation model for storing chat conversations linked to stories"""
-        __tablename__ = 'conversations'
-        
-        id = db.Column(db.Integer, primary_key=True)
-        story_id = db.Column(db.String(80), nullable=False)  # Link to story
-        user_id = db.Column(db.String(120), nullable=False)  # Store Google ID as string
-        title = db.Column(db.String(200), nullable=False)  # User-friendly conversation title
-        history = db.Column(db.JSON, nullable=False)  # Store conversation history as JSON
-        message_count = db.Column(db.Integer, default=0)
-        created_at = db.Column(db.DateTime, default=datetime.utcnow)
-        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-        
-        def __repr__(self):
-            return f'<Story {self.title} ({self.story_id})>'
+class Scene(db.Model):
+    """Scene model for storing story scenes linked to stories"""
+    __tablename__ = 'scenes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    story_id = db.Column(db.String(80), nullable=False)  # Link to story
+    user_id = db.Column(db.String(120), nullable=False)  # Store Google ID as string
+    title = db.Column(db.String(200), nullable=False)  # User-friendly scene title
+    history = db.Column(db.JSON, nullable=False)  # Store scene history as JSON
+    message_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Scene {self.title} ({self.story_id})>'
 else:
     # Dummy classes when database is not available
     class User:
         pass
     class Story:
         pass
-    class Conversation:
+    class Scene:
         pass
 
 # Request deduplication tracking
@@ -1824,9 +1824,9 @@ def save_conversation():
             'traceback': traceback.format_exc()
         })
 
-@app.route('/api/clear-conversation', methods=['POST'])
-def clear_conversation():
-    """Clear the current conversation from session and files"""
+@app.route('/api/clear-scene', methods=['POST'])
+def clear_scene():
+    """Clear the current scene from session"""
     try:
         # Clear session history
         session['history'] = []
@@ -1835,25 +1835,25 @@ def clear_conversation():
         if 'current_story_id' in session:
             del session['current_story_id']
         
-        print("🔍 Debug: Cleared conversation from session")
+        print("🔍 Debug: Cleared scene from session")
         
         return jsonify({
             'success': True,
-            'message': 'Conversation cleared successfully'
+            'message': 'Scene cleared successfully'
         })
             
     except Exception as e:
-        print(f"🔍 Debug: Error clearing conversation: {e}")
+        print(f"🔍 Debug: Error clearing scene: {e}")
         import traceback
         return jsonify({
-            'error': f'Failed to clear conversation: {str(e)}',
+            'error': f'Failed to clear scene: {str(e)}',
             'traceback': traceback.format_exc()
         })
 
-@app.route('/api/conversations/<story_id>', methods=['GET'])
+@app.route('/api/scenes/<story_id>', methods=['GET'])
 @require_auth
-def get_story_conversations(story_id):
-    """Get all conversations for a specific story"""
+def get_story_scenes(story_id):
+    """Get all scenes for a specific story"""
     try:
         # Get current user from session
         google_id = session.get('user_id')
@@ -1867,34 +1867,34 @@ def get_story_conversations(story_id):
         if not ensure_tables_exist():
             return jsonify({'error': 'Database tables not available'}), 500
         
-        # Get conversations for this story and user (case-insensitive)
-        conversations = Conversation.query.filter(
-            Conversation.story_id.ilike(story_id),
-            Conversation.user_id == google_id
-        ).order_by(Conversation.updated_at.desc()).all()
+        # Get scenes for this story and user (case-insensitive)
+        scenes = Scene.query.filter(
+            Scene.story_id.ilike(story_id),
+            Scene.user_id == google_id
+        ).order_by(Scene.updated_at.desc()).all()
         
-        conversation_list = []
-        for conv in conversations:
-            conversation_list.append({
-                'id': conv.id,
-                'title': conv.title,
-                'message_count': conv.message_count,
-                'created_at': conv.created_at.isoformat() if conv.created_at else None,
-                'updated_at': conv.updated_at.isoformat() if conv.updated_at else None
+        scene_list = []
+        for scene in scenes:
+            scene_list.append({
+                'id': scene.id,
+                'title': scene.title,
+                'message_count': scene.message_count,
+                'created_at': scene.created_at.isoformat() if scene.created_at else None,
+                'updated_at': scene.updated_at.isoformat() if scene.updated_at else None
             })
         
-        print(f"🔍 Debug: Found {len(conversation_list)} conversations for story {story_id} (user: {google_id})")
+        print(f"🔍 Debug: Found {len(scene_list)} scenes for story {story_id} (user: {google_id})")
         print(f"🔍 Debug: Query was for story_id='{story_id}' (case-insensitive)")
-        return jsonify({'conversations': conversation_list})
+        return jsonify({'scenes': scene_list})
         
     except Exception as e:
-        print(f"🔍 Debug: Error getting story conversations: {e}")
-        return jsonify({'error': f'Could not get conversations: {e}'}), 500
+        print(f"🔍 Debug: Error getting story scenes: {e}")
+        return jsonify({'error': f'Could not get scenes: {e}'}), 500
 
-@app.route('/api/conversations/<story_id>/<int:conversation_id>', methods=['GET'])
+@app.route('/api/scenes/<story_id>/<int:scene_id>', methods=['GET'])
 @require_auth
-def get_story_conversation(story_id, conversation_id):
-    """Get a specific conversation"""
+def get_story_scene(story_id, scene_id):
+    """Get a specific scene"""
     try:
         # Get current user from session
         google_id = session.get('user_id')
@@ -1908,37 +1908,37 @@ def get_story_conversation(story_id, conversation_id):
         if not ensure_tables_exist():
             return jsonify({'error': 'Database tables not available'}), 500
         
-        # Get the specific conversation
-        conversation = Conversation.query.filter_by(
-            id=conversation_id,
+        # Get the specific scene
+        scene = Scene.query.filter_by(
+            id=scene_id,
             story_id=story_id,
             user_id=google_id
         ).first()
         
-        if not conversation:
-            return jsonify({'error': 'Conversation not found'}), 404
+        if not scene:
+            return jsonify({'error': 'Scene not found'}), 404
         
-        # Update session with this conversation
-        session['history'] = conversation.history
+        # Update session with this scene
+        session['history'] = scene.history
         session['current_story_id'] = story_id
         
-        print(f"🔍 Debug: Loaded conversation {conversation_id} for story {story_id}")
+        print(f"🔍 Debug: Loaded scene {scene_id} for story {story_id}")
         
         return jsonify({
             'success': True,
-            'conversation': {
-                'id': conversation.id,
-                'title': conversation.title,
-                'history': conversation.history,
-                'message_count': conversation.message_count,
-                'created_at': conversation.created_at.isoformat() if conversation.created_at else None,
-                'updated_at': conversation.updated_at.isoformat() if conversation.updated_at else None
+            'scene': {
+                'id': scene.id,
+                'title': scene.title,
+                'history': scene.history,
+                'message_count': scene.message_count,
+                'created_at': scene.created_at.isoformat() if scene.created_at else None,
+                'updated_at': scene.updated_at.isoformat() if scene.updated_at else None
             }
         })
         
     except Exception as e:
-        print(f"🔍 Debug: Error getting conversation: {e}")
-        return jsonify({'error': f'Could not get conversation: {e}'}), 500
+        print(f"🔍 Debug: Error getting scene: {e}")
+        return jsonify({'error': f'Could not get scene: {e}'}), 500
 
 @app.route('/api/current-story-id', methods=['GET'])
 @require_auth
@@ -1960,14 +1960,14 @@ def get_current_story_id_api():
         print(f"🔍 Debug: Error getting current story ID: {e}")
         return jsonify({'error': f'Could not get current story ID: {e}'}), 500
 
-@app.route('/api/conversations/<story_id>', methods=['POST'])
+@app.route('/api/scenes/<story_id>', methods=['POST'])
 @require_auth
-def save_story_conversation(story_id):
-    """Save a conversation for a specific story"""
+def save_story_scene(story_id):
+    """Save a scene for a specific story"""
     try:
         data = request.get_json()
         if not data or 'history' not in data:
-            return jsonify({'error': 'No conversation history provided'}), 400
+            return jsonify({'error': 'No scene history provided'}), 400
         
         # Get current user from session
         google_id = session.get('user_id')
@@ -1982,10 +1982,10 @@ def save_story_conversation(story_id):
             return jsonify({'error': 'Database tables not available'}), 500
         
         history = data['history']
-        title = data.get('title', f'Conversation {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+        title = data.get('title', f'Scene {datetime.now().strftime("%Y-%m-%d %H:%M")}')
         
-        # Create new conversation
-        new_conversation = Conversation(
+        # Create new scene
+        new_scene = Scene(
             story_id=story_id,
             user_id=google_id,
             title=title,
@@ -1993,21 +1993,21 @@ def save_story_conversation(story_id):
             message_count=len(history)
         )
         
-        db.session.add(new_conversation)
+        db.session.add(new_scene)
         db.session.commit()
         
-        print(f"🔍 Debug: Saved conversation for story '{story_id}' with {len(history)} messages (user: {google_id})")
-        print(f"🔍 Debug: Conversation ID: {new_conversation.id}, Title: '{title}'")
+        print(f"🔍 Debug: Saved scene for story '{story_id}' with {len(history)} messages (user: {google_id})")
+        print(f"🔍 Debug: Scene ID: {new_scene.id}, Title: '{title}'")
         
         return jsonify({
             'success': True,
-            'message': f'Conversation saved successfully',
-            'conversation_id': new_conversation.id
+            'message': f'Scene saved successfully',
+            'scene_id': new_scene.id
         })
         
     except Exception as e:
-        print(f"🔍 Debug: Error saving conversation: {e}")
-        return jsonify({'error': f'Could not save conversation: {e}'}), 500
+        print(f"🔍 Debug: Error saving scene: {e}")
+        return jsonify({'error': f'Could not save scene: {e}'}), 500
 
 @app.route('/api/server-logs', methods=['GET'])
 def get_server_logs():
@@ -2677,7 +2677,7 @@ def ensure_tables_exist():
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
             
-            if 'stories' in existing_tables and 'users' in existing_tables and 'conversations' in existing_tables:
+            if 'stories' in existing_tables and 'users' in existing_tables and 'scenes' in existing_tables:
                 # Tables exist, check if schema is correct
                 try:
                     columns = inspector.get_columns('stories')

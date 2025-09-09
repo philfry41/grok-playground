@@ -571,9 +571,9 @@
                         <button class="btn btn-secondary" onclick="openOpenerModal()">📄 Select Opener</button>
                         <button class="btn btn-secondary" onclick="toggleHistoryPanel()">📚 History</button>
                         <div class="conversation-controls">
-                            <button class="btn btn-info" onclick="showConversationSelector()">🔄 Load Conversation</button>
-                            <button class="btn btn-success" onclick="saveCurrentConversation()">💾 Save Conversation</button>
-                            <button class="btn btn-warning" onclick="clearConversation()">🧹 Clear Conversation</button>
+                            <button class="btn btn-info" onclick="showSceneSelector()">🔄 Load Scene</button>
+                            <button class="btn btn-success" onclick="saveCurrentScene()">💾 Save Scene</button>
+                            <button class="btn btn-warning" onclick="clearScene()">🧹 Clear Scene</button>
                         </div>
                     </div>
                 </div>
@@ -633,16 +633,16 @@
         </div>
     </div>
 
-    <!-- Conversation Selection Modal -->
-    <div id="conversationModal" class="modal">
+    <!-- Scene Selection Modal -->
+    <div id="sceneModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>🔄 Select Conversation</h2>
-                <span class="close" onclick="closeConversationModal()">&times;</span>
+                <h2>🔄 Select Scene</h2>
+                <span class="close" onclick="closeSceneModal()">&times;</span>
             </div>
-            <div class="conversation-list" id="conversationList">
+            <div class="scene-list" id="sceneList">
                 <div style="text-align: center; padding: 20px; color: #666;">
-                    Loading conversations...
+                    Loading scenes...
                 </div>
             </div>
         </div>
@@ -1362,9 +1362,9 @@
             }
         }
 
-        async function saveCurrentConversation() {
+        async function saveCurrentScene() {
             try {
-                console.log('💾 Saving current conversation...');
+                console.log('💾 Saving current scene...');
                 
                 // Get current story ID
                 const currentStoryId = await getCurrentStoryId();
@@ -1378,19 +1378,19 @@
                 const messages = currentInteraction.querySelectorAll('.message');
                 
                 if (messages.length === 0) {
-                    addMessage('ℹ️ No conversation to save', 'system');
+                    addMessage('ℹ️ No scene to save', 'system');
                     return;
                 }
                 
-                // Convert DOM messages to conversation format
-                const conversation = [];
+                // Convert DOM messages to scene format
+                const scene = [];
                 messages.forEach(message => {
                     const role = message.classList.contains('user') ? 'user' : 
                                message.classList.contains('assistant') ? 'assistant' : 'system';
                     const content = message.querySelector('div')?.textContent || '';
                     
                     if (content.trim()) {
-                        conversation.push({
+                        scene.push({
                             role: role,
                             content: content.trim(),
                             timestamp: new Date().toISOString()
@@ -1398,25 +1398,25 @@
                     }
                 });
                 
-                // Prompt for conversation title
-                const title = prompt('Enter a title for this conversation:', `Conversation ${new Date().toLocaleDateString()}`);
+                // Prompt for scene title
+                const title = prompt('Enter a title for this scene:', `Scene ${new Date().toLocaleDateString()}`);
                 if (!title) {
                     addMessage('💾 Save cancelled', 'system');
                     return;
                 }
                 
                 // Send to server to save
-                console.log(`🔍 Debug: Saving conversation for story: ${currentStoryId}`);
-                console.log(`🔍 Debug: Conversation has ${conversation.length} messages`);
+                console.log(`🔍 Debug: Saving scene for story: ${currentStoryId}`);
+                console.log(`🔍 Debug: Scene has ${scene.length} messages`);
                 console.log(`🔍 Debug: Title: "${title}"`);
                 
-                const response = await fetch(`/api/conversations/${currentStoryId}`, {
+                const response = await fetch(`/api/scenes/${currentStoryId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        history: conversation,
+                        history: scene,
                         title: title
                     })
                 });
@@ -1426,27 +1426,27 @@
                 console.log(`🔍 Debug: Save response data:`, data);
                 
                 if (data.success) {
-                    addMessage(`💾 Conversation saved successfully: "${title}" (${conversation.length} messages)`, 'system');
+                    addMessage(`💾 Scene saved successfully: "${title}" (${scene.length} messages)`, 'system');
                 } else {
-                    addMessage(`❌ Failed to save conversation: ${data.error || 'Unknown error'}`, 'system');
+                    addMessage(`❌ Failed to save scene: ${data.error || 'Unknown error'}`, 'system');
                 }
                 
             } catch (error) {
-                console.error('❌ Error saving conversation:', error);
-                addMessage(`❌ Error saving conversation: ${error.message}`, 'system');
+                console.error('❌ Error saving scene:', error);
+                addMessage(`❌ Error saving scene: ${error.message}`, 'system');
             }
         }
 
-        async function clearConversation() {
+        async function clearScene() {
             try {
-                console.log('🧹 Clearing conversation...');
+                console.log('🧹 Clearing scene...');
                 
                 // Clear the current interaction area
                 const currentInteraction = document.getElementById('currentInteraction');
                 currentInteraction.innerHTML = '';
                 
                 // Clear the session history on the server
-                const response = await fetch('/api/clear-conversation', {
+                const response = await fetch('/api/clear-scene', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1456,13 +1456,13 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    addMessage('🧹 Conversation cleared successfully', 'system');
+                    addMessage('🧹 Scene cleared successfully', 'system');
                 } else {
-                    addMessage(`❌ Error clearing conversation: ${data.error}`, 'system');
+                    addMessage(`❌ Error clearing scene: ${data.error}`, 'system');
                 }
             } catch (error) {
-                console.error('❌ Error clearing conversation:', error);
-                addMessage(`❌ Error clearing conversation: ${error.message}`, 'system');
+                console.error('❌ Error clearing scene:', error);
+                addMessage(`❌ Error clearing scene: ${error.message}`, 'system');
             }
         }
 
@@ -2152,54 +2152,54 @@
             document.getElementById('openerModal').style.display = 'none';
         }
 
-        // Conversation Modal Functions
-        async function showConversationSelector() {
-            const modal = document.getElementById('conversationModal');
-            const conversationList = document.getElementById('conversationList');
+        // Scene Modal Functions
+        async function showSceneSelector() {
+            const modal = document.getElementById('sceneModal');
+            const sceneList = document.getElementById('sceneList');
             
             // Show loading state
-            conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Loading conversations...</div>';
+            sceneList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Loading scenes...</div>';
             modal.style.display = 'block';
             
             try {
                 // Get current story ID from session or URL
                 const currentStoryId = await getCurrentStoryId();
                 if (!currentStoryId) {
-                    conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No story loaded. Please load a story first.</div>';
+                    sceneList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No story loaded. Please load a story first.</div>';
                     return;
                 }
                 
-                console.log(`🔍 Debug: Loading conversations for story: ${currentStoryId}`);
-                const response = await fetch(`/api/conversations/${currentStoryId}`);
+                console.log(`🔍 Debug: Loading scenes for story: ${currentStoryId}`);
+                const response = await fetch(`/api/scenes/${currentStoryId}`);
                 console.log(`🔍 Debug: Load response status: ${response.status}`);
                 const data = await response.json();
                 console.log(`🔍 Debug: Load response data:`, data);
                 
-                if (data.conversations && data.conversations.length > 0) {
-                    conversationList.innerHTML = data.conversations.map(conv => `
-                        <div class="file-item" onclick="loadConversation(${conv.id})">
+                if (data.scenes && data.scenes.length > 0) {
+                    sceneList.innerHTML = data.scenes.map(scene => `
+                        <div class="file-item" onclick="loadScene(${scene.id})">
                             <div>
-                                <div class="file-name">${conv.title}</div>
-                                <div class="file-info">${conv.message_count} messages • ${new Date(conv.updated_at).toLocaleDateString()}</div>
+                                <div class="file-name">${scene.title}</div>
+                                <div class="file-info">${scene.message_count} messages • ${new Date(scene.updated_at).toLocaleDateString()}</div>
                             </div>
                         </div>
                     `).join('');
                 } else {
-                    conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No conversations found for this story.</div>';
+                    sceneList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No scenes found for this story.</div>';
                 }
             } catch (error) {
-                console.error('Error loading conversations:', error);
-                conversationList.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff6b6b;">Error loading conversations</div>';
+                console.error('Error loading scenes:', error);
+                sceneList.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff6b6b;">Error loading scenes</div>';
             }
         }
 
-        function closeConversationModal() {
-            document.getElementById('conversationModal').style.display = 'none';
+        function closeSceneModal() {
+            document.getElementById('sceneModal').style.display = 'none';
         }
 
-        async function loadConversation(conversationId) {
+        async function loadScene(sceneId) {
             try {
-                closeConversationModal();
+                closeSceneModal();
                 
                 const currentStoryId = await getCurrentStoryId();
                 if (!currentStoryId) {
@@ -2207,7 +2207,7 @@
                     return;
                 }
                 
-                const response = await fetch(`/api/conversations/${currentStoryId}/${conversationId}`);
+                const response = await fetch(`/api/scenes/${currentStoryId}/${sceneId}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -2215,21 +2215,21 @@
                     const currentInteraction = document.getElementById('currentInteraction');
                     currentInteraction.innerHTML = '';
                     
-                    // Display loaded conversation history
-                    data.conversation.history.forEach(message => {
+                    // Display loaded scene history
+                    data.scene.history.forEach(message => {
                         if (message.role === 'user' || message.role === 'assistant') {
                             addMessage(message.content, message.role);
                         }
                     });
                     
                     // Show success message
-                    addMessage(`🔄 Loaded conversation: ${data.conversation.title}`, 'system');
+                    addMessage(`🔄 Loaded scene: ${data.scene.title}`, 'system');
                 } else {
-                    addMessage(`❌ Error loading conversation: ${data.error}`, 'system');
+                    addMessage(`❌ Error loading scene: ${data.error}`, 'system');
                 }
             } catch (error) {
-                console.error('Error loading conversation:', error);
-                addMessage(`❌ Error loading conversation: ${error.message}`, 'system');
+                console.error('Error loading scene:', error);
+                addMessage(`❌ Error loading scene: ${error.message}`, 'system');
             }
         }
 
@@ -2380,13 +2380,13 @@
         // Close modal when clicking outside of it
         window.onclick = function(event) {
             const openerModal = document.getElementById('openerModal');
-            const conversationModal = document.getElementById('conversationModal');
+            const sceneModal = document.getElementById('sceneModal');
             
             if (event.target === openerModal) {
                 closeOpenerModal();
             }
-            if (event.target === conversationModal) {
-                closeConversationModal();
+            if (event.target === sceneModal) {
+                closeSceneModal();
             }
         }
         
