@@ -79,6 +79,8 @@ if DATABASE_AVAILABLE:
             db.drop_all()
             db.create_all()
             print("✅ Database tables recreated successfully")
+            # Force connection refresh to ensure new schema is used
+            db.engine.dispose()
             
             # Verify tables exist and check schema
             from sqlalchemy import inspect
@@ -1103,10 +1105,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 return jsonify({'error': 'Database not available'})
             
             # Ensure tables exist before querying
+            print(f"🔍 Debug: About to call ensure_tables_exist() for loadstory")
             if not ensure_tables_exist():
+                print(f"🔍 Debug: ensure_tables_exist() returned False")
                 if request_id:
                     untrack_request(request_id)
                 return jsonify({'error': 'Database tables not available'})
+            print(f"🔍 Debug: ensure_tables_exist() returned True, proceeding with query")
             
             story = Story.query.filter_by(user_id=user_id).filter(Story.story_id.ilike(story_id)).first()
             
@@ -2770,6 +2775,8 @@ def ensure_tables_exist():
                 db.drop_all()
                 db.create_all()
                 print("✅ Database tables migrated from 'conversations' to 'scenes'")
+                # Force connection refresh to ensure new schema is used
+                db.engine.dispose()
                 return True
             
             if 'stories' in existing_tables and 'users' in existing_tables and 'scenes' in existing_tables:
@@ -2799,6 +2806,8 @@ def ensure_tables_exist():
                         db.drop_all()
                         db.create_all()
                         print("✅ Database tables recreated with correct schema")
+                        # Force connection refresh to ensure new schema is used
+                        db.engine.dispose()
                         return True
                     else:
                         print("✅ Database tables exist with correct schema")
@@ -2810,6 +2819,8 @@ def ensure_tables_exist():
                     db.drop_all()
                     db.create_all()
                     print("✅ Database tables recreated")
+                    # Force connection refresh to ensure new schema is used
+                    db.engine.dispose()
                     return True
             else:
                 # Tables don't exist, create them
@@ -2830,6 +2841,8 @@ def ensure_tables_exist():
                 db.drop_all()
                 db.create_all()
                 print("✅ Database recovery successful")
+                # Force connection refresh to ensure new schema is used
+                db.engine.dispose()
                 return True
         except Exception as recovery_error:
             print(f"❌ Database recovery failed: {recovery_error}")
