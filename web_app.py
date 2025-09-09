@@ -166,21 +166,21 @@ if DATABASE_AVAILABLE:
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-class Scene(db.Model):
-    """Scene model for storing story scenes linked to stories"""
-    __tablename__ = 'scenes'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    story_id = db.Column(db.String(80), nullable=False)  # Link to story
-    user_id = db.Column(db.String(120), nullable=False)  # Store Google ID as string
-    title = db.Column(db.String(200), nullable=False)  # User-friendly scene title
-    history = db.Column(db.JSON, nullable=False)  # Store scene history as JSON
-    message_count = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<Scene {self.title} ({self.story_id})>'
+    class Scene(db.Model):
+        """Scene model for storing story scenes linked to stories"""
+        __tablename__ = 'scenes'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        story_id = db.Column(db.String(80), nullable=False)  # Link to story
+        user_id = db.Column(db.String(120), nullable=False)  # Store Google ID as string
+        title = db.Column(db.String(200), nullable=False)  # User-friendly scene title
+        history = db.Column(db.JSON, nullable=False)  # Store scene history as JSON
+        message_count = db.Column(db.Integer, default=0)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        
+        def __repr__(self):
+            return f'<Scene {self.title} ({self.story_id})>'
 else:
     # Dummy classes when database is not available
     class User:
