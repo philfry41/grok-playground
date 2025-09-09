@@ -2677,6 +2677,14 @@ def ensure_tables_exist():
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
             
+            # Check if we have the old 'conversations' table that needs to be migrated to 'scenes'
+            if 'conversations' in existing_tables and 'scenes' not in existing_tables:
+                print("🔄 Migrating 'conversations' table to 'scenes' table...")
+                db.drop_all()
+                db.create_all()
+                print("✅ Database tables migrated from 'conversations' to 'scenes'")
+                return True
+            
             if 'stories' in existing_tables and 'users' in existing_tables and 'scenes' in existing_tables:
                 # Tables exist, check if schema is correct
                 try:
