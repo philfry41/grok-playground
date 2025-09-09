@@ -484,6 +484,47 @@ def get_current_story_id():
         print(f"🔍 Debug: Error getting current story ID: {e}")
         return None
 
+def update_active_scene(history, story_id, user_input=None, ai_response=None):
+    """Update the active scene with new conversation"""
+    if not DATABASE_AVAILABLE or not story_id:
+        return
+    
+    try:
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            print("🔍 Debug: No user ID in session for active scene update")
+            return
+        
+        # Ensure tables exist
+        if not ensure_tables_exist():
+            print("🔍 Debug: Database tables not available for active scene update")
+            return
+        
+        # Find the active scene for this story and user
+        active_scene = Scene.query.filter(
+            Scene.story_id == story_id,
+            Scene.user_id == google_id,
+            Scene.is_active == True
+        ).first()
+        
+        if not active_scene:
+            print(f"🔍 Debug: No active scene found for story {story_id}, user {google_id}")
+            return
+        
+        # Update the active scene with new history
+        active_scene.history = history
+        active_scene.message_count = len(history)
+        active_scene.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        print(f"🔍 Debug: Updated active scene {active_scene.id} with {len(history)} messages")
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error updating active scene: {e}")
+        # Don't fail the chat request if scene update fails
+
 def extract_key_story_points(history):
     """Extract key plot points and story milestones from conversation history"""
     try:
@@ -1445,9 +1486,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         # Add response to history with overflow protection
         session['history'].append({"role": "assistant", "content": reply})
         
-        # Save conversation history for persistence
+        # Update active scene with new conversation
         current_story_id = get_current_story_id()
-        save_conversation_history(session['history'], current_story_id, user_input, reply)
+        update_active_scene(session['history'], current_story_id, user_input, reply)
         
         # Clean up session to prevent cookie overflow
         if len(session['history']) > 3:
