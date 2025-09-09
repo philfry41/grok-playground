@@ -2733,6 +2733,12 @@ def save_story_file():
             # Update story with default scene reference
             new_story.default_scene_id = opening_scene.id
             
+            # Set this story as the user's active story
+            user = User.query.filter_by(google_id=user_id).first()
+            if user:
+                user.active_story_id = story_id
+                print(f"🔍 Debug: Set {story_id} as active story for user {user_id}")
+            
             db.session.commit()
             
             print(f"🔍 Debug: Story saved to database: {story_id} by user {user_id}")
