@@ -2775,22 +2775,34 @@ def ensure_tables_exist():
             if 'stories' in existing_tables and 'users' in existing_tables and 'scenes' in existing_tables:
                 # Tables exist, check if schema is correct
                 try:
-                    columns = inspector.get_columns('stories')
-                    for col in columns:
-                        if col['name'] == 'user_id':
-                            if str(col['type']) == 'VARCHAR(120)':
-                                print("✅ Database tables exist with correct schema")
-                                return True
-                            else:
-                                print(f"⚠️ Schema mismatch: user_id is {col['type']}, need VARCHAR(120)")
-                                break
+                    # Check stories table for new columns
+                    story_columns = [col['name'] for col in inspector.get_columns('stories')]
+                    user_columns = [col['name'] for col in inspector.get_columns('users')]
+                    scene_columns = [col['name'] for col in inspector.get_columns('scenes')]
                     
-                    # Schema is wrong, need to recreate
-                    print("🔄 Schema mismatch detected, recreating tables...")
-                    db.drop_all()
-                    db.create_all()
-                    print("✅ Database tables recreated with correct schema")
-                    return True
+                    # Check for all required new columns
+                    required_story_cols = ['default_scene_id']
+                    required_user_cols = ['active_story_id']
+                    required_scene_cols = ['is_default', 'is_active']
+                    
+                    missing_cols = []
+                    if not all(col in story_columns for col in required_story_cols):
+                        missing_cols.extend([f'stories.{col}' for col in required_story_cols if col not in story_columns])
+                    if not all(col in user_columns for col in required_user_cols):
+                        missing_cols.extend([f'users.{col}' for col in required_user_cols if col not in user_columns])
+                    if not all(col in scene_columns for col in required_scene_cols):
+                        missing_cols.extend([f'scenes.{col}' for col in required_scene_cols if col not in scene_columns])
+                    
+                    if missing_cols:
+                        print(f"⚠️ Schema mismatch: Missing columns {missing_cols}")
+                        print("🔄 Schema mismatch detected, recreating tables...")
+                        db.drop_all()
+                        db.create_all()
+                        print("✅ Database tables recreated with correct schema")
+                        return True
+                    else:
+                        print("✅ Database tables exist with correct schema")
+                        return True
                 except Exception as schema_error:
                     print(f"❌ Schema check failed: {schema_error}")
                     # Try to recreate tables
