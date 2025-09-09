@@ -570,7 +570,7 @@
                     <div class="word-count-input">
                         <button class="btn btn-secondary" onclick="openOpenerModal()">📄 Select Opener</button>
                         <button class="btn btn-secondary" onclick="toggleHistoryPanel()">📚 History</button>
-                        <div class="conversation-controls">
+                        <div class="scene-controls">
                             <button class="btn btn-info" onclick="showSceneSelector()">🔄 Load Scene</button>
                             <button class="btn btn-success" onclick="saveCurrentScene()">💾 Save Scene</button>
                             <button class="btn btn-warning" onclick="clearScene()">🧹 Clear Scene</button>
@@ -807,7 +807,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadUserInfo();
             loadTTSStatus();
-            loadConversationHistory(); // Load conversation history on page load
+            loadSceneHistory(); // Load scene history on page load
             
             // Initialize history panel
             const historyPanel = document.getElementById('historyPanel');
@@ -1330,20 +1330,20 @@
             }
         }
 
-        async function loadConversationHistory() {
+        async function loadSceneHistory() {
             try {
-                console.log('🔄 Loading conversation history...');
+                console.log('🔄 Loading scene history...');
                 const response = await fetch('/api/load-conversation');
                 const data = await response.json();
                 
                 if (data.success && data.history && data.history.length > 0) {
-                    console.log(`✅ Loaded ${data.history.length} messages from conversation history`);
+                    console.log(`✅ Loaded ${data.history.length} messages from scene history`);
                     
                     // Clear current interaction area
                     const currentInteraction = document.getElementById('currentInteraction');
                     currentInteraction.innerHTML = '';
                     
-                    // Display loaded conversation history
+                    // Display loaded scene history
                     data.history.forEach(message => {
                         if (message.role === 'user' || message.role === 'assistant') {
                             addMessage(message.content, message.role);
@@ -1351,13 +1351,13 @@
                     });
                     
                     // Show success message
-                    addMessage(`🔄 Restored conversation with ${data.history.length} messages`, 'system');
+                    addMessage(`🔄 Restored scene with ${data.history.length} messages`, 'system');
                     
                 } else {
-                    console.log('ℹ️ No conversation history found or empty history');
+                    console.log('ℹ️ No scene history found or empty history');
                 }
             } catch (error) {
-                console.error('❌ Error loading conversation history:', error);
+                console.error('❌ Error loading scene history:', error);
                 // Don't show error to user - just log it
             }
         }
