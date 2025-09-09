@@ -2013,6 +2013,112 @@ def get_active_session():
         print(f"🔍 Debug: Error getting active session: {e}")
         return jsonify({'error': f'Could not get active session: {e}'}), 500
 
+@app.route('/api/set-active-story', methods=['POST'])
+@require_auth
+def set_active_story():
+    """Set a story as the user's active story and load its active scene"""
+    try:
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE or not ensure_tables_exist():
+            return jsonify({'error': 'Database not available'}), 500
+        
+        data = request.get_json()
+        story_id = data.get('story_id')
+        
+        if not story_id:
+            return jsonify({'error': 'Story ID required'}), 400
+        
+        # Verify the story exists and belongs to the user
+        story = Story.query.filter_by(story_id=story_id, user_id=google_id).first()
+        if not story:
+            return jsonify({'error': f'Story not found: {story_id}'}), 404
+        
+        # Set the story as active for the user
+        user = User.query.filter_by(google_id=google_id).first()
+        if user:
+            user.active_story_id = story_id
+            print(f"🔍 Debug: Set {story_id} as active story for user {google_id}")
+        
+        # Find or create the active scene for this story
+        active_scene = Scene.query.filter(
+            Scene.story_id == story_id,
+            Scene.user_id == google_id,
+            Scene.is_active == True
+        ).first()
+        
+        if not active_scene:
+            # Use the default scene if no active scene exists
+            if story.default_scene_id:
+                active_scene = Scene.query.filter_by(id=story.default_scene_id).first()
+                if active_scene:
+                    active_scene.is_active = True
+                    print(f"🔍 Debug: Set default scene {active_scene.id} as active for story {story_id}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'story_id': story_id,
+            'scene_id': active_scene.id if active_scene else None,
+            'scene_title': active_scene.title if active_scene else None,
+            'message': f'Active story set to {story_id}'
+        })
+    except Exception as e:
+        print(f"🔍 Debug: Error setting active story: {e}")
+        return jsonify({'error': f'Could not set active story: {e}'}), 500
+
+@app.route('/api/clear-active-scene', methods=['POST'])
+@require_auth
+def clear_active_scene():
+    """Clear the active scene and reset to the Opening scene"""
+    try:
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE or not ensure_tables_exist():
+            return jsonify({'error': 'Database not available'}), 500
+        
+        user = User.query.filter_by(google_id=google_id).first()
+        if not user or not user.active_story_id:
+            return jsonify({'error': 'No active story found'}), 404
+        
+        # Get the story and its default scene
+        story = Story.query.filter_by(story_id=user.active_story_id, user_id=google_id).first()
+        if not story or not story.default_scene_id:
+            return jsonify({'error': 'No default scene found for active story'}), 404
+        
+        # Clear all active scenes for this story
+        Scene.query.filter(
+            Scene.story_id == user.active_story_id,
+            Scene.user_id == google_id,
+            Scene.is_active == True
+        ).update({'is_active': False})
+        
+        # Set the default scene as active
+        default_scene = Scene.query.filter_by(id=story.default_scene_id).first()
+        if default_scene:
+            default_scene.is_active = True
+            default_scene.history = []  # Clear the history
+            default_scene.message_count = 0
+            print(f"🔍 Debug: Reset to Opening scene {default_scene.id} for story {user.active_story_id}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'story_id': user.active_story_id,
+            'scene_id': default_scene.id if default_scene else None,
+            'scene_title': default_scene.title if default_scene else None,
+            'message': f'Active scene cleared and reset to Opening'
+        })
+    except Exception as e:
+        print(f"🔍 Debug: Error clearing active scene: {e}")
+        return jsonify({'error': f'Could not clear active scene: {e}'}), 500
+
 @app.route('/api/current-story-id', methods=['GET'])
 @require_auth
 def get_current_story_id_api():
