@@ -1952,10 +1952,66 @@ def get_story_scene(story_id, scene_id):
         print(f"🔍 Debug: Error getting scene: {e}")
         return jsonify({'error': f'Could not get scene: {e}'}), 500
 
+@app.route('/api/active-session', methods=['GET'])
+@require_auth
+def get_active_session():
+    """Get the user's active story and scene"""
+    try:
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        # Ensure tables exist
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get user's active story
+        user = User.query.filter_by(google_id=google_id).first()
+        if not user or not user.active_story_id:
+            return jsonify({
+                'success': True,
+                'story_id': None,
+                'scene_id': None,
+                'message': 'No active story found'
+            })
+        
+        # Get the active scene for this story
+        active_scene = Scene.query.filter(
+            Scene.story_id == user.active_story_id,
+            Scene.user_id == google_id,
+            Scene.is_active == True
+        ).first()
+        
+        if not active_scene:
+            # If no active scene, get the default scene
+            story = Story.query.filter_by(story_id=user.active_story_id, user_id=google_id).first()
+            if story and story.default_scene_id:
+                active_scene = Scene.query.filter_by(id=story.default_scene_id).first()
+                if active_scene:
+                    # Set the default scene as active
+                    active_scene.is_active = True
+                    db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'story_id': user.active_story_id,
+            'scene_id': active_scene.id if active_scene else None,
+            'scene_title': active_scene.title if active_scene else None,
+            'message': f'Active session: {user.active_story_id}'
+        })
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error getting active session: {e}")
+        return jsonify({'error': f'Could not get active session: {e}'}), 500
+
 @app.route('/api/current-story-id', methods=['GET'])
 @require_auth
 def get_current_story_id_api():
-    """Get the current story ID from session"""
+    """Get the current story ID from session (legacy endpoint)"""
     try:
         story_id = get_current_story_id()
         if story_id:
