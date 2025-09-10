@@ -1032,7 +1032,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 model_env = os.getenv('XAI_MODEL', 'grok-3')
                 # AI call for loadopener with proper continuity
                 opener_context = [
-                    {"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from the opener text, maintaining the characters, setting, and situation described."},
+                    {"role": "system", "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development."},
                     {"role": "user", "content": f"Continue this story from where it left off:\n\n{opener}"}
                 ]
                 
@@ -1304,10 +1304,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 
                 # Add comprehensive system prompt
                 if comprehensive_system_prompt:
-                    context_messages.append({"role": "system", "content": f"You are an explicit storyteller. {comprehensive_system_prompt}"})
+                    context_messages.append({"role": "system", "content": f"You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development.\n\n{comprehensive_system_prompt}"})
                     print(f"🔍 Debug: Added comprehensive system prompt to AI context")
                 else:
-                    context_messages.append({"role": "system", "content": "You are an explicit storyteller. Continue the story naturally from the opener text."})
+                    context_messages.append({"role": "system", "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development. Continue the story naturally from the opener text."})
                     print(f"🔍 Debug: Added fallback system prompt to AI context")
                 
                 # Add opener text
@@ -1434,7 +1434,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # 1. Core system prompt
             context_messages.append({
                 "role": "system", 
-                "content": "You are an explicit storyteller. Maintain story continuity."
+                "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development. Maintain story continuity."
             })
             
             # 2. CORE STORY CONTEXT (always included) - "Story foundation"
