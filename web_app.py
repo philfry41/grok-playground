@@ -840,6 +840,14 @@ def chat():
     print(f"🔍 Debug: Session ID: {session.get('_id', 'No session ID')}")
     print(f"🔍 Debug: Session keys: {list(session.keys())}")
     
+    # Check memory usage
+    try:
+        import psutil
+        memory_info = psutil.virtual_memory()
+        print(f"🔍 Debug: Memory usage: {memory_info.percent}% ({memory_info.used / 1024 / 1024:.1f}MB used)")
+    except ImportError:
+        print("🔍 Debug: psutil not available for memory monitoring")
+    
     # Generate request ID for deduplication
     request_id = None
     
@@ -1383,6 +1391,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
     if len(session['history']) > 2:
         print(f"🔍 Debug: Truncating history from {len(session['history'])} to 2 messages to prevent cookie overflow")
         session['history'] = session['history'][-2:]
+        # Force session cleanup
+        session.modified = True
     
     # Add user message to history
     session['history'].append({"role": "user", "content": user_input})
@@ -1539,6 +1549,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         if len(session['history']) > 3:
             print(f"🔍 Debug: Cleaning up session history to prevent cookie overflow")
             session['history'] = session['history'][-3:]
+            session.modified = True
         
         # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
         try:
@@ -1599,7 +1610,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             untrack_request(request_id)
             print(f"🔍 Debug: Request untracked on error: {request_id}")
         
-        return jsonify({'error': f'Request failed: {error_msg}'})
+        # Log the full error for debugging
+        import traceback
+        print(f"🔍 Debug: Chat endpoint error: {error_msg}")
+        print(f"🔍 Debug: Error traceback: {traceback.format_exc()}")
+        
+        return jsonify({'error': f'Request failed: {error_msg}'}), 500
 
 @app.route('/api/tts-toggle', methods=['POST'])
 def toggle_tts():
