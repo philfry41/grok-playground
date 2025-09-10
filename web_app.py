@@ -1211,6 +1211,29 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Store story ID in session for persistence
             session['story_id'] = story_id
             
+            # Set this story as the user's active story
+            user = User.query.filter_by(google_id=user_id).first()
+            if user:
+                user.active_story_id = story_id
+                print(f"🔍 Debug: Set {story_id} as active story for user {user_id}")
+            
+            # Ensure the story's default scene is set as active
+            if story.default_scene_id:
+                default_scene = Scene.query.filter_by(id=story.default_scene_id).first()
+                if default_scene:
+                    # Clear any other active scenes for this story
+                    Scene.query.filter(
+                        Scene.story_id == story_id,
+                        Scene.user_id == user_id,
+                        Scene.is_active == True
+                    ).update({'is_active': False})
+                    
+                    # Set the default scene as active
+                    default_scene.is_active = True
+                    print(f"🔍 Debug: Set default scene {default_scene.id} as active for story {story_id}")
+            
+            db.session.commit()
+            
             # Try to load existing conversation history for this story
             existing_history = load_conversation_history(story_id)
             
