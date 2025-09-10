@@ -488,7 +488,10 @@ def get_current_story_id():
 
 def update_active_scene(history, story_id, user_input=None, ai_response=None):
     """Update the active scene with new conversation"""
+    print(f"🔍 Debug: update_active_scene called with story_id: {story_id}, history length: {len(history)}")
+    
     if not DATABASE_AVAILABLE or not story_id:
+        print(f"🔍 Debug: update_active_scene early return - DATABASE_AVAILABLE: {DATABASE_AVAILABLE}, story_id: {story_id}")
         return
     
     try:
@@ -1522,7 +1525,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         
         # Update active scene with new conversation
         current_story_id = get_current_story_id()
+        print(f"🔍 Debug: About to update active scene for story: {current_story_id}")
+        print(f"🔍 Debug: History length: {len(session['history'])}")
         update_active_scene(session['history'], current_story_id, user_input, reply)
+        print(f"🔍 Debug: Finished updating active scene")
         
         # Clean up session to prevent cookie overflow
         if len(session['history']) > 3:
