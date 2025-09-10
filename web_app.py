@@ -1520,11 +1520,15 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 # Force cleanup before AI call
                 cleanup_resources()
             
+            # Optimize for faster response to prevent browser timeouts
+            max_tokens_optimized = min(max_tokens_for_call, 600)  # Limit tokens for faster response
+            print(f"🔍 Debug: Using optimized max_tokens: {max_tokens_optimized} (was {max_tokens_for_call})")
+            
             reply = chat_with_grok(
                 context_messages,
                 model=model_env,
                 temperature=0.7,
-                max_tokens=max_tokens_for_call,
+                max_tokens=max_tokens_optimized,
                 top_p=0.8,
                 hide_thinking=True,
             )
