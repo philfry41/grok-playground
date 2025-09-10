@@ -2179,6 +2179,14 @@ def clear_active_scene():
             default_scene.message_count = 1
             db.session.commit()
             
+            # Also clear the current story ID from session to force reload
+            if 'story_id' in session:
+                del session['story_id']
+            if 'current_story_id' in session:
+                del session['current_story_id']
+            
+            print(f"🔍 Debug: Cleared story ID from session to force reload")
+            
             return jsonify({
                 'success': True,
                 'story_id': user.active_story_id,

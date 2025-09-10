@@ -1477,6 +1477,11 @@
                     
                     addMessage(`🧹 Active scene cleared and reset to "${data.scene_title}"`, 'system');
                     console.log(`✅ Cleared active scene, reset to: ${data.scene_title}`);
+                    
+                    // Reload the scene history to ensure synchronization
+                    setTimeout(() => {
+                        loadSceneHistory();
+                    }, 500);
                 } else {
                     addMessage(`❌ Error clearing scene: ${data.error}`, 'system');
                 }
