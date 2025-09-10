@@ -1345,22 +1345,22 @@
                     const sceneData = await sceneResponse.json();
                     console.log(`🔍 Debug: Scene response:`, sceneData);
                     
-                    if (sceneData.success && sceneData.history && sceneData.history.length > 0) {
-                        console.log(`✅ Loaded ${sceneData.history.length} messages from active scene`);
+                    if (sceneData.success && sceneData.scene && sceneData.scene.history && sceneData.scene.history.length > 0) {
+                        console.log(`✅ Loaded ${sceneData.scene.history.length} messages from active scene`);
                         
                         // Clear current interaction area
                         const currentInteraction = document.getElementById('currentInteraction');
                         currentInteraction.innerHTML = '';
                         
                         // Display loaded scene history
-                        sceneData.history.forEach(message => {
+                        sceneData.scene.history.forEach(message => {
                             if (message.role === 'user' || message.role === 'assistant') {
                                 addMessage(message.content, message.role);
                             }
                         });
                         
                         // Show success message
-                        addMessage(`🔄 Restored active scene "${data.scene_title}" with ${sceneData.history.length} messages`, 'system');
+                        addMessage(`🔄 Restored active scene "${data.scene_title}" with ${sceneData.scene.history.length} messages`, 'system');
                     } else {
                         console.log('ℹ️ Active scene has no history');
                         addMessage(`🔄 Loaded active story "${data.story_id}" - ready to continue`, 'system');
