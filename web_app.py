@@ -2166,7 +2166,7 @@ def clear_active_scene():
         
         # Generate the opening content from the story
         story_content = story.content
-        opener_text = story_content.get('opener', '')
+        opener_text = story_content.get('opener_text', '')
         
         if opener_text:
             # Clear session history and add opener content
