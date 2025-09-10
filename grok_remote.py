@@ -43,7 +43,7 @@ def chat_with_grok(
         payload["frequency_penalty"] = float(frequency_penalty)
     if stop: payload["stop"] = stop
 
-    r = requests.post(url, headers=headers, json=payload, timeout=120)
+    r = requests.post(url, headers=headers, json=payload, timeout=25)  # Reduced for mobile/timeout scenarios
     try:
         r.raise_for_status()
     except requests.HTTPError as http_err:
@@ -72,7 +72,7 @@ def chat_with_grok(
                 "max_tokens": min(512, int(payload.get("max_tokens", 512))),
                 "stream": False,
             }
-            r2 = requests.post(url, headers=headers, json=minimal_payload, timeout=120)
+            r2 = requests.post(url, headers=headers, json=minimal_payload, timeout=25)  # Reduced for mobile/timeout scenarios
             try:
                 r2.raise_for_status()
             except requests.HTTPError as http_err2:
