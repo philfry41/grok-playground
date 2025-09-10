@@ -43,7 +43,7 @@ def chat_with_grok(
         payload["frequency_penalty"] = float(frequency_penalty)
     if stop: payload["stop"] = stop
 
-    r = requests.post(url, headers=headers, json=payload, timeout=25)  # Reduced for mobile/timeout scenarios
+    r = requests.post(url, headers=headers, json=payload, timeout=120)
     try:
         r.raise_for_status()
     except requests.HTTPError as http_err:
