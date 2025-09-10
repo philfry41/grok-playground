@@ -2178,6 +2178,14 @@ def clear_active_scene():
             session['history'].append({"role": "user", "content": opener_text})
             print(f"🔍 Debug: Added opener content to session for cleared scene")
             
+            # Reset the story state manager to clear old state
+            try:
+                state_manager = StoryStateManager()
+                state_manager.reset_state()
+                print(f"🔍 Debug: Reset story state manager to clear old state")
+            except Exception as e:
+                print(f"🔍 Debug: Error resetting story state manager: {e}")
+            
             # Update the active scene with the opener content
             default_scene.history = session['history']
             default_scene.message_count = 1
