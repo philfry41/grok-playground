@@ -1340,8 +1340,10 @@
                     console.log(`✅ Loaded active session: ${data.story_id} (scene: ${data.scene_title})`);
                     
                     // Load the active scene
+                    console.log(`🔍 Debug: Loading scene ${data.scene_id} for story ${data.story_id}`);
                     const sceneResponse = await fetch(`/api/scenes/${data.story_id}/${data.scene_id}`);
                     const sceneData = await sceneResponse.json();
+                    console.log(`🔍 Debug: Scene response:`, sceneData);
                     
                     if (sceneData.success && sceneData.history && sceneData.history.length > 0) {
                         console.log(`✅ Loaded ${sceneData.history.length} messages from active scene`);
