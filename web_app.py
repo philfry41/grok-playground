@@ -463,6 +463,10 @@ def load_conversation_history(story_id=None):
         
         history = active_scene.history or []
         print(f"🔍 Debug: Loaded conversation history from active scene {active_scene.id} ({len(history)} messages)")
+        print(f"🔍 Debug: Active scene is_active: {active_scene.is_active}")
+        print(f"🔍 Debug: Active scene title: {active_scene.title}")
+        if history:
+            print(f"🔍 Debug: First message: {history[0].get('content', '')[:100]}...")
         return history
         
     except Exception as e:
@@ -2178,6 +2182,10 @@ def clear_active_scene():
             default_scene.history = session['history']
             default_scene.message_count = 1
             db.session.commit()
+            
+            print(f"🔍 Debug: Updated default scene {default_scene.id} with opener content")
+            print(f"🔍 Debug: Default scene history length: {len(default_scene.history)}")
+            print(f"🔍 Debug: Default scene is_active: {default_scene.is_active}")
             
             # Also clear the current story ID from session to force reload
             if 'story_id' in session:
