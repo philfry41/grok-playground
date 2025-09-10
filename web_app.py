@@ -433,31 +433,36 @@ def save_conversation_history(history, story_id=None, user_input=None, ai_respon
         return False
 
 def load_conversation_history(story_id=None):
-    """Load conversation history from file"""
+    """Load conversation history from active scene in database"""
     try:
-        ensure_conversations_dir()
-        
-        # Look for the most recent conversation file for this story
-        if story_id:
-            pattern = f"conversation_{story_id}_*.json"
-        else:
-            pattern = "conversation_general_*.json"
-        
-        import glob
-        files = glob.glob(os.path.join(CONVERSATIONS_DIR, pattern))
-        
-        if not files:
-            print(f"🔍 Debug: No conversation history found for story_id: {story_id}")
+        if not DATABASE_AVAILABLE or not story_id:
+            print(f"🔍 Debug: No conversation history - DATABASE_AVAILABLE: {DATABASE_AVAILABLE}, story_id: {story_id}")
             return []
         
-        # Get the most recent file
-        latest_file = max(files, key=os.path.getctime)
+        # Ensure tables exist
+        if not ensure_tables_exist():
+            print(f"🔍 Debug: Database tables not available for conversation history")
+            return []
         
-        with open(latest_file, 'r', encoding='utf-8') as f:
-            conversation_data = json.load(f)
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            print(f"🔍 Debug: No user ID in session for conversation history")
+            return []
         
-        history = conversation_data.get('history', [])
-        print(f"🔍 Debug: Loaded conversation history from {latest_file} ({len(history)} messages)")
+        # Find the active scene for this story
+        active_scene = Scene.query.filter(
+            Scene.story_id == story_id,
+            Scene.user_id == google_id,
+            Scene.is_active == True
+        ).first()
+        
+        if not active_scene:
+            print(f"🔍 Debug: No active scene found for story {story_id}, user {google_id}")
+            return []
+        
+        history = active_scene.history or []
+        print(f"🔍 Debug: Loaded conversation history from active scene {active_scene.id} ({len(history)} messages)")
         return history
         
     except Exception as e:
