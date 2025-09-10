@@ -480,6 +480,10 @@ def get_current_story_id():
         if 'story_id' in session:
             return session.get('story_id')
         
+        # Check for current_story_id (newer format)
+        if 'current_story_id' in session:
+            return session.get('current_story_id')
+        
         # Fallback: try to extract from session history (legacy support)
         if 'history' in session:
             for msg in session['history']:
