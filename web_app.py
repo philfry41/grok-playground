@@ -2148,13 +2148,39 @@ def clear_active_scene():
         
         db.session.commit()
         
-        return jsonify({
-            'success': True,
-            'story_id': user.active_story_id,
-            'scene_id': default_scene.id if default_scene else None,
-            'scene_title': default_scene.title if default_scene else None,
-            'message': f'Active scene cleared and reset to Opening'
-        })
+        # Generate the opening content from the story
+        story_content = story.content
+        opener_text = story_content.get('opener', '')
+        
+        if opener_text:
+            # Clear session history and add opener content
+            session['history'] = []
+            session['history'].append({"role": "user", "content": opener_text})
+            print(f"🔍 Debug: Added opener content to session for cleared scene")
+            
+            # Update the active scene with the opener content
+            default_scene.history = session['history']
+            default_scene.message_count = 1
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'story_id': user.active_story_id,
+                'scene_id': default_scene.id if default_scene else None,
+                'scene_title': default_scene.title if default_scene else None,
+                'message': f'Active scene cleared and reset to Opening',
+                'opener_content': opener_text,
+                'ai_response': None,
+                'response_type': 'system'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'story_id': user.active_story_id,
+                'scene_id': default_scene.id if default_scene else None,
+                'scene_title': default_scene.title if default_scene else None,
+                'message': f'Active scene cleared and reset to Opening (no opener content)'
+            })
     except Exception as e:
         print(f"🔍 Debug: Error clearing active scene: {e}")
         return jsonify({'error': f'Could not clear active scene: {e}'}), 500

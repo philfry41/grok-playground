@@ -1469,6 +1469,12 @@
                     const currentInteraction = document.getElementById('currentInteraction');
                     currentInteraction.innerHTML = '';
                     
+                    // If opener content is provided, display it
+                    if (data.opener_content) {
+                        addMessage(data.opener_content, 'user');
+                        console.log(`✅ Cleared active scene and loaded opener content`);
+                    }
+                    
                     addMessage(`🧹 Active scene cleared and reset to "${data.scene_title}"`, 'system');
                     console.log(`✅ Cleared active scene, reset to: ${data.scene_title}`);
                 } else {
