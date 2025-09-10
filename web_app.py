@@ -1521,17 +1521,22 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 cleanup_resources()
             
             # Optimize for faster response to prevent browser timeouts
-            max_tokens_optimized = min(max_tokens_for_call, 600)  # Limit tokens for faster response
+            max_tokens_optimized = min(max_tokens_for_call, 400)  # Further limit tokens for faster response
             print(f"🔍 Debug: Using optimized max_tokens: {max_tokens_optimized} (was {max_tokens_for_call})")
             
-            reply = chat_with_grok(
-                context_messages,
-                model=model_env,
-                temperature=0.7,
-                max_tokens=max_tokens_optimized,
-                top_p=0.8,
-                hide_thinking=True,
-            )
+            try:
+                reply = chat_with_grok(
+                    context_messages,
+                    model=model_env,
+                    temperature=0.7,
+                    max_tokens=max_tokens_optimized,
+                    top_p=0.8,
+                    hide_thinking=True,
+                )
+            except Exception as ai_error:
+                print(f"🔍 Debug: AI call failed: {ai_error}")
+                # Fallback response for timeout scenarios
+                reply = "I'm having trouble generating a response right now. Please try again in a moment."
             
             print(f"🔍 Debug: AI response received, length: {len(reply)}")
             print(f"🔍 Debug: AI response starts with: {reply[:200]}...")
