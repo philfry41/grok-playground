@@ -1961,9 +1961,22 @@ def debug_story_content(story_id):
         
         # Extract character memory for each character
         for char_key, char_data in characters.items():
+            # Check for both 'memory' (single string) and 'key_memories' (array)
+            memory_data = char_data.get('memory', '')
+            key_memories = char_data.get('key_memories', [])
+            
+            # Combine both memory types for debugging
+            all_memories = []
+            if memory_data:
+                all_memories.append(memory_data)
+            if key_memories:
+                all_memories.extend(key_memories)
+            
             debug_data['characters'][char_key] = {
                 'name': char_data.get('name', 'Unknown'),
-                'memory': char_data.get('memory', '')[:200] + '...' if len(char_data.get('memory', '')) > 200 else char_data.get('memory', '')
+                'memory': memory_data[:200] + '...' if len(memory_data) > 200 else memory_data,
+                'key_memories': key_memories,
+                'all_memories': all_memories
             }
         
         return jsonify(debug_data)
