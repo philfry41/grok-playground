@@ -1548,6 +1548,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                         "content": f"CORE STORY CONTEXT:\n{core_story_context}"
                     })
                     print(f"🔍 Debug: Added core story context to AI context ({len(core_story_context)} chars)")
+                    print(f"🔍 Debug: CORE STORY CONTEXT CONTENT:\n{core_story_context}")
                 else:
                     print(f"🔍 Debug: No core story context available, skipping core context injection")
             except Exception as e:
@@ -1602,6 +1603,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
             for i, msg in enumerate(context_messages):
                 print(f"🔍 Debug: Context {i}: {msg['role']} - {msg['content'][:100]}...")
+            
+            # Log the complete AI payload for debugging
+            print(f"🔍 Debug: COMPLETE AI PAYLOAD:")
+            for i, msg in enumerate(context_messages):
+                print(f"🔍 Debug: Message {i} ({msg['role']}):")
+                print(f"🔍 Debug: {msg['content']}")
+                print(f"🔍 Debug: ---")
             
             # Use full tokens for better story quality
             max_tokens_for_call = 500 if command == 'cont' else 500
