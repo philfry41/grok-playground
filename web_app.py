@@ -737,6 +737,16 @@ def get_core_story_context(story_id):
                 if arc:
                     char_summary += f" - {arc}"
                 
+                # Add character memories (both 'memory' and 'key_memories')
+                memories = []
+                if char_data.get('memory'):
+                    memories.append(char_data['memory'])
+                if char_data.get('key_memories'):
+                    memories.extend(char_data['key_memories'])
+                
+                if memories:
+                    char_summary += f" - Memory: {'; '.join(memories)}"
+                
                 char_summaries.append(char_summary)
             
             core_parts.append(f"CHARACTERS:\n" + "\n".join(char_summaries))
