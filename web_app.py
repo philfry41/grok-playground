@@ -693,13 +693,31 @@ def get_core_story_context(story_id):
     try:
         if not story_id:
             return None
-            
-        story_filename = f"story_{story_id}.json"
-        if not os.path.exists(story_filename):
+        
+        # Get current user from session
+        google_id = session.get('user_id')
+        if not google_id:
+            print(f"🔍 Debug: No user ID in session for core story context")
             return None
-            
-        with open(story_filename, "r", encoding="utf-8") as f:
-            story_data = json.load(f)
+        
+        if not DATABASE_AVAILABLE:
+            print(f"🔍 Debug: Database not available for core story context")
+            return None
+        
+        # Ensure tables exist
+        if not ensure_tables_exist():
+            print(f"🔍 Debug: Database tables not available for core story context")
+            return None
+        
+        # Get story from database (case-insensitive)
+        story = Story.query.filter_by(user_id=google_id).filter(Story.story_id.ilike(story_id)).first()
+        
+        if not story:
+            print(f"🔍 Debug: Story {story_id} not found in database for user {google_id}")
+            return None
+        
+        story_data = story.content
+        print(f"🔍 Debug: Loaded story {story_id} from database for core context")
         
         # Build compressed core context
         core_parts = []
