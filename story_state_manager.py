@@ -13,7 +13,10 @@ class StoryStateManager:
             "physical_contact": "none",
             "mood_atmosphere": "neutral",
             "key_objects": [],
-            "story_progress": []
+            "story_progress": [],
+            "arousal_levels": {},
+            "clothing_removed": [],
+            "body_positions": {}
         }
     
     def extract_state_from_messages(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
@@ -28,7 +31,7 @@ class StoryStateManager:
             context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
             
             extraction_prompt = f"""
-You are a story state analyzer. Extract the current story state from this conversation and return ONLY a JSON object.
+You are a detailed story state analyzer for erotic fiction. Extract the current story state from this conversation and return ONLY a JSON object.
 
 CONVERSATION CONTEXT:
 {context}
@@ -37,24 +40,37 @@ EXTRACT AND RETURN THIS JSON STRUCTURE:
 {{
     "characters": {{
         "character_name": {{
-            "clothing": "current clothing state",
-            "position": "current body position",
-            "mood": "emotional state"
+            "clothing": "detailed clothing state (what's on/off, partially removed, etc.)",
+            "position": "specific body position and orientation",
+            "mood": "emotional/arousal state",
+            "physical_state": "body condition (sweating, trembling, etc.)",
+            "body_parts_exposed": ["specific body parts that are visible/touched"],
+            "interactions": "what they're doing with their hands/body"
         }}
     }},
-    "location": "current location/setting",
-    "positions": "overall body positions of characters",
-    "physical_contact": "level of physical contact between characters",
-    "mood_atmosphere": "overall mood/atmosphere of the scene",
-    "key_objects": ["important objects in the scene"],
-    "story_progress": ["key plot points achieved"]
+    "location": "current location/setting with specific details",
+    "positions": "detailed body positions and spatial relationships",
+    "physical_contact": "specific level and type of physical contact",
+    "mood_atmosphere": "overall mood/atmosphere with sexual tension level",
+    "key_objects": ["important objects in the scene and their state"],
+    "story_progress": ["key plot points and sexual milestones achieved"],
+    "arousal_levels": {{
+        "character_name": "arousal level (low/medium/high/peak)"
+    }},
+    "clothing_removed": ["specific items of clothing that have been removed"],
+    "body_positions": {{
+        "character_name": "detailed body position and what they're doing"
+    }}
 }}
 
 RULES:
 - Only include characters that are actively present in the scene
-- Be specific about clothing states (e.g., "fully dressed", "shirt removed", "naked")
-- Be specific about positions (e.g., "sitting", "standing", "lying down", "kneeling")
-- Be specific about physical contact (e.g., "none", "touching", "kissing", "penetration")
+- Be VERY specific about clothing states (e.g., "shirt unbuttoned, bra visible", "pants around ankles", "completely naked")
+- Be VERY specific about positions (e.g., "sitting on edge of bed, legs spread", "kneeling between legs", "lying on back, arms above head")
+- Track specific body parts that are exposed, touched, or involved in actions
+- Be specific about physical contact (e.g., "fingering pussy", "sucking cock", "grinding against thigh")
+- Track arousal levels for each character
+- Note any clothing items that have been removed and where they are
 - Use "unknown" for any state you cannot determine
 - Return ONLY the JSON object, no other text
 """
@@ -112,19 +128,22 @@ RULES:
         """
         Intelligently merge new state with current state
         """
-        # Merge characters
+        # Merge characters with enhanced fields
         if "characters" in new_state:
             for char_name, char_data in new_state["characters"].items():
                 if char_name not in self.current_state["characters"]:
                     self.current_state["characters"][char_name] = {
                         "clothing": "fully dressed",
                         "position": "unknown",
-                        "mood": "neutral"
+                        "mood": "neutral",
+                        "physical_state": "normal",
+                        "body_parts_exposed": [],
+                        "interactions": "none"
                     }
                 
                 # Update character data
                 for key, value in char_data.items():
-                    if value != "unknown":
+                    if value != "unknown" and value != []:
                         self.current_state["characters"][char_name][key] = value
         
         # Update other state fields
@@ -132,13 +151,22 @@ RULES:
             if key in new_state and new_state[key] != "unknown":
                 self.current_state[key] = new_state[key]
         
-        # Update key objects
-        if "key_objects" in new_state:
-            self.current_state["key_objects"] = new_state["key_objects"]
+        # Update enhanced fields
+        for key in ["key_objects", "story_progress", "clothing_removed"]:
+            if key in new_state:
+                self.current_state[key] = new_state[key]
         
-        # Update story progress
-        if "story_progress" in new_state:
-            self.current_state["story_progress"] = new_state["story_progress"]
+        # Update arousal levels
+        if "arousal_levels" in new_state:
+            if "arousal_levels" not in self.current_state:
+                self.current_state["arousal_levels"] = {}
+            self.current_state["arousal_levels"].update(new_state["arousal_levels"])
+        
+        # Update body positions
+        if "body_positions" in new_state:
+            if "body_positions" not in self.current_state:
+                self.current_state["body_positions"] = {}
+            self.current_state["body_positions"].update(new_state["body_positions"])
         
         # Save updated state to file
         self._save_state()
@@ -149,11 +177,41 @@ RULES:
         """
         character_list = []
         for char_name, char_data in self.current_state["characters"].items():
-            char_info = f"- {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}"
+            # Build detailed character info
+            char_parts = [char_data.get('clothing', 'unknown clothing')]
+            char_parts.append(char_data.get('position', 'unknown position'))
+            char_parts.append(char_data.get('mood', 'unknown mood'))
+            
+            # Add physical state if available
+            if char_data.get('physical_state') and char_data['physical_state'] != 'normal':
+                char_parts.append(f"({char_data['physical_state']})")
+            
+            # Add exposed body parts if any
+            if char_data.get('body_parts_exposed'):
+                char_parts.append(f"exposed: {', '.join(char_data['body_parts_exposed'])}")
+            
+            # Add interactions if any
+            if char_data.get('interactions') and char_data['interactions'] != 'none':
+                char_parts.append(f"doing: {char_data['interactions']}")
+            
+            char_info = f"- {char_name}: {', '.join(char_parts)}"
             character_list.append(char_info)
         
         if not character_list:
             character_list = ["- No characters tracked yet"]
+        
+        # Build arousal levels info
+        arousal_info = ""
+        if self.current_state.get('arousal_levels'):
+            arousal_parts = []
+            for char_name, level in self.current_state['arousal_levels'].items():
+                arousal_parts.append(f"{char_name}: {level}")
+            arousal_info = f"- Arousal levels: {', '.join(arousal_parts)}\n"
+        
+        # Build clothing removed info
+        clothing_info = ""
+        if self.current_state.get('clothing_removed'):
+            clothing_info = f"- Clothing removed: {', '.join(self.current_state['clothing_removed'])}\n"
         
         state_prompt = f"""
 CURRENT SCENE STATE (maintain this continuity):
@@ -162,10 +220,10 @@ CURRENT SCENE STATE (maintain this continuity):
 - Positions: {self.current_state['positions']}
 - Physical contact: {self.current_state['physical_contact']}
 - Mood/Atmosphere: {self.current_state['mood_atmosphere']}
-- Key objects: {', '.join(self.current_state['key_objects']) if self.current_state['key_objects'] else 'none'}
+{arousal_info}{clothing_info}- Key objects: {', '.join(self.current_state['key_objects']) if self.current_state['key_objects'] else 'none'}
 - Story progress: {', '.join(self.current_state['story_progress']) if self.current_state['story_progress'] else 'beginning'}
 
-Continue the story while maintaining this physical state. Do not have clothes magically reappear or positions change without explicit action.
+Continue the story while maintaining this detailed physical state. Do not have clothes magically reappear, positions change without explicit action, or forget what body parts are exposed/touched.
 """
         return state_prompt
     
@@ -180,7 +238,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             "physical_contact": "none",
             "mood_atmosphere": "neutral",
             "key_objects": [],
-            "story_progress": []
+            "story_progress": [],
+            "arousal_levels": {},
+            "clothing_removed": [],
+            "body_positions": {}
         }
         self._save_state()
     

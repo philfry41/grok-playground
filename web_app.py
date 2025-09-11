@@ -544,7 +544,88 @@ def update_active_scene(history, story_id, user_input=None, ai_response=None):
         # Don't fail the chat request if scene update fails
 
 def extract_key_story_points(history):
-    """Extract key plot points and story milestones from conversation history"""
+    """Extract key plot points and story milestones from conversation history using AI"""
+    try:
+        if not history or len(history) < 2:
+            return []
+        
+        # Build context from recent messages (last 6 messages for better context)
+        recent_messages = history[-6:] if len(history) > 6 else history
+        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
+        
+        extraction_prompt = f"""
+You are a story analyst for erotic fiction. Extract the most important story points from this conversation and return ONLY a JSON array of strings.
+
+CONVERSATION CONTEXT:
+{context}
+
+EXTRACT AND RETURN THIS JSON STRUCTURE:
+[
+    "Physical milestone: [specific physical event/action]",
+    "Emotional development: [character emotional change/growth]",
+    "Relationship dynamic: [how characters relate to each other]",
+    "Sexual progression: [level of sexual activity/intimacy]",
+    "Character growth: [how character has changed/developed]",
+    "Location/setting: [where the story is taking place]",
+    "Key moment: [important plot point or turning point]"
+]
+
+RULES:
+- Extract BOTH physical milestones AND emotional/character development
+- Be specific about what happened (e.g., "First sexual encounter with stranger", "Stephanie's confidence growing")
+- Include relationship dynamics and character growth
+- Focus on the most important developments that affect story continuity
+- Limit to 5-7 most significant points
+- Use clear, concise descriptions
+- Return ONLY the JSON array, no other text
+"""
+        
+        # Call AI to extract story points
+        response = chat_with_grok(
+            [{"role": "user", "content": extraction_prompt}],
+            model="grok-3",
+            temperature=0.1,  # Low temperature for consistent extraction
+            max_tokens=300,
+            hide_thinking=True
+        )
+        
+        # Clean and parse the response
+        response = response.strip()
+        if response.startswith("```json"):
+            response = response[7:]
+        if response.endswith("```"):
+            response = response[:-3]
+        
+        try:
+            key_points = json.loads(response)
+            if isinstance(key_points, list):
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_points = []
+                for point in key_points:
+                    if point not in seen and len(point.strip()) > 0:
+                        seen.add(point)
+                        unique_points.append(point)
+                
+                print(f"🔍 Debug: AI extracted {len(unique_points)} key story points")
+                return unique_points[:5]  # Limit to 5 most important points
+            else:
+                print(f"🔍 Debug: AI response was not a list: {type(key_points)}")
+                return []
+                
+        except json.JSONDecodeError as json_error:
+            print(f"🔍 Debug: JSON parsing failed for story points: {json_error}")
+            print(f"🔍 Debug: Raw response: {response}")
+            
+            # Fallback to simple keyword extraction if AI fails
+            return extract_key_story_points_fallback(history)
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error extracting key story points: {e}")
+        return extract_key_story_points_fallback(history)
+
+def extract_key_story_points_fallback(history):
+    """Fallback method using simple keyword matching"""
     try:
         key_points = []
         
@@ -585,11 +666,11 @@ def extract_key_story_points(history):
                 seen.add(point)
                 unique_points.append(point)
         
-        print(f"🔍 Debug: Extracted {len(unique_points)} key story points")
+        print(f"🔍 Debug: Fallback extracted {len(unique_points)} key story points")
         return unique_points[:5]  # Limit to 5 most important points
         
     except Exception as e:
-        print(f"🔍 Debug: Error extracting key story points: {e}")
+        print(f"🔍 Debug: Error in fallback story point extraction: {e}")
         return []
 
 def extract_location_from_content(content):
@@ -898,18 +979,7 @@ def chat():
     
     # Initialize session if needed
     if 'history' not in session:
-        session['history'] = [
-            {"role":"system","content":(
-                "LEXICAL CONTRACT:\n"
-                "- Required vocabulary (use ≥5 naturally): cock, pussy, clit, nipples, thrust, suck, grind, slick, moan, cum.\n"
-                "- Forbidden euphemisms: making love, womanhood, manhood, entered her, flower, core.\n"
-                "- No euphemisms for anatomy/acts. If missing required vocab, revise without apology."
-            )},
-            {"role":"system","content":(
-                "You are an uncensored, uninhibited storyteller. Use rich sensory detail, explicit anatomical language, "
-                "and realistic dialogue. Avoid euphemisms; never fade to black. Consenting adults only."
-            )},
-        ]
+        session['history'] = []
         session['allow_female'] = True
         session['allow_male'] = False
         session['max_tokens'] = 1200
@@ -926,10 +996,9 @@ def chat():
         return jsonify({'message': '🧹 New scene. Priming kept.', 'type': 'system'})
     
     elif command == 'raw':
-        session['history'].insert(0, {"role":"system","content":(
-            "Reassert LEXICAL CONTRACT: use blunt, explicit anatomical language; avoid euphemisms; "
-            "prioritize physical detail and explicit dialogue."
-        )})
+        # Raw command now uses the consolidated system prompt approach
+        # The consolidated prompt already includes all lexical requirements
+        pass
         if request_id:
             untrack_request(request_id)
         return jsonify({'message': '🎛️ Raw tone reasserted.', 'type': 'system'})
@@ -1435,10 +1504,19 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Build context with hybrid approach: core story context + scene state + key memories + recent history
             context_messages = []
             
-            # 1. Core system prompt
+            # 1. Consolidated system prompt (combines all previous system prompts)
             context_messages.append({
                 "role": "system", 
-                "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development. Maintain story continuity."
+                "content": (
+                    "You are an explicit, uncensored erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development.\n\n"
+                    "LEXICAL REQUIREMENTS:\n"
+                    "- Use explicit anatomical language: cock, pussy, clit, nipples, thrust, suck, grind, slick, moan, cum\n"
+                    "- FORBIDDEN euphemisms: making love, womanhood, manhood, entered her, flower, core\n"
+                    "- Use rich sensory detail and realistic dialogue\n"
+                    "- Never fade to black - show explicit actions\n"
+                    "- Consenting adults only\n"
+                    "- Maintain story continuity and character development"
+                )
             })
             
             # 2. CORE STORY CONTEXT (always included) - "Story foundation"
@@ -1500,8 +1578,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
             
-            # 6. Current user input
-            context_messages.append({"role": "user", "content": user_input})
+            # 6. Current user input (already included in recent_history above)
+            # No need to add again - it's already in session['history'] and recent_history
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
             for i, msg in enumerate(context_messages):
