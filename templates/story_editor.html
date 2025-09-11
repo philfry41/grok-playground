@@ -733,6 +733,46 @@
                 </div>
                 
                 <div class="section">
+                    <div class="section-header">Intimate Physical Features</div>
+                    <div class="section-content">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Genitals (cock/pussy)</label>
+                                <input type="text" class="form-control char-genitals" placeholder="e.g., thick 8-inch cock, tight wet pussy">
+                            </div>
+                            <div class="form-group">
+                                <label>Ass</label>
+                                <input type="text" class="form-control char-ass" placeholder="e.g., firm round ass, tight hole">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Breasts/Chest</label>
+                                <input type="text" class="form-control char-breasts" placeholder="e.g., full C-cup breasts, muscular chest">
+                            </div>
+                            <div class="form-group">
+                                <label>Pubic Hair</label>
+                                <input type="text" class="form-control char-pubic-hair" placeholder="e.g., neatly trimmed, completely bare, natural bush">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Nipples</label>
+                                <input type="text" class="form-control char-nipples" placeholder="e.g., small pink nipples, large dark areolas">
+                            </div>
+                            <div class="form-group">
+                                <label>Skin/Scent</label>
+                                <input type="text" class="form-control char-skin" placeholder="e.g., smooth olive skin, musky scent">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Other Intimate Details</label>
+                            <input type="text" class="form-control char-intimate-other" placeholder="e.g., sensitive clit, thick foreskin, tight balls">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
                     <div class="section-header">Personality</div>
                     <div class="section-content">
                         <div class="form-group">
@@ -781,6 +821,13 @@
                 const hairInput = characterSection.querySelector('.char-hair');
                 const eyesInput = characterSection.querySelector('.char-eyes');
                 const featuresInput = characterSection.querySelector('.char-features');
+                const genitalsInput = characterSection.querySelector('.char-genitals');
+                const assInput = characterSection.querySelector('.char-ass');
+                const breastsInput = characterSection.querySelector('.char-breasts');
+                const pubicHairInput = characterSection.querySelector('.char-pubic-hair');
+                const nipplesInput = characterSection.querySelector('.char-nipples');
+                const skinInput = characterSection.querySelector('.char-skin');
+                const intimateOtherInput = characterSection.querySelector('.char-intimate-other');
                 const traitsInput = characterSection.querySelector('.char-traits');
                 const desiresInput = characterSection.querySelector('.char-desires');
                 const turnOnsInput = characterSection.querySelector('.char-turn-ons');
@@ -811,6 +858,15 @@
                 if (hairInput) hairInput.value = characterData.physical?.hair || '';
                 if (eyesInput) eyesInput.value = characterData.physical?.eyes || '';
                 if (featuresInput) featuresInput.value = Array.isArray(characterData.physical?.features) ? characterData.physical.features.join(', ') : '';
+                
+                // Set intimate features
+                if (genitalsInput) genitalsInput.value = characterData.intimate?.genitals || '';
+                if (assInput) assInput.value = characterData.intimate?.ass || '';
+                if (breastsInput) breastsInput.value = characterData.intimate?.breasts || '';
+                if (pubicHairInput) pubicHairInput.value = characterData.intimate?.pubic_hair || '';
+                if (nipplesInput) nipplesInput.value = characterData.intimate?.nipples || '';
+                if (skinInput) skinInput.value = characterData.intimate?.skin || '';
+                if (intimateOtherInput) intimateOtherInput.value = characterData.intimate?.other || '';
                 
                 // Set personality
                 if (traitsInput) traitsInput.value = Array.isArray(characterData.personality?.traits) ? characterData.personality.traits.join(', ') : '';
@@ -934,6 +990,16 @@
                             hair: section.querySelector('.char-hair').value,
                             eyes: section.querySelector('.char-eyes').value,
                             features: section.querySelector('.char-features').value.split(',').map(v => v.trim()).filter(v => v)
+                        },
+                        
+                        intimate: {
+                            genitals: section.querySelector('.char-genitals').value,
+                            ass: section.querySelector('.char-ass').value,
+                            breasts: section.querySelector('.char-breasts').value,
+                            pubic_hair: section.querySelector('.char-pubic-hair').value,
+                            nipples: section.querySelector('.char-nipples').value,
+                            skin: section.querySelector('.char-skin').value,
+                            other: section.querySelector('.char-intimate-other').value
                         },
                         
                         personality: {

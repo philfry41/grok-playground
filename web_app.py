@@ -728,14 +728,36 @@ def get_core_story_context(story_id):
             for char_key, char_data in story_data['characters'].items():
                 name = char_data.get('name', 'Unknown')
                 age = char_data.get('age', 'unknown age')
+                gender = char_data.get('gender', '')
                 role = char_data.get('role', '')
                 arc = char_data.get('sexual_growth_arc', '')
                 
-                char_summary = f"{name} ({age})"
+                char_summary = f"{name} ({age}, {gender})"
                 if role:
                     char_summary += f" - {role}"
                 if arc:
                     char_summary += f" - {arc}"
+                
+                # Add intimate features if available
+                intimate = char_data.get('intimate', {})
+                intimate_parts = []
+                if intimate.get('genitals'):
+                    intimate_parts.append(f"genitals: {intimate['genitals']}")
+                if intimate.get('breasts'):
+                    intimate_parts.append(f"breasts: {intimate['breasts']}")
+                if intimate.get('ass'):
+                    intimate_parts.append(f"ass: {intimate['ass']}")
+                if intimate.get('pubic_hair'):
+                    intimate_parts.append(f"pubic hair: {intimate['pubic_hair']}")
+                if intimate.get('nipples'):
+                    intimate_parts.append(f"nipples: {intimate['nipples']}")
+                if intimate.get('skin'):
+                    intimate_parts.append(f"skin: {intimate['skin']}")
+                if intimate.get('other'):
+                    intimate_parts.append(f"other: {intimate['other']}")
+                
+                if intimate_parts:
+                    char_summary += f" | Intimate: {', '.join(intimate_parts)}"
                 
                 char_summaries.append(char_summary)
             
