@@ -1926,6 +1926,51 @@ def get_debug_info():
             'traceback': traceback.format_exc()
         })
 
+@app.route('/api/debug-story/<story_id>', methods=['GET'])
+@require_auth
+def debug_story_content(story_id):
+    """Debug endpoint to check what story content is actually in the database"""
+    try:
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        if not DATABASE_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
+        
+        if not ensure_tables_exist():
+            return jsonify({'error': 'Database tables not available'}), 500
+        
+        # Get story from database
+        story = Story.query.filter_by(user_id=google_id).filter(Story.story_id.ilike(story_id)).first()
+        
+        if not story:
+            return jsonify({'error': f'Story {story_id} not found'}), 404
+        
+        # Extract character memory for debugging
+        story_content = story.content or {}
+        characters = story_content.get('characters', {})
+        
+        debug_data = {
+            'story_id': story.story_id,
+            'title': story.title,
+            'updated_at': story.updated_at.isoformat() if story.updated_at else None,
+            'characters': {},
+            'opener_text': story_content.get('opener_text', '')[:200] + '...' if len(story_content.get('opener_text', '')) > 200 else story_content.get('opener_text', '')
+        }
+        
+        # Extract character memory for each character
+        for char_key, char_data in characters.items():
+            debug_data['characters'][char_key] = {
+                'name': char_data.get('name', 'Unknown'),
+                'memory': char_data.get('memory', '')[:200] + '...' if len(char_data.get('memory', '')) > 200 else char_data.get('memory', '')
+            }
+        
+        return jsonify(debug_data)
+        
+    except Exception as e:
+        return jsonify({'error': f'Debug story failed: {str(e)}'}), 500
+
 @app.route('/api/load-conversation', methods=['GET'])
 def load_conversation():
     """Load the most recent conversation history"""
