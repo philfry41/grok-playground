@@ -738,23 +738,66 @@ def get_core_story_context(story_id):
                 if arc:
                     char_summary += f" - {arc}"
                 
-                # Add intimate features if available
+                # Add intimate features if available (as flexible keywords, not literal descriptions)
                 intimate = char_data.get('intimate', {})
                 intimate_parts = []
                 if intimate.get('genitals'):
-                    intimate_parts.append(f"genitals: {intimate['genitals']}")
+                    # Extract key descriptive words instead of full sentences
+                    genitals_text = intimate['genitals'].lower()
+                    genitals_keywords = []
+                    if 'thick' in genitals_text: genitals_keywords.append('thick')
+                    if '8-inch' in genitals_text or 'large' in genitals_text: genitals_keywords.append('large')
+                    if 'uncut' in genitals_text: genitals_keywords.append('uncut')
+                    if 'veiny' in genitals_text: genitals_keywords.append('veiny')
+                    if 'prominent' in genitals_text: genitals_keywords.append('prominent head')
+                    if genitals_keywords:
+                        intimate_parts.append(f"genitals: {', '.join(genitals_keywords)}")
+                
                 if intimate.get('breasts'):
-                    intimate_parts.append(f"breasts: {intimate['breasts']}")
+                    breasts_text = intimate['breasts'].lower()
+                    breasts_keywords = []
+                    if 'c-cup' in breasts_text or 'full' in breasts_text: breasts_keywords.append('full')
+                    if 'small' in breasts_text and 'nipples' in breasts_text: breasts_keywords.append('small nipples')
+                    if 'dark' in breasts_text: breasts_keywords.append('dark nipples')
+                    if breasts_keywords:
+                        intimate_parts.append(f"breasts: {', '.join(breasts_keywords)}")
+                
                 if intimate.get('ass'):
-                    intimate_parts.append(f"ass: {intimate['ass']}")
+                    ass_text = intimate['ass'].lower()
+                    ass_keywords = []
+                    if 'firm' in ass_text: ass_keywords.append('firm')
+                    if 'round' in ass_text: ass_keywords.append('round')
+                    if 'tight' in ass_text: ass_keywords.append('tight')
+                    if ass_keywords:
+                        intimate_parts.append(f"ass: {', '.join(ass_keywords)}")
+                
                 if intimate.get('pubic_hair'):
-                    intimate_parts.append(f"pubic hair: {intimate['pubic_hair']}")
+                    pubic_text = intimate['pubic_hair'].lower()
+                    pubic_keywords = []
+                    if 'trimmed' in pubic_text: pubic_keywords.append('trimmed')
+                    if 'bare' in pubic_text: pubic_keywords.append('bare')
+                    if 'natural' in pubic_text: pubic_keywords.append('natural')
+                    if pubic_keywords:
+                        intimate_parts.append(f"pubic hair: {', '.join(pubic_keywords)}")
+                
                 if intimate.get('nipples'):
-                    intimate_parts.append(f"nipples: {intimate['nipples']}")
+                    nipples_text = intimate['nipples'].lower()
+                    nipples_keywords = []
+                    if 'small' in nipples_text: nipples_keywords.append('small')
+                    if 'dark' in nipples_text: nipples_keywords.append('dark')
+                    if 'sensitive' in nipples_text: nipples_keywords.append('sensitive')
+                    if nipples_keywords:
+                        intimate_parts.append(f"nipples: {', '.join(nipples_keywords)}")
+                
                 if intimate.get('skin'):
-                    intimate_parts.append(f"skin: {intimate['skin']}")
-                if intimate.get('other'):
-                    intimate_parts.append(f"other: {intimate['other']}")
+                    skin_text = intimate['skin'].lower()
+                    skin_keywords = []
+                    if 'smooth' in skin_text: skin_keywords.append('smooth')
+                    if 'olive' in skin_text: skin_keywords.append('olive')
+                    if 'tanned' in skin_text: skin_keywords.append('tanned')
+                    if 'musky' in skin_text: skin_keywords.append('musky scent')
+                    if skin_keywords:
+                        intimate_parts.append(f"skin: {', '.join(skin_keywords)}")
                 
                 if intimate_parts:
                     char_summary += f" | Intimate: {', '.join(intimate_parts)}"
