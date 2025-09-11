@@ -1466,9 +1466,14 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Clear the current interaction area
+                    // Clear both the current interaction area AND the chat history
                     const currentInteraction = document.getElementById('currentInteraction');
+                    const historyContent = document.getElementById('historyContent');
+                    
                     currentInteraction.innerHTML = '';
+                    historyContent.innerHTML = '';
+                    
+                    console.log(`✅ Cleared both current interaction and chat history`);
                     
                     // If opener content is provided, display it
                     if (data.opener_content) {
