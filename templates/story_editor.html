@@ -224,6 +224,40 @@
             transform: translateY(-2px);
         }
         
+        .btn-success {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+        
         .file-list {
             max-height: 300px;
             overflow-y: auto;
@@ -440,6 +474,8 @@
                             <button type="button" class="btn-success" onclick="loadInChat()">🚀 Load in Chat</button>
                             <button type="button" class="btn-secondary" onclick="loadStory()">📂 Load Story</button>
                             <button type="button" class="btn-secondary" onclick="previewStory()">👁️ Preview</button>
+                            <button type="button" class="btn-info" onclick="exportStory()">📤 Export</button>
+                            <button type="button" class="btn-info" onclick="importStory()">📥 Import</button>
                         </div>
                     </form>
                 </div>
@@ -954,6 +990,83 @@
             } catch (error) {
                 console.error('🔍 Error saving story:', error);
                 showStatus('Error saving story', 'error');
+            }
+        }
+        
+        // Export story as JSON file
+        function exportStory() {
+            try {
+                if (!currentStory || !currentStory.story_id) {
+                    showStatus('No story loaded to export', 'error');
+                    return;
+                }
+                
+                // Create a clean export version
+                const exportData = {
+                    ...currentStory,
+                    metadata: {
+                        ...currentStory.metadata,
+                        exported_at: new Date().toISOString(),
+                        exported_by: 'Story Editor'
+                    }
+                };
+                
+                // Create and download file
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `story_${currentStory.story_id}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showStatus(`Story exported: ${currentStory.story_id}.json`, 'success');
+            } catch (error) {
+                console.error('🔍 Error exporting story:', error);
+                showStatus('Error exporting story', 'error');
+            }
+        }
+        
+        // Import story from JSON file
+        function importStory() {
+            try {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = function(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const storyData = JSON.parse(e.target.result);
+                            
+                            // Validate the story data
+                            if (!storyData.story_id || !storyData.title) {
+                                showStatus('Invalid story file: missing story_id or title', 'error');
+                                return;
+                            }
+                            
+                            // Load the story into the form
+                            loadStoryData(storyData);
+                            showStatus(`Story imported: ${storyData.title}`, 'success');
+                            
+                        } catch (error) {
+                            console.error('🔍 Error parsing story file:', error);
+                            showStatus('Error parsing story file. Please check the format.', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            } catch (error) {
+                console.error('🔍 Error importing story:', error);
+                showStatus('Error importing story', 'error');
             }
         }
         
