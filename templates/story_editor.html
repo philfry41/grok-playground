@@ -672,7 +672,7 @@
             // Create the HTML structure
             characterSection.innerHTML = `
                 <div class="character-header">
-                    <div class="character-name">Character ${charId}</div>
+                    <div class="character-name">${characterData?.name || `Character ${charId}`}</div>
                     <button type="button" class="remove-character" onclick="removeCharacter(this)">🗑️</button>
                 </div>
                 
@@ -794,6 +794,12 @@
                 if (nameInput) {
                     nameInput.value = characterData.name || '';
                     console.log('🔍 Set nameInput.value to:', nameInput.value);
+                    
+                    // Update the character header with the name
+                    const headerName = characterSection.querySelector('.character-name');
+                    if (headerName && characterData.name) {
+                        headerName.textContent = characterData.name;
+                    }
                 }
                 if (ageInput) ageInput.value = typeof characterData.age === 'number' ? characterData.age : '';
                 if (genderSelect) genderSelect.value = characterData.gender || 'female';
@@ -1053,7 +1059,8 @@
                             }
                             
                             // Load the story into the form
-                            loadStoryData(storyData);
+                            populateForm(storyData);
+                            showNewStory(); // Switch to the editor view
                             showStatus(`Story imported: ${storyData.title}`, 'success');
                             
                         } catch (error) {
