@@ -1555,7 +1555,14 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- Use rich sensory detail and realistic dialogue\n"
                     "- Never fade to black - show explicit actions\n"
                     "- Consenting adults only\n"
-                    "- Maintain story continuity and character development"
+                    "- Maintain story continuity and character development\n\n"
+                    "PHYSICAL DESCRIPTION VARIATION:\n"
+                    "- Vary your physical descriptions - don't repeat the same phrases verbatim\n"
+                    "- Use synonyms, different angles, and creative language while maintaining accuracy\n"
+                    "- Describe the same features in fresh ways: 'thick shaft' → 'impressive length' → 'massive cock'\n"
+                    "- Focus on different aspects: size, texture, appearance, sensation, movement\n"
+                    "- Keep descriptions natural and flowing, not clinical or repetitive\n"
+                    "- Maintain character consistency while using varied language"
                 )
             })
             
