@@ -214,7 +214,9 @@ RULES:
             clothing_info = f"- Clothing removed: {', '.join(self.current_state['clothing_removed'])}\n"
         
         state_prompt = f"""
-CURRENT SCENE STATE (maintain this continuity):
+CRITICAL: MAINTAIN EXACT PHYSICAL CONTINUITY - NO MAGICAL CHANGES ALLOWED
+
+CURRENT SCENE STATE (MUST BE PRESERVED EXACTLY):
 {chr(10).join(character_list)}
 - Location: {self.current_state['location']}
 - Positions: {self.current_state['positions']}
@@ -223,7 +225,21 @@ CURRENT SCENE STATE (maintain this continuity):
 {arousal_info}{clothing_info}- Key objects: {', '.join(self.current_state['key_objects']) if self.current_state['key_objects'] else 'none'}
 - Story progress: {', '.join(self.current_state['story_progress']) if self.current_state['story_progress'] else 'beginning'}
 
-Continue the story while maintaining this detailed physical state. Do not have clothes magically reappear, positions change without explicit action, or forget what body parts are exposed/touched.
+MANDATORY CONTINUITY RULES:
+1. CLOTHING: If clothing is removed/partially removed, it STAYS that way until explicitly put back on
+2. POSITIONS: Characters maintain their exact positions unless they explicitly move
+3. BODY PARTS: Exposed body parts remain exposed until explicitly covered
+4. PHYSICAL STATE: Current physical conditions (sweating, trembling, etc.) continue unless explicitly changed
+5. OBJECTS: Items remain where they are unless explicitly moved
+6. NO MAGICAL RESETS: Do not have clothes magically reappear, positions reset, or body parts become covered without explicit action
+
+VIOLATION EXAMPLES TO AVOID:
+- Character's shirt is off → next response has them "unbuttoning their shirt" (WRONG)
+- Character is naked → next response mentions "removing their dress" (WRONG)  
+- Character is sitting → next response has them "standing up" without mentioning the movement (WRONG)
+- Character's pants are around ankles → next response has them "pulling down their pants" (WRONG)
+
+Continue the story while STRICTLY maintaining this exact physical state. Any changes must be explicitly described as actions.
 """
         return state_prompt
     
