@@ -743,7 +743,7 @@ def get_core_story_context(story_id):
                 if arc:
                     char_summary += f" - {arc}"
                 
-                # Add intimate features if available (as flexible keywords, not literal descriptions)
+                # Add intimate features if available (randomized keyword selection for variation)
                 intimate = char_data.get('intimate', {})
                 intimate_parts = []
                 if intimate.get('genitals'):
@@ -755,8 +755,14 @@ def get_core_story_context(story_id):
                     if 'uncut' in genitals_text: genitals_keywords.append('uncut')
                     if 'veiny' in genitals_text: genitals_keywords.append('veiny')
                     if 'prominent' in genitals_text: genitals_keywords.append('prominent head')
+                    
+                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
                     if genitals_keywords:
-                        intimate_parts.append(f"genitals: {', '.join(genitals_keywords)}")
+                        import random
+                        num_to_select = random.randint(0, min(3, len(genitals_keywords)))
+                        selected_keywords = random.sample(genitals_keywords, num_to_select)
+                        if selected_keywords:  # Only add if we have keywords selected
+                            intimate_parts.append(f"genitals: {', '.join(selected_keywords)}")
                 
                 if intimate.get('breasts'):
                     breasts_text = intimate['breasts'].lower()
@@ -764,8 +770,14 @@ def get_core_story_context(story_id):
                     if 'c-cup' in breasts_text or 'full' in breasts_text: breasts_keywords.append('full')
                     if 'small' in breasts_text and 'nipples' in breasts_text: breasts_keywords.append('small nipples')
                     if 'dark' in breasts_text: breasts_keywords.append('dark nipples')
+                    
+                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
                     if breasts_keywords:
-                        intimate_parts.append(f"breasts: {', '.join(breasts_keywords)}")
+                        import random
+                        num_to_select = random.randint(0, min(3, len(breasts_keywords)))
+                        selected_keywords = random.sample(breasts_keywords, num_to_select)
+                        if selected_keywords:  # Only add if we have keywords selected
+                            intimate_parts.append(f"breasts: {', '.join(selected_keywords)}")
                 
                 if intimate.get('ass'):
                     ass_text = intimate['ass'].lower()
@@ -773,8 +785,14 @@ def get_core_story_context(story_id):
                     if 'firm' in ass_text: ass_keywords.append('firm')
                     if 'round' in ass_text: ass_keywords.append('round')
                     if 'tight' in ass_text: ass_keywords.append('tight')
+                    
+                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
                     if ass_keywords:
-                        intimate_parts.append(f"ass: {', '.join(ass_keywords)}")
+                        import random
+                        num_to_select = random.randint(0, min(3, len(ass_keywords)))
+                        selected_keywords = random.sample(ass_keywords, num_to_select)
+                        if selected_keywords:  # Only add if we have keywords selected
+                            intimate_parts.append(f"ass: {', '.join(selected_keywords)}")
                 
                 if intimate.get('pubic_hair'):
                     pubic_text = intimate['pubic_hair'].lower()
@@ -782,8 +800,14 @@ def get_core_story_context(story_id):
                     if 'trimmed' in pubic_text: pubic_keywords.append('trimmed')
                     if 'bare' in pubic_text: pubic_keywords.append('bare')
                     if 'natural' in pubic_text: pubic_keywords.append('natural')
+                    
+                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
                     if pubic_keywords:
-                        intimate_parts.append(f"pubic hair: {', '.join(pubic_keywords)}")
+                        import random
+                        num_to_select = random.randint(0, min(3, len(pubic_keywords)))
+                        selected_keywords = random.sample(pubic_keywords, num_to_select)
+                        if selected_keywords:  # Only add if we have keywords selected
+                            intimate_parts.append(f"pubic hair: {', '.join(selected_keywords)}")
                 
                 if intimate.get('nipples'):
                     nipples_text = intimate['nipples'].lower()
@@ -791,8 +815,14 @@ def get_core_story_context(story_id):
                     if 'small' in nipples_text: nipples_keywords.append('small')
                     if 'dark' in nipples_text: nipples_keywords.append('dark')
                     if 'sensitive' in nipples_text: nipples_keywords.append('sensitive')
+                    
+                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
                     if nipples_keywords:
-                        intimate_parts.append(f"nipples: {', '.join(nipples_keywords)}")
+                        import random
+                        num_to_select = random.randint(0, min(3, len(nipples_keywords)))
+                        selected_keywords = random.sample(nipples_keywords, num_to_select)
+                        if selected_keywords:  # Only add if we have keywords selected
+                            intimate_parts.append(f"nipples: {', '.join(selected_keywords)}")
                 
                 if intimate.get('skin'):
                     skin_text = intimate['skin'].lower()
@@ -801,11 +831,18 @@ def get_core_story_context(story_id):
                     if 'olive' in skin_text: skin_keywords.append('olive')
                     if 'tanned' in skin_text: skin_keywords.append('tanned')
                     if 'musky' in skin_text: skin_keywords.append('musky scent')
+                    
+                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
                     if skin_keywords:
-                        intimate_parts.append(f"skin: {', '.join(skin_keywords)}")
+                        import random
+                        num_to_select = random.randint(0, min(3, len(skin_keywords)))
+                        selected_keywords = random.sample(skin_keywords, num_to_select)
+                        if selected_keywords:  # Only add if we have keywords selected
+                            intimate_parts.append(f"skin: {', '.join(selected_keywords)}")
                 
                 if intimate_parts:
                     char_summary += f" | Intimate: {', '.join(intimate_parts)}"
+                    print(f"🔍 Debug: Selected intimate keywords for {name}: {', '.join(intimate_parts)}")
                 
                 char_summaries.append(char_summary)
             
