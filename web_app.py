@@ -756,12 +756,17 @@ def get_core_story_context(story_id):
                     if 'veiny' in genitals_text: genitals_keywords.append('veiny')
                     if 'prominent' in genitals_text: genitals_keywords.append('prominent head')
                     
-                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
+                    # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if genitals_keywords:
                         import random
-                        num_to_select = random.randint(0, min(3, len(genitals_keywords)))
-                        selected_keywords = random.sample(genitals_keywords, num_to_select)
-                        if selected_keywords:  # Only add if we have keywords selected
+                        # 50% chance to omit all keywords, 50% chance to select 1-3 keywords
+                        if random.random() < 0.5:
+                            num_to_select = 0  # Omit all keywords
+                        else:
+                            num_to_select = random.randint(1, min(3, len(genitals_keywords)))
+                        
+                        if num_to_select > 0:
+                            selected_keywords = random.sample(genitals_keywords, num_to_select)
                             intimate_parts.append(f"genitals: {', '.join(selected_keywords)}")
                 
                 if intimate.get('breasts'):
@@ -771,12 +776,17 @@ def get_core_story_context(story_id):
                     if 'small' in breasts_text and 'nipples' in breasts_text: breasts_keywords.append('small nipples')
                     if 'dark' in breasts_text: breasts_keywords.append('dark nipples')
                     
-                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
+                    # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if breasts_keywords:
                         import random
-                        num_to_select = random.randint(0, min(3, len(breasts_keywords)))
-                        selected_keywords = random.sample(breasts_keywords, num_to_select)
-                        if selected_keywords:  # Only add if we have keywords selected
+                        # 50% chance to omit all keywords, 50% chance to select 1-3 keywords
+                        if random.random() < 0.5:
+                            num_to_select = 0  # Omit all keywords
+                        else:
+                            num_to_select = random.randint(1, min(3, len(breasts_keywords)))
+                        
+                        if num_to_select > 0:
+                            selected_keywords = random.sample(breasts_keywords, num_to_select)
                             intimate_parts.append(f"breasts: {', '.join(selected_keywords)}")
                 
                 if intimate.get('ass'):
@@ -786,12 +796,17 @@ def get_core_story_context(story_id):
                     if 'round' in ass_text: ass_keywords.append('round')
                     if 'tight' in ass_text: ass_keywords.append('tight')
                     
-                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
+                    # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if ass_keywords:
                         import random
-                        num_to_select = random.randint(0, min(3, len(ass_keywords)))
-                        selected_keywords = random.sample(ass_keywords, num_to_select)
-                        if selected_keywords:  # Only add if we have keywords selected
+                        # 50% chance to omit all keywords, 50% chance to select 1-3 keywords
+                        if random.random() < 0.5:
+                            num_to_select = 0  # Omit all keywords
+                        else:
+                            num_to_select = random.randint(1, min(3, len(ass_keywords)))
+                        
+                        if num_to_select > 0:
+                            selected_keywords = random.sample(ass_keywords, num_to_select)
                             intimate_parts.append(f"ass: {', '.join(selected_keywords)}")
                 
                 if intimate.get('pubic_hair'):
@@ -801,12 +816,17 @@ def get_core_story_context(story_id):
                     if 'bare' in pubic_text: pubic_keywords.append('bare')
                     if 'natural' in pubic_text: pubic_keywords.append('natural')
                     
-                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
+                    # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if pubic_keywords:
                         import random
-                        num_to_select = random.randint(0, min(3, len(pubic_keywords)))
-                        selected_keywords = random.sample(pubic_keywords, num_to_select)
-                        if selected_keywords:  # Only add if we have keywords selected
+                        # 50% chance to omit all keywords, 50% chance to select 1-3 keywords
+                        if random.random() < 0.5:
+                            num_to_select = 0  # Omit all keywords
+                        else:
+                            num_to_select = random.randint(1, min(3, len(pubic_keywords)))
+                        
+                        if num_to_select > 0:
+                            selected_keywords = random.sample(pubic_keywords, num_to_select)
                             intimate_parts.append(f"pubic hair: {', '.join(selected_keywords)}")
                 
                 if intimate.get('nipples'):
@@ -816,12 +836,17 @@ def get_core_story_context(story_id):
                     if 'dark' in nipples_text: nipples_keywords.append('dark')
                     if 'sensitive' in nipples_text: nipples_keywords.append('sensitive')
                     
-                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
+                    # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if nipples_keywords:
                         import random
-                        num_to_select = random.randint(0, min(3, len(nipples_keywords)))
-                        selected_keywords = random.sample(nipples_keywords, num_to_select)
-                        if selected_keywords:  # Only add if we have keywords selected
+                        # 50% chance to omit all keywords, 50% chance to select 1-3 keywords
+                        if random.random() < 0.5:
+                            num_to_select = 0  # Omit all keywords
+                        else:
+                            num_to_select = random.randint(1, min(3, len(nipples_keywords)))
+                        
+                        if num_to_select > 0:
+                            selected_keywords = random.sample(nipples_keywords, num_to_select)
                             intimate_parts.append(f"nipples: {', '.join(selected_keywords)}")
                 
                 if intimate.get('skin'):
@@ -832,12 +857,17 @@ def get_core_story_context(story_id):
                     if 'tanned' in skin_text: skin_keywords.append('tanned')
                     if 'musky' in skin_text: skin_keywords.append('musky scent')
                     
-                    # Randomly select 0-3 keywords (sometimes omit all for maximum variation)
+                    # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if skin_keywords:
                         import random
-                        num_to_select = random.randint(0, min(3, len(skin_keywords)))
-                        selected_keywords = random.sample(skin_keywords, num_to_select)
-                        if selected_keywords:  # Only add if we have keywords selected
+                        # 50% chance to omit all keywords, 50% chance to select 1-3 keywords
+                        if random.random() < 0.5:
+                            num_to_select = 0  # Omit all keywords
+                        else:
+                            num_to_select = random.randint(1, min(3, len(skin_keywords)))
+                        
+                        if num_to_select > 0:
+                            selected_keywords = random.sample(skin_keywords, num_to_select)
                             intimate_parts.append(f"skin: {', '.join(selected_keywords)}")
                 
                 if intimate_parts:
