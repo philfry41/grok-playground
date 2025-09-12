@@ -1706,10 +1706,24 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 # Force cleanup before AI call
                 cleanup_resources()
             
+            # Get story-specific temperature
+            story_temperature = 0.7  # Default
+            try:
+                current_story_id = get_current_story_id()
+                if current_story_id:
+                    google_id = session.get('user_id')
+                    if google_id and DATABASE_AVAILABLE and ensure_tables_exist():
+                        story = Story.query.filter_by(user_id=google_id).filter(Story.story_id.ilike(current_story_id)).first()
+                        if story and story.content:
+                            story_temperature = story.content.get('ai_temperature', 0.7)
+                            print(f"🔍 Debug: Using story-specific temperature: {story_temperature}")
+            except Exception as e:
+                print(f"🔍 Debug: Error getting story temperature, using default: {e}")
+            
             reply = chat_with_grok(
                 context_messages,
                 model=model_env,
-                temperature=0.7,
+                temperature=story_temperature,
                 max_tokens=max_tokens_for_call,
                 top_p=0.8,
                 hide_thinking=True,
