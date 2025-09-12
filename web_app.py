@@ -722,10 +722,15 @@ def get_core_story_context(story_id):
         # Build compressed core context
         core_parts = []
         
-        # Characters (compressed)
+        # Characters (compressed) - only include active characters
         if story_data.get('characters'):
             char_summaries = []
             for char_key, char_data in story_data['characters'].items():
+                # Skip inactive characters
+                if char_data.get('active', True) == False:
+                    print(f"🔍 Debug: Skipping inactive character: {char_data.get('name', 'Unknown')}")
+                    continue
+                    
                 name = char_data.get('name', 'Unknown')
                 age = char_data.get('age', 'unknown age')
                 gender = char_data.get('gender', '')
@@ -1319,10 +1324,15 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Build comprehensive system prompt from story data
             system_prompt_parts = []
             
-            # Add character information
+            # Add character information (only active characters)
             if characters:
                 char_info = []
                 for char_key, char_data in characters.items():
+                    # Skip inactive characters
+                    if char_data.get('active', True) == False:
+                        print(f"🔍 Debug: Skipping inactive character in chat: {char_data.get('name', 'Unknown')}")
+                        continue
+                        
                     char_name = char_data.get('name', 'Unknown')
                     char_age = char_data.get('age', 'unknown age')
                     char_occupation = char_data.get('occupation', '')

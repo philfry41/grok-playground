@@ -258,6 +258,51 @@
             transform: translateY(-2px);
         }
         
+        /* Checkbox styling */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 0;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            display: none;
+        }
+        
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            background-color: #fff;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox-label input[type="checkbox"]:checked + .checkmark {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+            content: "✓";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .checkbox-label:hover .checkmark {
+            border-color: #007bff;
+        }
+        
         .file-list {
             max-height: 300px;
             overflow-y: auto;
@@ -676,6 +721,14 @@
                     <button type="button" class="remove-character" onclick="removeCharacter(this)">🗑️</button>
                 </div>
                 
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="char-active" checked>
+                        <span class="checkmark"></span>
+                        Include this character in the story
+                    </label>
+                </div>
+                
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Name</label>
@@ -816,6 +869,7 @@
                 const ageInput = characterSection.querySelector('.char-age');
                 const genderSelect = characterSection.querySelector('.char-gender');
                 const occupationInput = characterSection.querySelector('.char-occupation');
+                const activeCheckbox = characterSection.querySelector('.char-active');
                 const heightInput = characterSection.querySelector('.char-height');
                 const buildInput = characterSection.querySelector('.char-build');
                 const hairInput = characterSection.querySelector('.char-hair');
@@ -851,6 +905,7 @@
                 if (ageInput) ageInput.value = typeof characterData.age === 'number' ? characterData.age : '';
                 if (genderSelect) genderSelect.value = characterData.gender || 'female';
                 if (occupationInput) occupationInput.value = characterData.occupation || '';
+                if (activeCheckbox) activeCheckbox.checked = characterData.active !== false; // Default to true if not specified
                 
                 // Set physical description
                 if (heightInput) heightInput.value = characterData.physical?.height || '';
@@ -983,6 +1038,7 @@
                         age: parseInt(section.querySelector('.char-age').value) || null,
                         gender: section.querySelector('.char-gender').value,
                         occupation: section.querySelector('.char-occupation').value,
+                        active: section.querySelector('.char-active').checked,
                         
                         physical: {
                             height: section.querySelector('.char-height').value,
