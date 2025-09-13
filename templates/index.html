@@ -574,6 +574,7 @@
                             <button class="btn btn-info" onclick="showSceneSelector()">🔄 Load Scene</button>
                             <button class="btn btn-success" onclick="saveCurrentScene()">💾 Save Scene</button>
                             <button class="btn btn-warning" onclick="clearScene()">🧹 Clear Scene</button>
+                            <button class="btn btn-secondary" onclick="openDebugPayload()">🔍 Debug AI Payload</button>
                         </div>
                     </div>
                 </div>
@@ -1495,6 +1496,12 @@
                 console.error('❌ Error clearing scene:', error);
                 addMessage('❌ Error clearing scene. Please try again.', 'system');
             }
+        }
+
+        function openDebugPayload() {
+            // Open debug payload page in a new window
+            const debugUrl = '/debug-payload';
+            window.open(debugUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
         }
 
         async function updateVoiceDropdown(data) {

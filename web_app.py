@@ -200,6 +200,30 @@ else:
 active_requests = {}  # Track active requests to prevent duplicates
 tts_generation_tracker = {}  # Track TTS generations to prevent duplicates
 
+# Debug payload storage
+last_ai_payloads = {}  # Store last AI payloads for debugging
+
+def store_ai_payload(exchange_type, payload, response=None):
+    """Store AI payload for debugging"""
+    try:
+        google_id = session.get('user_id')
+        if not google_id:
+            return
+        
+        if google_id not in last_ai_payloads:
+            last_ai_payloads[google_id] = {}
+        
+        last_ai_payloads[google_id][exchange_type] = {
+            'payload': payload,
+            'response': response,
+            'timestamp': datetime.utcnow().isoformat(),
+            'payload_size': len(str(payload))
+        }
+        
+        print(f"🔍 Debug: Stored {exchange_type} payload for user {google_id}")
+    except Exception as e:
+        print(f"🔍 Debug: Error storing AI payload: {e}")
+
 # Resource cleanup functions
 def cleanup_resources():
     """Clean up resources to prevent memory leaks"""
@@ -580,14 +604,20 @@ RULES:
 - Return ONLY the JSON array, no other text
 """
         
+        # Prepare payload for story points extraction
+        story_points_payload = [{"role": "user", "content": extraction_prompt}]
+        
         # Call AI to extract story points
         response = chat_with_grok(
-            [{"role": "user", "content": extraction_prompt}],
+            story_points_payload,
             model="grok-3",
             temperature=0.1,  # Low temperature for consistent extraction
             max_tokens=300,
             hide_thinking=True
         )
+        
+        # Store payload for debugging
+        store_ai_payload('story_points', story_points_payload, response)
         
         # Clean and parse the response
         response = response.strip()
@@ -932,6 +962,12 @@ def index():
     if not session.get('logged_in'):
         return render_template('login_required.html')
     return render_template('index.html')
+
+@app.route('/debug-payload')
+@require_auth
+def debug_payload_page():
+    """Debug payload page"""
+    return render_template('debug_payload.html')
 
 @app.route('/api/oauth-test')
 def oauth_test():
@@ -1794,6 +1830,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error getting story temperature, using default: {e}")
             
+            # Store payload for debugging
+            store_ai_payload('story_generation', context_messages)
+            
             reply = chat_with_grok(
                 context_messages,
                 model=model_env,
@@ -1802,6 +1841,14 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 top_p=0.8,
                 hide_thinking=True,
             )
+            
+            # Update the stored payload with the response
+            try:
+                google_id = session.get('user_id')
+                if google_id and google_id in last_ai_payloads and 'story_generation' in last_ai_payloads[google_id]:
+                    last_ai_payloads[google_id]['story_generation']['response'] = reply
+            except:
+                pass
             
             print(f"🔍 Debug: AI response received, length: {len(reply)}")
             print(f"🔍 Debug: AI response starts with: {reply[:200]}...")
@@ -2629,6 +2676,26 @@ def save_story_scene(story_id):
     except Exception as e:
         print(f"🔍 Debug: Error saving scene: {e}")
         return jsonify({'error': f'Could not save scene: {e}'}), 500
+
+@app.route('/api/debug-payload', methods=['GET'])
+@require_auth
+def get_debug_payload():
+    """Get the last AI payloads for debugging"""
+    try:
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        user_payloads = last_ai_payloads.get(google_id, {})
+        
+        return jsonify({
+            'success': True,
+            'payloads': user_payloads
+        })
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error getting debug payload: {e}")
+        return jsonify({'error': f'Could not get debug payload: {e}'}), 500
 
 @app.route('/api/server-logs', methods=['GET'])
 def get_server_logs():

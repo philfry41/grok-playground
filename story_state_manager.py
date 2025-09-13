@@ -75,14 +75,24 @@ RULES:
 - Return ONLY the JSON object, no other text
 """
             
+            # Prepare payload for state extraction
+            extraction_payload = [{"role": "user", "content": extraction_prompt}]
+            
             # Call AI to extract state
             response = chat_with_grok(
-                [{"role": "user", "content": extraction_prompt}],
+                extraction_payload,
                 model="grok-3",
                 temperature=0.1,  # Low temperature for consistent extraction
                 max_tokens=500,
                 hide_thinking=True
             )
+            
+            # Store payload for debugging
+            try:
+                from web_app import store_ai_payload
+                store_ai_payload('state_extraction', extraction_payload, response)
+            except:
+                pass  # Ignore if web_app not available
             
             # Clean and parse the response
             response = response.strip()

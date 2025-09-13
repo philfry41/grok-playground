@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug AI Payload</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .exchange-section {
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .exchange-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .exchange-header:hover {
+            background: #e9ecef;
+        }
+        
+        .exchange-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .exchange-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .exchange-content {
+            padding: 20px;
+            background: white;
+            display: none;
+        }
+        
+        .exchange-content.expanded {
+            display: block;
+        }
+        
+        .payload-section {
+            margin-bottom: 20px;
+        }
+        
+        .payload-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        
+        .payload-content {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .response-section {
+            margin-top: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .copy-btn {
+            float: right;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Debug AI Payload</h1>
+            <p>View the raw AI exchanges from your last conversation</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="refreshData()">🔄 Refresh</button>
+            <button class="btn btn-secondary" onclick="window.close()">❌ Close</button>
+        </div>
+        
+        <div class="content" id="content">
+            <div class="no-data">Loading debug data...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadDebugData() {
+            try {
+                const response = await fetch('/api/debug-payload');
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="error">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (!data.payloads || Object.keys(data.payloads).length === 0) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="no-data">
+                            No AI payloads found. Make sure you've had at least one conversation with the AI.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                renderPayloads(data.payloads);
+                
+            } catch (error) {
+                console.error('Error loading debug data:', error);
+                document.getElementById('content').innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> Failed to load debug data. Please try again.
+                    </div>
+                `;
+            }
+        }
+        
+        function renderPayloads(payloads) {
+            const content = document.getElementById('content');
+            let html = '';
+            
+            // Define exchange types in order
+            const exchangeTypes = [
+                { key: 'state_extraction', title: 'State Extraction', description: 'AI extracting scene state from messages' },
+                { key: 'story_points', title: 'Story Points Extraction', description: 'AI extracting key story points and memories' },
+                { key: 'story_generation', title: 'Story Generation', description: 'Main story generation call' }
+            ];
+            
+            exchangeTypes.forEach(exchangeType => {
+                const payload = payloads[exchangeType.key];
+                if (!payload) return;
+                
+                html += `
+                    <div class="exchange-section">
+                        <div class="exchange-header" onclick="toggleExchange('${exchangeType.key}')">
+                            <div>
+                                <div class="exchange-title">${exchangeType.title}</div>
+                                <div class="exchange-meta">${exchangeType.description}</div>
+                            </div>
+                            <div class="exchange-meta">
+                                ${payload.payload_size} chars | ${new Date(payload.timestamp).toLocaleString()}
+                            </div>
+                        </div>
+                        <div class="exchange-content" id="${exchangeType.key}-content">
+                            <div class="payload-section">
+                                <div class="payload-label">
+                                    AI Payload (Input)
+                                    <button class="btn btn-secondary copy-btn" onclick="copyToClipboard('${exchangeType.key}-payload')">📋 Copy</button>
+                                </div>
+                                <div class="payload-content" id="${exchangeType.key}-payload">${JSON.stringify(payload.payload, null, 2)}</div>
+                            </div>
+                            ${payload.response ? `
+                                <div class="response-section">
+                                    <div class="payload-label">
+                                        AI Response (Output)
+                                        <button class="btn btn-secondary copy-btn" onclick="copyToClipboard('${exchangeType.key}-response')">📋 Copy</button>
+                                    </div>
+                                    <div class="payload-content" id="${exchangeType.key}-response">${payload.response}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (html === '') {
+                html = '<div class="no-data">No AI payloads found.</div>';
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        function toggleExchange(exchangeId) {
+            const content = document.getElementById(exchangeId + '-content');
+            content.classList.toggle('expanded');
+        }
+        
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief success feedback
+                const btn = element.previousElementSibling;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+        
+        function refreshData() {
+            document.getElementById('content').innerHTML = '<div class="no-data">Loading debug data...</div>';
+            loadDebugData();
+        }
+        
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadDebugData);
+    </script>
+</body>
+</html>
