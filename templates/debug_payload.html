@@ -147,6 +147,17 @@
             margin-top: 20px;
         }
         
+        .parsed-section {
+            margin-top: 20px;
+            border-top: 2px solid #28a745;
+            padding-top: 15px;
+        }
+        
+        .parsed-section .payload-label {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
         .no-data {
             text-align: center;
             padding: 40px;
@@ -265,6 +276,24 @@
                                     <div class="payload-content" id="${exchangeType.key}-response">${payload.response}</div>
                                 </div>
                             ` : ''}
+                            ${exchangeType.key === 'state_extraction' && payload.response ? `
+                                <div class="parsed-section">
+                                    <div class="payload-label">
+                                        Parsed State (What the system extracted)
+                                        <button class="btn btn-secondary copy-btn" onclick="copyToClipboard('${exchangeType.key}-parsed')">📋 Copy</button>
+                                    </div>
+                                    <div class="payload-content" id="${exchangeType.key}-parsed">${formatStateExtraction(payload.response)}</div>
+                                </div>
+                            ` : ''}
+                            ${exchangeType.key === 'story_points' && payload.response ? `
+                                <div class="parsed-section">
+                                    <div class="payload-label">
+                                        Parsed Story Points (What the system extracted)
+                                        <button class="btn btn-secondary copy-btn" onclick="copyToClipboard('${exchangeType.key}-parsed')">📋 Copy</button>
+                                    </div>
+                                    <div class="payload-content" id="${exchangeType.key}-parsed">${formatStoryPoints(payload.response)}</div>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -302,6 +331,106 @@
         function refreshData() {
             document.getElementById('content').innerHTML = '<div class="no-data">Loading debug data...</div>';
             loadDebugData();
+        }
+        
+        function formatStateExtraction(response) {
+            try {
+                // Clean the response (remove markdown formatting)
+                let cleanResponse = response.trim();
+                if (cleanResponse.startsWith("```json")) {
+                    cleanResponse = cleanResponse.substring(7);
+                }
+                if (cleanResponse.endsWith("```")) {
+                    cleanResponse = cleanResponse.substring(0, cleanResponse.length - 3);
+                }
+                
+                // Try to parse as JSON
+                const stateData = JSON.parse(cleanResponse);
+                
+                // Format the state data nicely
+                let formatted = "EXTRACTED SCENE STATE:\n\n";
+                
+                if (stateData.characters) {
+                    formatted += "CHARACTERS:\n";
+                    for (const [charName, charData] of Object.entries(stateData.characters)) {
+                        formatted += `\n${charName}:\n`;
+                        for (const [key, value] of Object.entries(charData)) {
+                            if (Array.isArray(value)) {
+                                formatted += `  ${key}: [${value.join(', ')}]\n`;
+                            } else {
+                                formatted += `  ${key}: ${value}\n`;
+                            }
+                        }
+                    }
+                    formatted += "\n";
+                }
+                
+                if (stateData.location) {
+                    formatted += `LOCATION: ${stateData.location}\n`;
+                }
+                if (stateData.positions) {
+                    formatted += `POSITIONS: ${stateData.positions}\n`;
+                }
+                if (stateData.physical_contact) {
+                    formatted += `PHYSICAL CONTACT: ${stateData.physical_contact}\n`;
+                }
+                if (stateData.mood_atmosphere) {
+                    formatted += `MOOD/ATMOSPHERE: ${stateData.mood_atmosphere}\n`;
+                }
+                if (stateData.key_objects && stateData.key_objects.length > 0) {
+                    formatted += `KEY OBJECTS: [${stateData.key_objects.join(', ')}]\n`;
+                }
+                if (stateData.story_progress && stateData.story_progress.length > 0) {
+                    formatted += `STORY PROGRESS: [${stateData.story_progress.join(', ')}]\n`;
+                }
+                if (stateData.arousal_levels) {
+                    formatted += `AROUSAL LEVELS:\n`;
+                    for (const [charName, level] of Object.entries(stateData.arousal_levels)) {
+                        formatted += `  ${charName}: ${level}\n`;
+                    }
+                }
+                if (stateData.clothing_removed && stateData.clothing_removed.length > 0) {
+                    formatted += `CLOTHING REMOVED: [${stateData.clothing_removed.join(', ')}]\n`;
+                }
+                if (stateData.body_positions) {
+                    formatted += `BODY POSITIONS:\n`;
+                    for (const [charName, position] of Object.entries(stateData.body_positions)) {
+                        formatted += `  ${charName}: ${position}\n`;
+                    }
+                }
+                
+                return formatted;
+            } catch (error) {
+                return `Error parsing state extraction: ${error.message}\n\nRaw response:\n${response}`;
+            }
+        }
+        
+        function formatStoryPoints(response) {
+            try {
+                // Clean the response (remove markdown formatting)
+                let cleanResponse = response.trim();
+                if (cleanResponse.startsWith("```json")) {
+                    cleanResponse = cleanResponse.substring(7);
+                }
+                if (cleanResponse.endsWith("```")) {
+                    cleanResponse = cleanResponse.substring(0, cleanResponse.length - 3);
+                }
+                
+                // Try to parse as JSON array
+                const storyPoints = JSON.parse(cleanResponse);
+                
+                if (Array.isArray(storyPoints)) {
+                    let formatted = "EXTRACTED STORY POINTS:\n\n";
+                    storyPoints.forEach((point, index) => {
+                        formatted += `${index + 1}. ${point}\n`;
+                    });
+                    return formatted;
+                } else {
+                    return `Error: Expected array but got ${typeof storyPoints}\n\nRaw response:\n${response}`;
+                }
+            } catch (error) {
+                return `Error parsing story points: ${error.message}\n\nRaw response:\n${response}`;
+            }
         }
         
         // Load data when page loads
