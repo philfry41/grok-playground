@@ -1749,7 +1749,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # 3. Scene state (always included) - "What's happening now"
             try:
                 state_manager = StoryStateManager()
-                current_state = state_manager.get_current_state()
+                
+                # Extract current state from existing history BEFORE generating new response
+                if len(session['history']) > 0:
+                    print(f"🔍 Debug: Extracting state from {len(session['history'])} existing messages")
+                    current_state = state_manager.extract_state_from_messages(session['history'])
+                else:
+                    current_state = state_manager.get_current_state()
                 
                 if current_state.get("characters"):
                     scene_state_prompt = state_manager.get_state_as_prompt()
@@ -1880,22 +1886,19 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             session['history'] = session['history'][-3:]
             session.modified = True
         
-        # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
+        # Update scene state with the new AI response for next iteration
         try:
             state_manager = StoryStateManager()
-            # Add the AI response to history for state extraction
+            # Add the AI response to history for next state extraction
             temp_history = session['history'] + [{"role": "assistant", "content": reply}]
             
-            # Use AI to intelligently extract current state
+            # Extract state including the new response for next time
             updated_state = state_manager.extract_state_from_messages(temp_history)
             
-            print(f"🔍 Debug: AI-powered state extraction completed")
+            print(f"🔍 Debug: Updated state with new AI response for next iteration")
             print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
-            for char_name, char_data in updated_state['characters'].items():
-                print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
         except Exception as e:
-            print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
-            print(f"🔍 Debug: Error type: {type(e)}")
+            print(f"🔍 Debug: State update failed: {e}")
             # Continue without state update if extraction fails
         
         # Clean up session if it gets too large
