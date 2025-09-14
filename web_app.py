@@ -780,11 +780,28 @@ def get_core_story_context(story_id):
                     # Extract key descriptive words instead of full sentences
                     genitals_text = intimate['genitals'].lower()
                     genitals_keywords = []
-                    if 'thick' in genitals_text: genitals_keywords.append('thick')
-                    if '8-inch' in genitals_text or 'large' in genitals_text: genitals_keywords.append('large')
-                    if 'uncut' in genitals_text: genitals_keywords.append('uncut')
-                    if 'veiny' in genitals_text: genitals_keywords.append('veiny')
-                    if 'prominent' in genitals_text: genitals_keywords.append('prominent head')
+                    
+                    # Size descriptors
+                    if any(word in genitals_text for word in ['thick', 'large', 'big', 'massive', 'huge']): 
+                        genitals_keywords.append('large')
+                    if any(word in genitals_text for word in ['long', 'length']): 
+                        genitals_keywords.append('long')
+                    if any(word in genitals_text for word in ['skinny', 'thin', 'slender']): 
+                        genitals_keywords.append('skinny')
+                    
+                    # Specific measurements
+                    if any(word in genitals_text for word in ['7"', '8"', '9"', '10"', '7-inch', '8-inch', '9-inch', '10-inch']): 
+                        genitals_keywords.append('measured')
+                    
+                    # Physical characteristics
+                    if any(word in genitals_text for word in ['uncut', 'cut', 'circumcised']): 
+                        genitals_keywords.append('uncut' if 'uncut' in genitals_text else 'cut')
+                    if any(word in genitals_text for word in ['veiny', 'veins', 'veined']): 
+                        genitals_keywords.append('veiny')
+                    if any(word in genitals_text for word in ['curved', 'bent', 'curving']): 
+                        genitals_keywords.append('curved')
+                    if any(word in genitals_text for word in ['prominent', 'large head', 'big head']): 
+                        genitals_keywords.append('prominent head')
                     
                     # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if genitals_keywords:
@@ -802,9 +819,20 @@ def get_core_story_context(story_id):
                 if intimate.get('breasts'):
                     breasts_text = intimate['breasts'].lower()
                     breasts_keywords = []
-                    if 'c-cup' in breasts_text or 'full' in breasts_text: breasts_keywords.append('full')
-                    if 'small' in breasts_text and 'nipples' in breasts_text: breasts_keywords.append('small nipples')
-                    if 'dark' in breasts_text: breasts_keywords.append('dark nipples')
+                    
+                    # Size descriptors
+                    if any(word in breasts_text for word in ['c-cup', 'd-cup', 'full', 'large', 'big']): 
+                        breasts_keywords.append('full')
+                    if any(word in breasts_text for word in ['a-cup', 'b-cup', 'small', 'petite']): 
+                        breasts_keywords.append('small')
+                    
+                    # Nipple characteristics
+                    if any(word in breasts_text for word in ['small nipples', 'tiny nipples']): 
+                        breasts_keywords.append('small nipples')
+                    if any(word in breasts_text for word in ['dark nipples', 'dark', 'brown nipples']): 
+                        breasts_keywords.append('dark nipples')
+                    if any(word in breasts_text for word in ['pink nipples', 'pink']): 
+                        breasts_keywords.append('pink nipples')
                     
                     # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if breasts_keywords:
@@ -822,9 +850,16 @@ def get_core_story_context(story_id):
                 if intimate.get('ass'):
                     ass_text = intimate['ass'].lower()
                     ass_keywords = []
-                    if 'firm' in ass_text: ass_keywords.append('firm')
-                    if 'round' in ass_text: ass_keywords.append('round')
-                    if 'tight' in ass_text: ass_keywords.append('tight')
+                    
+                    # Shape descriptors
+                    if any(word in ass_text for word in ['firm', 'tight', 'toned']): 
+                        ass_keywords.append('firm')
+                    if any(word in ass_text for word in ['round', 'curved', 'shapely']): 
+                        ass_keywords.append('round')
+                    if any(word in ass_text for word in ['tight', 'small', 'compact']): 
+                        ass_keywords.append('tight')
+                    if any(word in ass_text for word in ['big', 'large', 'full']): 
+                        ass_keywords.append('large')
                     
                     # Randomly select 0-3 keywords (biased to omit 50% of the time for maximum variation)
                     if ass_keywords:
