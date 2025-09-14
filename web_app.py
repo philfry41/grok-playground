@@ -1750,10 +1750,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             try:
                 state_manager = StoryStateManager()
                 
-                # Extract current state from existing history BEFORE generating new response
-                if len(session['history']) > 0:
-                    print(f"🔍 Debug: Extracting state from {len(session['history'])} existing messages")
-                    current_state = state_manager.extract_state_from_messages(session['history'])
+                # Extract current state from PRIOR conversation (excluding the new user message)
+                # This provides context for generating a response to the new message
+                prior_history = session['history'][:-1] if len(session['history']) > 1 else []
+                if len(prior_history) > 0:
+                    print(f"🔍 Debug: Extracting state from {len(prior_history)} prior messages (excluding new user message)")
+                    current_state = state_manager.extract_state_from_messages(prior_history)
                 else:
                     current_state = state_manager.get_current_state()
                 
@@ -1771,7 +1773,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # 4. Key story points (memory) - "What led to this moment"
             try:
-                key_memories = extract_key_story_points(session['history'])
+                # Extract story points from PRIOR conversation (excluding the new user message)
+                # This provides context for generating a response to the new message
+                prior_history = session['history'][:-1] if len(session['history']) > 1 else []
+                key_memories = extract_key_story_points(prior_history)
                 if key_memories:
                     memories_prompt = "\n".join([f"- {memory}" for memory in key_memories])
                     context_messages.append({
