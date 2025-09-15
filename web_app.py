@@ -1721,7 +1721,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- NEVER have exposed body parts become covered without explicit action\n"
                     "- ALWAYS track and maintain physical state changes accurately\n"
                     "- ALWAYS describe any physical changes as explicit actions when they occur\n"
-                    "- ALWAYS reference current clothing/position state in your descriptions\n"
+                    "- Reference current clothing/position state when it enriches the story\n"
                     "- FOLLOW user instructions for physical changes (removing clothes, changing positions, etc.)\n"
                     "- UPDATE physical state tracking when changes are explicitly described\n\n"
                     "PHYSICAL DESCRIPTION VARIATION:\n"
