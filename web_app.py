@@ -38,6 +38,12 @@ except ImportError as e:
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "grok-playground-secret-key")
 
+# Configure session for better persistence
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
+
 # Database configuration (only if database packages are available)
 if DATABASE_AVAILABLE:
     DATABASE_URL = os.getenv('DATABASE_URL')
@@ -1557,6 +1563,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         # Create a simple continuation prompt
         user_input = f"Continue the story naturally. Write about {target} words."
         session['max_tokens'] = max_tokens
+    
+    # Make session permanent to ensure persistence
+    session.permanent = True
     
     # Robust session management to prevent cookie overflow
     if 'history' not in session:
