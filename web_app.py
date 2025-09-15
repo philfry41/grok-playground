@@ -2242,9 +2242,17 @@ def debug_story_content(story_id):
             
             debug_data['characters'][char_key] = {
                 'name': char_data.get('name', 'Unknown'),
+                'age': char_data.get('age', 'Unknown'),
+                'gender': char_data.get('gender', 'Unknown'),
+                'active': char_data.get('active', True),
                 'memory': memory_data[:200] + '...' if len(memory_data) > 200 else memory_data,
                 'key_memories': key_memories,
-                'all_memories': all_memories
+                'all_memories': all_memories,
+                'physical': char_data.get('physical', {}),
+                'intimate': char_data.get('intimate', {}),
+                'personality': char_data.get('personality', {}),
+                'role': char_data.get('role', ''),
+                'sexual_growth_arc': char_data.get('sexual_growth_arc', '')
             }
         
         return jsonify(debug_data)
