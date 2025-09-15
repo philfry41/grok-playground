@@ -1558,10 +1558,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
     
     print(f"🔍 Debug: Before adding user input - session history has {len(session['history'])} messages")
     
-    # Keep only last 2 messages to prevent cookie overflow
-    if len(session['history']) > 2:
-        print(f"🔍 Debug: Truncating history from {len(session['history'])} to 2 messages to prevent cookie overflow")
-        session['history'] = session['history'][-2:]
+    # Keep only last 10 messages to prevent cookie overflow
+    if len(session['history']) > 10:
+        print(f"🔍 Debug: Truncating history from {len(session['history'])} to 10 messages to prevent cookie overflow")
+        session['history'] = session['history'][-10:]
         # Force session cleanup
         session.modified = True
     
@@ -1579,11 +1579,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: Starting AI call with {len(session['history'])} messages")
         
                             # Limit history length for memory management
-        if len(session['history']) > 8:  # Reduced for Render stability
-            print(f"🔍 Debug: Truncating history from {len(session['history'])} to 8 messages")
-            # Keep system messages and last 6 messages
+        if len(session['history']) > 12:  # Increased for paid tier
+            print(f"🔍 Debug: Truncating history from {len(session['history'])} to 12 messages")
+            # Keep system messages and last 12 messages
             system_messages = [m for m in session['history'] if m['role'] == 'system']
-            recent_messages = session['history'][-6:]
+            recent_messages = session['history'][-12:]
             session['history'] = system_messages + recent_messages
             print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
             
@@ -1784,9 +1784,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: Finished updating active scene")
         
         # Clean up session to prevent cookie overflow
-        if len(session['history']) > 3:
+        if len(session['history']) > 12:
             print(f"🔍 Debug: Cleaning up session history to prevent cookie overflow")
-            session['history'] = session['history'][-3:]
+            session['history'] = session['history'][-12:]
             session.modified = True
         
         # Update scene state with the new AI response for next iteration
@@ -1807,9 +1807,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         # Clean up session if it gets too large
         if len(session['history']) > 12:  # Increased for paid tier
             print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
-            # Keep system messages and last 6 messages
+            # Keep system messages and last 12 messages
             system_messages = [m for m in session['history'] if m['role'] == 'system']
-            recent_messages = session['history'][-6:]
+            recent_messages = session['history'][-12:]
             session['history'] = system_messages + recent_messages
             print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
         
