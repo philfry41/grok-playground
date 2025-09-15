@@ -1014,9 +1014,16 @@ if OAUTH_AVAILABLE:
 @app.route('/api/chat', methods=['POST'])
 @require_auth
 def chat():
+    print(f"🔍 Debug: === NEW REQUEST START ===")
     print(f"🔍 Debug: /api/chat endpoint called")
     print(f"🔍 Debug: Session ID: {session.get('_id', 'No session ID')}")
     print(f"🔍 Debug: Session keys: {list(session.keys())}")
+    if 'history' in session:
+        print(f"🔍 Debug: Session history exists with {len(session['history'])} messages")
+        for i, msg in enumerate(session['history']):
+            print(f"🔍 Debug: Session history {i}: {msg['role']} - {msg['content'][:50]}...")
+    else:
+        print(f"🔍 Debug: No session history found")
     
     # Check memory usage
     try:
@@ -1555,6 +1562,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
     if 'history' not in session:
         session['history'] = []
         print(f"🔍 Debug: Created new session history")
+    else:
+        print(f"🔍 Debug: Session history exists with {len(session['history'])} messages")
+        for i, msg in enumerate(session['history']):
+            print(f"🔍 Debug: Existing history {i}: {msg['role']} - {msg['content'][:50]}...")
     
     print(f"🔍 Debug: Before adding user input - session history has {len(session['history'])} messages")
     
@@ -1775,6 +1786,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         
         # Add response to history with overflow protection
         session['history'].append({"role": "assistant", "content": reply})
+        print(f"🔍 Debug: Added AI response to session history - now has {len(session['history'])} messages")
+        for i, msg in enumerate(session['history']):
+            print(f"🔍 Debug: Final history {i}: {msg['role']} - {msg['content'][:50]}...")
         
         # Update active scene with new conversation
         current_story_id = get_current_story_id()
@@ -1817,6 +1831,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         print(f"🔍 Debug: TTS enabled: {tts.enabled}")
         print(f"🔍 Debug: Reply length: {len(reply)}")
         print(f"🔍 Debug: TTS will be generated on-demand when user clicks 'Play TTS' button")
+        
+        # Debug session state at end of request
+        print(f"🔍 Debug: === REQUEST END ===")
+        print(f"🔍 Debug: Final session history has {len(session['history'])} messages")
+        for i, msg in enumerate(session['history']):
+            print(f"🔍 Debug: Final session history {i}: {msg['role']} - {msg['content'][:50]}...")
+        print(f"🔍 Debug: Session modified: {session.modified}")
         
         # Clean up before sending response
         cleanup_resources()
