@@ -1691,9 +1691,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # 4. Key story points (memory) - "What led to this moment"
             try:
-                # Extract story points from FULL conversation (including the new user message)
-                # This captures important story developments from the user's latest input
-                key_memories = extract_key_story_points(session['history'])
+                # Extract story points from PRIOR conversation (excluding the new user message)
+                # This provides context for generating a response to the new message
+                prior_history = session['history'][:-1] if len(session['history']) > 1 else []
+                key_memories = extract_key_story_points(prior_history)
                 if key_memories:
                     memories_prompt = "\n".join([f"- {memory}" for memory in key_memories])
                     context_messages.append({
