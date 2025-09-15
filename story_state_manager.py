@@ -224,9 +224,9 @@ RULES:
             clothing_info = f"- Clothing removed: {', '.join(self.current_state['clothing_removed'])}\n"
         
         state_prompt = f"""
-CRITICAL: MAINTAIN EXACT PHYSICAL CONTINUITY - NO MAGICAL CHANGES ALLOWED
+CRITICAL: MAINTAIN ACCURATE PHYSICAL CONTINUITY - TRACK CHANGES PROPERLY
 
-CURRENT SCENE STATE (MUST BE PRESERVED EXACTLY):
+CURRENT SCENE STATE (TRACK CHANGES ACCURATELY):
 {chr(10).join(character_list)}
 - Location: {self.current_state['location']}
 - Positions: {self.current_state['positions']}
@@ -242,6 +242,7 @@ MANDATORY CONTINUITY RULES:
 4. PHYSICAL STATE: Current physical conditions (sweating, trembling, etc.) continue unless explicitly changed
 5. OBJECTS: Items remain where they are unless explicitly moved
 6. NO MAGICAL RESETS: Do not have clothes magically reappear, positions reset, or body parts become covered without explicit action
+7. FOLLOW USER INSTRUCTIONS: When user explicitly requests physical changes (removing clothes, changing positions), follow those instructions and update state tracking accordingly
 
 VIOLATION EXAMPLES TO AVOID:
 - Character's shirt is off → next response has them "unbuttoning their shirt" (WRONG)
@@ -249,7 +250,7 @@ VIOLATION EXAMPLES TO AVOID:
 - Character is sitting → next response has them "standing up" without mentioning the movement (WRONG)
 - Character's pants are around ankles → next response has them "pulling down their pants" (WRONG)
 
-Continue the story while STRICTLY maintaining this exact physical state. Any changes must be explicitly described as actions.
+Continue the story while maintaining accurate physical state tracking. Follow user instructions for changes and describe all physical changes as explicit actions.
 """
         return state_prompt
     
