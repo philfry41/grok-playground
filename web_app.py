@@ -208,6 +208,7 @@ tts_generation_tracker = {}  # Track TTS generations to prevent duplicates
 
 # Debug payload storage
 last_ai_payloads = {}  # Store last AI payloads for debugging
+story_points_cache = {}  # Store story points for incremental updates
 
 def store_ai_payload(exchange_type, payload, response=None):
     """Store AI payload for debugging"""
@@ -215,20 +216,29 @@ def store_ai_payload(exchange_type, payload, response=None):
         google_id = session.get('user_id')
         if not google_id:
             return
-        
+
         if google_id not in last_ai_payloads:
             last_ai_payloads[google_id] = {}
-        
+
         last_ai_payloads[google_id][exchange_type] = {
             'payload': payload,
             'response': response,
             'timestamp': datetime.utcnow().isoformat(),
             'payload_size': len(str(payload))
         }
-        
+
         print(f"🔍 Debug: Stored {exchange_type} payload for user {google_id}")
     except Exception as e:
         print(f"🔍 Debug: Error storing AI payload: {e}")
+
+def get_story_points(google_id):
+    """Get existing story points for incremental updates"""
+    return story_points_cache.get(google_id, [])
+
+def update_story_points(google_id, new_story_points):
+    """Update story points cache with new points"""
+    story_points_cache[google_id] = new_story_points
+    print(f"🔍 Debug: Updated story points cache for user {google_id} with {len(new_story_points)} points")
 
 # Resource cleanup functions
 def cleanup_resources():
@@ -659,6 +669,81 @@ RULES:
     except Exception as e:
         print(f"🔍 Debug: Error extracting key story points: {e}")
         return extract_key_story_points_fallback(history)
+
+def extract_key_story_points_incremental(existing_story_points, immediate_history):
+    """Extract story points incrementally using existing points + immediate history"""
+    try:
+        if not immediate_history:
+            return existing_story_points
+        
+        # Build context from existing story points and immediate history
+        existing_context = "\n".join([f"- {point}" for point in existing_story_points]) if existing_story_points else "None"
+        immediate_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in immediate_history])
+        
+        extraction_prompt = f"""
+You are a story analyst for erotic fiction. Update the existing story points with new developments from the immediate conversation.
+
+EXISTING STORY POINTS:
+{existing_context}
+
+IMMEDIATE CONVERSATION (last exchange):
+{immediate_context}
+
+EXTRACT AND RETURN THIS JSON STRUCTURE:
+[
+    "Physical milestone: [specific physical event/action]",
+    "Emotional development: [character emotional change/growth]",
+    "Relationship dynamic: [how characters relate to each other]",
+    "Sexual progression: [level of sexual activity/intimacy]",
+    "Character growth: [how character has changed/developed]",
+    "Location/setting: [where the story is taking place]",
+    "Key moment: [important plot point or turning point]"
+]
+
+RULES:
+- Build on existing story points, don't repeat them
+- Add NEW developments from the immediate conversation
+- Update existing points if they've evolved
+- Be specific about what happened (e.g., "First sexual encounter with stranger", "Stephanie's confidence growing")
+- Include relationship dynamics and character growth
+- Focus on the most important developments that affect story continuity
+- Limit to 5-7 most significant points total
+- Use clear, concise descriptions
+- Return ONLY the JSON array, no other text
+"""
+        
+        # Prepare payload for story points extraction
+        story_points_payload = [{"role": "user", "content": extraction_prompt}]
+        
+        # Call AI to extract story points
+        response = chat_with_grok(
+            story_points_payload,
+            model="grok-3",
+            temperature=0.1,  # Low temperature for consistent extraction
+            max_tokens=300,
+            hide_thinking=True
+        )
+        
+        # Store payload for debugging
+        store_ai_payload('story_points', story_points_payload, response)
+        
+        # Parse the JSON response
+        try:
+            import json
+            story_points = json.loads(response.strip())
+            if isinstance(story_points, list):
+                print(f"🔍 Debug: Extracted {len(story_points)} incremental story points")
+                return story_points
+            else:
+                print(f"🔍 Debug: Invalid story points format: {type(story_points)}")
+                return existing_story_points
+        except json.JSONDecodeError as e:
+            print(f"🔍 Debug: JSON decode error in story points: {e}")
+            return existing_story_points
+            
+    except Exception as e:
+        print(f"🔍 Debug: Error in incremental story points extraction: {e}")
+        return existing_story_points
 
 def extract_key_story_points_fallback(history):
     """Fallback method using simple keyword matching"""
@@ -1691,11 +1776,22 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # 4. Key story points (memory) - "What led to this moment"
             try:
-                # Extract story points from PRIOR conversation (excluding the new user message)
-                # This provides context for generating a response to the new message
-                prior_history = session['history'][:-1] if len(session['history']) > 1 else []
-                key_memories = extract_key_story_points(prior_history)
+                # Get existing story points and immediate prior history for incremental updates
+                google_id = session.get('user_id')
+                existing_story_points = get_story_points(google_id) if google_id else []
+                
+                # Get immediate prior history (last exchange: user message + AI response)
+                if len(session['history']) >= 2:
+                    immediate_history = session['history'][-2:]  # Last 2 messages (user + AI)
+                else:
+                    immediate_history = session['history']
+                
+                key_memories = extract_key_story_points_incremental(existing_story_points, immediate_history)
                 if key_memories:
+                    # Update the story points cache with new points
+                    if google_id:
+                        update_story_points(google_id, key_memories)
+                    
                     memories_prompt = "\n".join([f"- {memory}" for memory in key_memories])
                     context_messages.append({
                         "role": "system", 
