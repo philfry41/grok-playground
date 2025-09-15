@@ -1694,7 +1694,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: Message {i}: {msg['role']} - {msg['content'][:100]}...")
                 
                 # Use full history for better story continuity
-                recent_history = session['history'][-10:]  # Use last 10 messages for all commands
+                recent_history = session['history'][-3:]  # Use last 3 messages for all commands
                 print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
                 
