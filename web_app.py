@@ -1697,6 +1697,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 recent_history = session['history'][-3:]  # Use last 3 messages for all commands
                 print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
+                
+                # Store payload for debugging (after history is added)
+                store_ai_payload('story_generation', context_messages)
             
             # 6. Current user input (already included in recent_history above)
             # No need to add again - it's already in session['history'] and recent_history
@@ -1738,9 +1741,6 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                             print(f"🔍 Debug: Using story-specific temperature: {story_temperature}")
             except Exception as e:
                 print(f"🔍 Debug: Error getting story temperature, using default: {e}")
-            
-            # Store payload for debugging
-            store_ai_payload('story_generation', context_messages)
             
             reply = chat_with_grok(
                 context_messages,
