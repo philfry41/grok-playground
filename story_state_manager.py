@@ -83,7 +83,7 @@ RULES:
                 extraction_payload,
                 model="grok-3",
                 temperature=0.1,  # Low temperature for consistent extraction
-                max_tokens=500,
+                max_tokens=800,  # Increased to prevent JSON truncation
                 hide_thinking=True
             )
             
