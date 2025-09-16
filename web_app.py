@@ -1902,7 +1902,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: ---")
             
             # Use more tokens to prevent mid-sentence cutoffs
-            max_tokens_for_call = 800 if command == 'cont' else 500
+            max_tokens_for_call = 800  # Use 800 tokens for all story generation to prevent cutoffs
             
             print(f"🔍 Debug: About to call AI with {len(context_messages)} messages")
             print(f"🔍 Debug: Model: {model_env}")
