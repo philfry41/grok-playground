@@ -143,6 +143,76 @@
             overflow-y: auto;
         }
         
+        .message-container {
+            margin-bottom: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+        
+        .message-header {
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .message-content {
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .message-system {
+            border-color: #6c757d;
+        }
+        
+        .message-system .message-header {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .message-system .message-content {
+            background: #f8f9fa;
+            color: #495057;
+        }
+        
+        .message-user {
+            border-color: #007bff;
+        }
+        
+        .message-user .message-header {
+            background: #007bff;
+            color: white;
+        }
+        
+        .message-user .message-content {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .message-assistant {
+            border-color: #28a745;
+        }
+        
+        .message-assistant .message-header {
+            background: #28a745;
+            color: white;
+        }
+        
+        .message-assistant .message-content {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .message-separator {
+            height: 2px;
+            background: linear-gradient(90deg, #dee2e6, #adb5bd, #dee2e6);
+            margin: 10px 0;
+            border-radius: 1px;
+        }
+        
         .response-section {
             margin-top: 20px;
         }
@@ -221,6 +291,8 @@
                     return;
                 }
                 
+                // Store payloads globally for copy function access
+                window.currentPayloads = data.payloads;
                 renderPayloads(data.payloads);
                 
             } catch (error) {
@@ -265,7 +337,7 @@
                                     AI Payload (Input)
                                     <button class="btn btn-secondary copy-btn" onclick="copyToClipboard('${exchangeType.key}-payload')">📋 Copy</button>
                                 </div>
-                                <div class="payload-content" id="${exchangeType.key}-payload">${JSON.stringify(payload.payload, null, 2)}</div>
+                                <div class="payload-content" id="${exchangeType.key}-payload">${formatPayloadMessages(payload.payload)}</div>
                             </div>
                             ${payload.response ? `
                                 <div class="response-section">
@@ -313,7 +385,22 @@
         
         function copyToClipboard(elementId) {
             const element = document.getElementById(elementId);
-            const text = element.textContent;
+            let text;
+            
+            // For payload elements, get the raw JSON data instead of formatted HTML
+            if (elementId.includes('-payload')) {
+                // Find the original payload data from the exchange
+                const exchangeKey = elementId.replace('-payload', '');
+                const payloads = window.currentPayloads || {};
+                const payload = payloads[exchangeKey];
+                if (payload && payload.payload) {
+                    text = JSON.stringify(payload.payload, null, 2);
+                } else {
+                    text = element.textContent;
+                }
+            } else {
+                text = element.textContent;
+            }
             
             navigator.clipboard.writeText(text).then(() => {
                 // Show brief success feedback
@@ -431,6 +518,39 @@
             } catch (error) {
                 return `Error parsing story points: ${error.message}\n\nRaw response:\n${response}`;
             }
+        }
+        
+        function formatPayloadMessages(payload) {
+            if (!Array.isArray(payload)) {
+                return JSON.stringify(payload, null, 2);
+            }
+            
+            let html = '';
+            payload.forEach((message, index) => {
+                const role = message.role || 'unknown';
+                const content = message.content || '';
+                
+                // Truncate very long content for display
+                const displayContent = content.length > 1000 ? 
+                    content.substring(0, 1000) + '...\n\n[Content truncated - use copy button for full content]' : 
+                    content;
+                
+                html += `
+                    <div class="message-container message-${role}">
+                        <div class="message-header">
+                            Message ${index + 1} - ${role.toUpperCase()}
+                        </div>
+                        <div class="message-content">${displayContent}</div>
+                    </div>
+                `;
+                
+                // Add separator between messages (except for the last one)
+                if (index < payload.length - 1) {
+                    html += '<div class="message-separator"></div>';
+                }
+            });
+            
+            return html;
         }
         
         // Load data when page loads
