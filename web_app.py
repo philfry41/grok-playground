@@ -1906,7 +1906,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             print(f"🔍 Debug: About to call AI with {len(context_messages)} messages")
             print(f"🔍 Debug: Model: {model_env}")
+            print(f"🔍 Debug: Command: {command}")
             print(f"🔍 Debug: Max tokens: {max_tokens_for_call}")
+            print(f"🔍 Debug: Is /cont command? {command == 'cont'}")
             
             # Add timeout handling for /cont commands
             if command == 'cont':
@@ -1928,6 +1930,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error getting story temperature, using default: {e}")
             
+            print(f"🔍 Debug: Calling AI with max_tokens={max_tokens_for_call}")
             ai_response = chat_with_grok(
                 context_messages,
                 model=model_env,
@@ -1938,6 +1941,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 return_usage=True,
                 stop=["\n\n\n", "---", "***", "END OF SCENE"]  # Stop at natural break points
             )
+            print(f"🔍 Debug: AI call completed, response type: {type(ai_response)}")
             
             # Extract response text and usage info
             if isinstance(ai_response, dict):
