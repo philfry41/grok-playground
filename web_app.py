@@ -1700,7 +1700,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
     elif command == 'cont':
         # Handle /cont command with full context for better story quality
         target = max(250, min(1000, word_count))  # Restored original range
-        max_tokens = min(500, target)  # Restored original token limit
+        max_tokens = min(800, target)  # Increased to prevent cutoffs
         
         # Create a simple continuation prompt
         user_input = f"Continue the story naturally. Write about {target} words."
