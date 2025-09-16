@@ -1323,7 +1323,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 model_env = os.getenv('XAI_MODEL', 'grok-3')
                 # AI call for loadopener with proper continuity
                 opener_context = [
-                    {"role": "system", "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development."},
+                    {"role": "system", "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development.\n\nIMPORTANT: Always end your response at a natural stopping point (end of sentence, paragraph, or scene). Never cut off mid-sentence or mid-thought. Complete your thoughts and actions before ending."},
                     {"role": "user", "content": f"Continue this story from where it left off:\n\n{opener}"}
                 ]
                 
@@ -1331,10 +1331,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     opener_context,
                     model=model_env,
                     temperature=0.7,
-                    max_tokens=500,  # Slightly increased for better continuity
+                    max_tokens=800,  # Increased to prevent cutoffs
                     top_p=0.8,
                     hide_thinking=True,
-                    return_usage=True
+                    return_usage=True,
+                    stop=["\n\n\n", "---", "***", "END OF SCENE"]  # Stop at natural break points
                 )
                 
                 # Extract response text and usage info
@@ -1780,6 +1781,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- FOLLOW user instructions for physical changes (removing clothes, changing positions, etc.)\n"
                     "- UPDATE physical state tracking when changes are explicitly described\n"
                     "- Allow natural character movement and interaction - just describe it when it happens\n\n"
+                    "RESPONSE COMPLETION REQUIREMENTS:\n"
+                    "- ALWAYS end your response at a natural stopping point (end of sentence, paragraph, or scene)\n"
+                    "- NEVER cut off mid-sentence or mid-thought\n"
+                    "- Complete your thoughts and actions before ending\n"
+                    "- If approaching token limit, wrap up the current scene or action naturally\n\n"
                     "PHYSICAL DESCRIPTION VARIATION:\n"
                     "- Vary your physical descriptions - don't repeat the same phrases verbatim\n"
                     "- Use synonyms, different angles, and creative language while maintaining accuracy\n"
@@ -1889,8 +1895,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: {msg['content']}")
                 print(f"🔍 Debug: ---")
             
-            # Use full tokens for better story quality
-            max_tokens_for_call = 500 if command == 'cont' else 500
+            # Use more tokens to prevent mid-sentence cutoffs
+            max_tokens_for_call = 800 if command == 'cont' else 500
             
             print(f"🔍 Debug: About to call AI with {len(context_messages)} messages")
             print(f"🔍 Debug: Model: {model_env}")
@@ -1923,7 +1929,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 max_tokens=max_tokens_for_call,
                 top_p=0.8,
                 hide_thinking=True,
-                return_usage=True
+                return_usage=True,
+                stop=["\n\n\n", "---", "***", "END OF SCENE"]  # Stop at natural break points
             )
             
             # Extract response text and usage info
