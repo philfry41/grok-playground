@@ -1201,7 +1201,7 @@ def chat():
         session['history'] = []
         session['allow_female'] = True
         session['allow_male'] = False
-        session['max_tokens'] = 1500  # Increased to prevent response cutoffs
+        session['max_tokens'] = 1200
         # Initialize AI-powered story state manager (not stored in session to avoid JSON serialization issues)
         if 'state_manager' not in session:
             # Create a new state manager but don't store it in session
@@ -1635,7 +1635,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     context_messages,
                     model=model_env,
                     temperature=0.7,
-                    max_tokens=session.get('max_tokens', 1500),
+                    max_tokens=session.get('max_tokens', 1200),
                     return_usage=True
                 )
                 
@@ -1956,60 +1956,6 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 reply = ai_response
                 usage = {}
                 finish_reason = 'unknown'
-            
-            # Check if response was cut off due to token limits
-            incomplete_indicators = [
-                finish_reason == 'length',
-                (reply and not reply.strip().endswith(('.', '!', '?', '"', "'"))),
-                (reply and reply.strip().endswith(('as he', 'as she', 'as they', 'as it', 'as the', 'as a', 'as an'))),
-                (reply and reply.strip().endswith(('he', 'she', 'they', 'it', 'the', 'a', 'an')) and len(reply.split()) > 50)
-            ]
-            
-            if any(incomplete_indicators):
-                print(f"🔍 Debug: Response appears to be cut off - finish_reason: {finish_reason}")
-                print(f"🔍 Debug: Response ends with: '{reply[-50:] if reply else 'None'}'")
-                
-                # Try to complete the response with a follow-up call
-                try:
-                    completion_prompt = f"""
-Complete this story response naturally. The previous response was cut off mid-sentence. Continue from where it left off and bring the scene to a natural conclusion.
-
-PREVIOUS RESPONSE (cut off):
-{reply}
-
-INSTRUCTIONS:
-- Continue the story from where it was cut off
-- Complete the current thought or action naturally
-- End at a natural stopping point (end of sentence, paragraph, or scene)
-- Do not restart the scene or repeat previous content
-- Keep the same tone and style
-- Complete in 2-3 sentences maximum
-
-Return ONLY the completion, no other text.
-"""
-                    
-                    completion_payload = [{"role": "user", "content": completion_prompt}]
-                    
-                    print(f"🔍 Debug: Attempting to complete cut-off response...")
-                    completion_response = chat_with_grok(
-                        completion_payload,
-                        model=model_env,
-                        temperature=story_temperature,
-                        max_tokens=200,  # Small completion
-                        top_p=0.8,
-                        hide_thinking=True
-                    )
-                    
-                    if completion_response and completion_response.strip():
-                        reply = reply + " " + completion_response.strip()
-                        print(f"🔍 Debug: Successfully completed response")
-                        print(f"🔍 Debug: Completion added: '{completion_response[:100]}...'")
-                    else:
-                        print(f"🔍 Debug: Completion failed, using original response")
-                        
-                except Exception as e:
-                    print(f"🔍 Debug: Error completing response: {e}")
-                    # Continue with original response if completion fails
             
             # Update the stored payload with the response and usage info
             try:
