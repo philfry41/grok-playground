@@ -1163,7 +1163,7 @@ def chat():
         print(f"🔍 Debug: Request data: {data}")
         user_input = data.get('message', '').strip()
         command = data.get('command', '')
-        word_count = data.get('word_count', 500)
+        token_count = data.get('word_count', 800)  # Now represents tokens, not words
         
         # Parse commands from user input if they start with /
         if user_input.startswith('/'):
@@ -1173,7 +1173,7 @@ def chat():
                 # Add the rest as additional data
                 data[command] = parts[1]
         
-        print(f"🔍 Debug: user_input='{user_input}', command='{command}', word_count={word_count}")
+        print(f"🔍 Debug: user_input='{user_input}', command='{command}', token_count={token_count}")
         
         # Generate request ID for deduplication
         request_id = generate_request_id(user_input, command)
@@ -1698,12 +1698,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             return jsonify({'error': f"Couldn't load story: {str(e)}"})
     
     elif command == 'cont':
-        # Handle /cont command with full context for better story quality
-        target = max(250, min(1000, word_count))  # Restored original range
-        max_tokens = min(800, target)  # Increased to prevent cutoffs
+        # Handle /cont command with user-specified token count
+        max_tokens = max(200, min(2000, token_count))  # Use token count directly
         
         # Create a simple continuation prompt
-        user_input = f"Continue the story naturally. Write about {target} words."
+        user_input = f"Continue the story naturally."
         session['max_tokens'] = max_tokens
     
     # Make session permanent to ensure persistence
@@ -1901,8 +1900,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: {msg['content']}")
                 print(f"🔍 Debug: ---")
             
-            # Use more tokens to prevent mid-sentence cutoffs
-            max_tokens_for_call = 800  # Use 800 tokens for all story generation to prevent cutoffs
+            # Use user-specified token count for story generation
+            max_tokens_for_call = max(200, min(2000, token_count))  # Use user-specified token count
             
             print(f"🔍 Debug: About to call AI with {len(context_messages)} messages")
             print(f"🔍 Debug: Model: {model_env}")

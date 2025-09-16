@@ -562,8 +562,8 @@
                     <button class="btn btn-success" onclick="sendCommand('payoff')">✅ Payoff Mode</button>
                     
                     <div class="word-count-input">
-                        <label>Words:</label>
-                        <input type="number" id="wordCount" value="500" min="250" max="1500" />
+                        <label>Tokens:</label>
+                        <input type="number" id="wordCount" value="800" min="200" max="2000" />
                         <button class="btn btn-primary" onclick="sendContinuation()">📝 Continue</button>
                     </div>
                     
@@ -995,7 +995,8 @@
                     },
                     body: JSON.stringify({
                         message: message,
-                        command: ''
+                        command: '',
+                        word_count: parseInt(document.getElementById('wordCount').value) || 800
                     })
                 });
                 
@@ -1132,7 +1133,7 @@
         }
 
         async function sendContinuation() {
-            const wordCount = parseInt(document.getElementById('wordCount').value) || 500;
+            const wordCount = parseInt(document.getElementById('wordCount').value) || 800;
             
             showLoading();
             
