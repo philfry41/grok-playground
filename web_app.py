@@ -1790,7 +1790,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- Only reference past events if they directly impact the current scene or character development\n"
                     "- Focus on NEW actions, thoughts, and developments rather than rehashing what's already been described\n"
                     "- Build upon existing context rather than restating it\n"
-                    "- Use fresh, varied language for ongoing actions rather than repeating the same phrases\n\n"
+                    "- Use fresh, varied language for ongoing actions rather than repeating the same phrases\n"
+                    "- NEVER rehash the same scene elements or physical descriptions from recent responses\n"
+                    "- ALWAYS move the story forward with new developments, sensations, or actions\n"
+                    "- Vary your descriptive language - use synonyms and different angles for the same elements\n"
+                    "- Focus on progression and momentum rather than static descriptions\n\n"
                     "PHYSICAL DESCRIPTION VARIATION:\n"
                     "- Vary your physical descriptions - don't repeat the same phrases verbatim\n"
                     "- Use synonyms, different angles, and creative language while maintaining accuracy\n"
@@ -2003,6 +2007,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # Extract state including the new response for next time
             updated_state = state_manager.extract_state_from_messages(temp_history)
+            
+            # Track progression to prevent repetition
+            state_manager.track_progression(reply)
             
             print(f"🔍 Debug: Updated state with new AI response for next iteration")
             print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")

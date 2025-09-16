@@ -16,7 +16,11 @@ class StoryStateManager:
             "story_progress": [],
             "arousal_levels": {},
             "clothing_removed": [],
-            "body_positions": {}
+            "body_positions": {},
+            "last_scene_elements": [],  # Track what was described in the last response
+            "progression_milestones": [],  # Track story progression points
+            "recent_actions": [],  # Track recent actions to avoid repetition
+            "scene_momentum": "building"  # Track scene momentum: building, peak, resolution
         }
     
     def extract_state_from_messages(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
@@ -60,7 +64,11 @@ EXTRACT AND RETURN THIS JSON STRUCTURE:
     "clothing_removed": ["specific items of clothing that have been removed"],
     "body_positions": {{
         "character_name": "detailed body position and what they're doing"
-    }}
+    }},
+    "last_scene_elements": ["specific elements described in the most recent response"],
+    "progression_milestones": ["story progression points that have been reached"],
+    "recent_actions": ["actions that happened in the last 1-2 responses"],
+    "scene_momentum": "current scene momentum (building/peak/resolution)"
 }}
 
 RULES:
@@ -71,6 +79,10 @@ RULES:
 - Be specific about physical contact (e.g., "fingering pussy", "sucking cock", "grinding against thigh")
 - Track arousal levels for each character
 - Note any clothing items that have been removed and where they are
+- Track what was described in the last response to avoid repetition
+- Identify story progression milestones (e.g., "first kiss", "clothing removal", "oral contact", "penetration")
+- Track recent actions to prevent rehashing the same events
+- Assess scene momentum: "building" (tension increasing), "peak" (climactic moment), "resolution" (winding down)
 - Use "unknown" for any state you cannot determine
 - Return ONLY the JSON object, no other text
 """
@@ -173,7 +185,7 @@ RULES:
                 self.current_state[key] = new_state[key]
         
         # Update enhanced fields
-        for key in ["key_objects", "story_progress", "clothing_removed"]:
+        for key in ["key_objects", "story_progress", "clothing_removed", "last_scene_elements", "progression_milestones", "recent_actions", "scene_momentum"]:
             if key in new_state:
                 self.current_state[key] = new_state[key]
         
@@ -234,6 +246,23 @@ RULES:
         if self.current_state.get('clothing_removed'):
             clothing_info = f"- Clothing removed: {', '.join(self.current_state['clothing_removed'])}\n"
         
+        # Build progression tracking info
+        progression_info = ""
+        if self.current_state.get('progression_milestones'):
+            progression_info = f"- Story milestones reached: {', '.join(self.current_state['progression_milestones'])}\n"
+        
+        recent_actions_info = ""
+        if self.current_state.get('recent_actions'):
+            recent_actions_info = f"- Recent actions: {', '.join(self.current_state['recent_actions'])}\n"
+        
+        last_elements_info = ""
+        if self.current_state.get('last_scene_elements'):
+            last_elements_info = f"- Last described elements: {', '.join(self.current_state['last_scene_elements'])}\n"
+        
+        momentum_info = ""
+        if self.current_state.get('scene_momentum'):
+            momentum_info = f"- Scene momentum: {self.current_state['scene_momentum']}\n"
+
         state_prompt = f"""
 CRITICAL: MAINTAIN ACCURATE PHYSICAL CONTINUITY - TRACK CHANGES PROPERLY
 
@@ -243,7 +272,7 @@ CURRENT SCENE STATE (TRACK CHANGES ACCURATELY):
 - Positions: {self.current_state['positions']}
 - Physical contact: {self.current_state['physical_contact']}
 - Mood/Atmosphere: {self.current_state['mood_atmosphere']}
-{arousal_info}{clothing_info}- Key objects: {', '.join(self.current_state['key_objects']) if self.current_state['key_objects'] else 'none'}
+{arousal_info}{clothing_info}{progression_info}{recent_actions_info}{last_elements_info}{momentum_info}- Key objects: {', '.join(self.current_state['key_objects']) if self.current_state['key_objects'] else 'none'}
 - Story progress: {', '.join(self.current_state['story_progress']) if self.current_state['story_progress'] else 'beginning'}
 
 MANDATORY CONTINUITY RULES:
@@ -255,13 +284,23 @@ MANDATORY CONTINUITY RULES:
 6. NO MAGICAL RESETS: Do not have clothes magically reappear, positions reset, or body parts become covered without explicit action
 7. FOLLOW USER INSTRUCTIONS: When user explicitly requests physical changes (removing clothes, changing positions), follow those instructions and update state tracking accordingly
 
+ANTI-REPETITION RULES:
+8. DO NOT rehash elements from "Last described elements" - move the story forward instead
+9. DO NOT repeat actions from "Recent actions" - build upon them or take new directions
+10. PROGRESS THE STORY: Use "Story milestones reached" to build toward new milestones
+11. MAINTAIN MOMENTUM: If momentum is "building", continue building tension; if "peak", maintain intensity; if "resolution", wind down naturally
+12. FRESH DESCRIPTIONS: Vary your language and focus on new aspects of the same elements
+13. FORWARD MOVEMENT: Always advance the scene - new actions, new sensations, new developments
+
 VIOLATION EXAMPLES TO AVOID:
 - Character's shirt is off → next response has them "unbuttoning their shirt" (WRONG)
 - Character is naked → next response mentions "removing their dress" (WRONG)  
 - Character is sitting → next response has them "standing up" without describing how they moved (WRONG - should describe the movement)
 - Character's pants are around ankles → next response has them "pulling down their pants" (WRONG)
+- Repeating the same physical descriptions from "Last described elements" (WRONG - use fresh language)
+- Rehashing actions from "Recent actions" (WRONG - build upon them instead)
 
-Continue the story while maintaining accurate physical state tracking. Follow user instructions for changes and describe all physical changes as explicit actions.
+Continue the story while maintaining accurate physical state tracking and avoiding repetition. Follow user instructions for changes and describe all physical changes as explicit actions. Always move the story forward with fresh developments.
 """
         return state_prompt
     
@@ -279,7 +318,11 @@ Continue the story while maintaining accurate physical state tracking. Follow us
             "story_progress": [],
             "arousal_levels": {},
             "clothing_removed": [],
-            "body_positions": {}
+            "body_positions": {},
+            "last_scene_elements": [],
+            "progression_milestones": [],
+            "recent_actions": [],
+            "scene_momentum": "building"
         }
         self._save_state()
     
@@ -317,3 +360,85 @@ Continue the story while maintaining accurate physical state tracking. Follow us
         if not self.current_state.get("characters"):
             self._load_state()
         return self.current_state
+    
+    def track_progression(self, new_response: str):
+        """
+        Track story progression and update state to prevent repetition
+        """
+        try:
+            # Extract key elements from the new response
+            progression_prompt = f"""
+Analyze this story response and extract progression information. Return ONLY a JSON object.
+
+RESPONSE TO ANALYZE:
+{new_response}
+
+EXTRACT AND RETURN THIS JSON STRUCTURE:
+{{
+    "new_milestones": ["new story progression milestones reached in this response"],
+    "new_actions": ["new actions that happened in this response"],
+    "scene_elements": ["key scene elements described in this response"],
+    "momentum_change": "how the scene momentum changed (building/peak/resolution)"
+}}
+
+RULES:
+- Only include NEW milestones, actions, and elements from this response
+- Do not repeat elements that were already established
+- Focus on progression points: first contact, clothing removal, new positions, new sensations, climax, etc.
+- Track momentum changes: building (tension increasing), peak (climactic), resolution (winding down)
+- Return ONLY the JSON object, no other text
+"""
+            
+            progression_payload = [{"role": "user", "content": progression_prompt}]
+            
+            ai_response = chat_with_grok(
+                progression_payload,
+                model="grok-3",
+                temperature=0.1,
+                max_tokens=400,
+                hide_thinking=True,
+                return_usage=True
+            )
+            
+            if isinstance(ai_response, dict):
+                response = ai_response['text']
+            else:
+                response = ai_response
+            
+            # Clean and parse the response
+            response = response.strip()
+            if response.startswith("```json"):
+                response = response[7:]
+            if response.endswith("```"):
+                response = response[:-3]
+            
+            try:
+                progression_data = json.loads(response)
+                
+                # Update state with new progression data
+                if "new_milestones" in progression_data:
+                    self.current_state["progression_milestones"].extend(progression_data["new_milestones"])
+                    # Keep only last 10 milestones to prevent bloat
+                    self.current_state["progression_milestones"] = self.current_state["progression_milestones"][-10:]
+                
+                if "new_actions" in progression_data:
+                    self.current_state["recent_actions"].extend(progression_data["new_actions"])
+                    # Keep only last 8 actions to prevent bloat
+                    self.current_state["recent_actions"] = self.current_state["recent_actions"][-8:]
+                
+                if "scene_elements" in progression_data:
+                    self.current_state["last_scene_elements"] = progression_data["scene_elements"]
+                
+                if "momentum_change" in progression_data:
+                    self.current_state["scene_momentum"] = progression_data["momentum_change"]
+                
+                # Save updated state
+                self._save_state()
+                
+                print(f"🔍 Debug: Progression tracked - milestones: {len(self.current_state['progression_milestones'])}, actions: {len(self.current_state['recent_actions'])}")
+                
+            except json.JSONDecodeError as e:
+                print(f"🔍 Debug: Failed to parse progression data: {e}")
+                
+        except Exception as e:
+            print(f"🔍 Debug: Progression tracking failed: {e}")
