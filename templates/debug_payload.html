@@ -269,6 +269,7 @@
         
         <div class="controls">
             <button class="btn btn-primary" onclick="refreshData()">🔄 Refresh</button>
+            <button class="btn btn-primary" onclick="exportDebugData()">📁 Export All Data</button>
             <button class="btn btn-secondary" onclick="window.close()">❌ Close</button>
         </div>
         
@@ -437,6 +438,61 @@
         function refreshData() {
             document.getElementById('content').innerHTML = '<div class="no-data">Loading debug data...</div>';
             loadDebugData();
+        }
+        
+        async function exportDebugData() {
+            try {
+                // Show loading state
+                const exportBtn = event.target;
+                const originalText = exportBtn.textContent;
+                exportBtn.textContent = '⏳ Exporting...';
+                exportBtn.disabled = true;
+                
+                const response = await fetch('/api/export-debug-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Get the filename from the response headers
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'debug_export.txt';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Reset button state
+                exportBtn.textContent = originalText;
+                exportBtn.disabled = false;
+                
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert(`Export failed: ${error.message}`);
+                
+                // Reset button state
+                const exportBtn = event.target;
+                exportBtn.textContent = '📁 Export All Data';
+                exportBtn.disabled = false;
+            }
         }
         
         function formatStateExtraction(response) {

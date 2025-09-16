@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import re
 import datetime
@@ -2836,6 +2837,149 @@ def get_debug_payload():
     except Exception as e:
         print(f"🔍 Debug: Error getting debug payload: {e}")
         return jsonify({'error': f'Could not get debug payload: {e}'}), 500
+
+@app.route('/api/export-debug-data', methods=['POST'])
+@require_auth
+def export_debug_data():
+    """Export complete debug data including chat history and payloads"""
+    try:
+        google_id = session.get('user_id')
+        if not google_id:
+            return jsonify({'error': 'User not found in session'}), 401
+        
+        # Get current session history
+        session_history = session.get('history', [])
+        
+        # Get user payloads
+        user_payloads = last_ai_payloads.get(google_id, {})
+        
+        # Get story points if available
+        story_points = get_story_points(google_id) if google_id else []
+        
+        # Get current story state
+        try:
+            state_manager = StoryStateManager()
+            current_state = state_manager.get_current_state()
+        except Exception as e:
+            current_state = {"error": f"Could not load state: {e}"}
+        
+        # Generate timestamp for filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"debug_export_{timestamp}.txt"
+        
+        # Build export content
+        export_content = []
+        export_content.append("=" * 80)
+        export_content.append("GROK PLAYGROUND DEBUG EXPORT")
+        export_content.append("=" * 80)
+        export_content.append(f"Export Date: {datetime.now().isoformat()}")
+        export_content.append(f"User ID: {google_id}")
+        export_content.append("")
+        
+        # Session History
+        export_content.append("=" * 80)
+        export_content.append("CHAT HISTORY")
+        export_content.append("=" * 80)
+        if session_history:
+            for i, message in enumerate(session_history):
+                export_content.append(f"\n--- Message {i+1} ---")
+                export_content.append(f"Role: {message.get('role', 'unknown')}")
+                export_content.append(f"Content: {message.get('content', '')}")
+                export_content.append("")
+        else:
+            export_content.append("No chat history found.")
+        export_content.append("")
+        
+        # Story Points
+        export_content.append("=" * 80)
+        export_content.append("STORY POINTS")
+        export_content.append("=" * 80)
+        if story_points:
+            for i, point in enumerate(story_points):
+                export_content.append(f"{i+1}. {point}")
+        else:
+            export_content.append("No story points found.")
+        export_content.append("")
+        
+        # Current State
+        export_content.append("=" * 80)
+        export_content.append("CURRENT STORY STATE")
+        export_content.append("=" * 80)
+        export_content.append(json.dumps(current_state, indent=2))
+        export_content.append("")
+        
+        # AI Payloads
+        export_content.append("=" * 80)
+        export_content.append("AI PAYLOADS")
+        export_content.append("=" * 80)
+        if user_payloads:
+            for payload_type, payload_data in user_payloads.items():
+                export_content.append(f"\n--- {payload_type.upper()} ---")
+                export_content.append(f"Timestamp: {payload_data.get('timestamp', 'unknown')}")
+                export_content.append(f"Payload Size: {payload_data.get('payload_size', 'unknown')} chars")
+                export_content.append("")
+                
+                # Payload (Input)
+                export_content.append("PAYLOAD (INPUT):")
+                export_content.append(json.dumps(payload_data.get('payload', {}), indent=2))
+                export_content.append("")
+                
+                # Response (Output)
+                if payload_data.get('response'):
+                    export_content.append("RESPONSE (OUTPUT):")
+                    export_content.append(payload_data['response'])
+                    export_content.append("")
+                
+                # Usage Info
+                if payload_data.get('usage'):
+                    export_content.append("USAGE INFO:")
+                    export_content.append(json.dumps(payload_data['usage'], indent=2))
+                    export_content.append("")
+                
+                # Finish Reason
+                if payload_data.get('finish_reason'):
+                    export_content.append(f"FINISH REASON: {payload_data['finish_reason']}")
+                    export_content.append("")
+                
+                export_content.append("-" * 60)
+        else:
+            export_content.append("No AI payloads found.")
+        export_content.append("")
+        
+        # Server Info
+        export_content.append("=" * 80)
+        export_content.append("SERVER INFORMATION")
+        export_content.append("=" * 80)
+        export_content.append(f"Python Version: {sys.version}")
+        export_content.append(f"Current Directory: {os.getcwd()}")
+        export_content.append(f"TTS Enabled: {tts.enabled}")
+        export_content.append(f"TTS Status: {tts.get_mode_display()}")
+        export_content.append(f"API Key Set: {'Yes' if os.getenv('XAI_API_KEY') else 'No'}")
+        export_content.append(f"Model: {os.getenv('XAI_MODEL', 'grok-3')}")
+        export_content.append("")
+        
+        # Join all content
+        full_content = "\n".join(export_content)
+        
+        # Create response with file download
+        from flask import Response
+        response = Response(
+            full_content,
+            mimetype='text/plain',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'text/plain; charset=utf-8'
+            }
+        )
+        
+        print(f"🔍 Debug: Generated debug export file: {filename} ({len(full_content)} chars)")
+        return response
+        
+    except Exception as e:
+        print(f"🔍 Debug: Error exporting debug data: {e}")
+        import traceback
+        print(f"🔍 Debug: Export error traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Could not export debug data: {e}'}), 500
 
 @app.route('/api/server-logs', methods=['GET'])
 def get_server_logs():
