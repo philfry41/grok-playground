@@ -40,15 +40,31 @@ class StoryStateManager:
                     seen_content.add(content_key)
                     deduplicated_messages.append(msg)
             
-            # Build context from deduplicated messages, but limit total length to prevent overwhelming the AI
+            # Build context from deduplicated messages, but ensure the most recent user message is always included
             context_parts = []
             total_length = 0
             max_context_length = 3000  # Limit context to prevent token overflow and confusion
             
+            # First, ensure we have the most recent user message
+            most_recent_user_msg = None
+            for msg in reversed(deduplicated_messages):
+                if msg['role'] == 'user':
+                    most_recent_user_msg = msg
+                    break
+            
+            # Build context, prioritizing the most recent user message
             for msg in deduplicated_messages:
                 msg_text = f"{msg['role']}: {msg['content']}"
+                
+                # Always include the most recent user message, even if it means truncating others
+                if msg == most_recent_user_msg:
+                    context_parts.append(msg_text)
+                    total_length += len(msg_text)
+                    continue
+                
+                # For other messages, check if we have space
                 if total_length + len(msg_text) > max_context_length:
-                    # Truncate the last message if needed
+                    # If we don't have space, truncate this message
                     remaining_space = max_context_length - total_length
                     if remaining_space > 100:  # Only include if there's meaningful space
                         truncated_msg = f"{msg['role']}: {msg['content'][:remaining_space-50]}..."
