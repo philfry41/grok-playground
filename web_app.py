@@ -1838,7 +1838,24 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: Extracting state from {len(prior_history)} prior messages (excluding new user message)")
                     current_state = state_manager.extract_state_from_messages(prior_history)
                 else:
-                    current_state = state_manager.get_current_state()
+                    # If no prior history, use default empty state instead of corrupted persisted state
+                    current_state = {
+                        "characters": {},
+                        "location": "unknown",
+                        "positions": "unknown",
+                        "physical_contact": "none",
+                        "mood_atmosphere": "neutral",
+                        "key_objects": [],
+                        "story_progress": [],
+                        "arousal_levels": {},
+                        "clothing_removed": [],
+                        "body_positions": {},
+                        "last_scene_elements": [],
+                        "progression_milestones": [],
+                        "recent_actions": [],
+                        "scene_momentum": "building",
+                        "repetition_warning": False
+                    }
                 
                 if current_state.get("characters"):
                     scene_state_prompt = state_manager.get_state_as_prompt()
@@ -2862,13 +2879,14 @@ def export_debug_data():
         # Get story points if available
         story_points = get_story_points(google_id) if google_id else []
         
-        # Get current story state
+        # Get current story state (extract from current conversation, not from persisted file)
         try:
             google_id = session.get('user_id', 'default')
             state_manager = StoryStateManager(session_id=google_id)
-            current_state = state_manager.get_current_state()
+            # Extract current state from the actual conversation history, not from persisted file
+            current_state = state_manager.extract_state_from_messages(session_history)
         except Exception as e:
-            current_state = {"error": f"Could not load state: {e}"}
+            current_state = {"error": f"Could not extract state: {e}"}
         
         # Generate timestamp for filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
