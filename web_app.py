@@ -2178,22 +2178,29 @@ def set_tts_voice():
 
 @app.route('/api/tts-generate', methods=['POST'])
 def generate_tts_on_demand():
-    """Generate TTS for the most recent AI response on demand"""
+    """Generate TTS for a specific message content on demand"""
     try:
         if not tts.enabled:
             return jsonify({'error': 'TTS not enabled'})
         
-        # Get the most recent AI response from session
-        if 'history' not in session:
-            return jsonify({'error': 'No conversation history found'})
+        # Get the request data
+        data = request.get_json()
+        message_content = data.get('message_content') if data else None
         
-        # Find the most recent assistant message
-        assistant_messages = [msg for msg in session['history'] if msg['role'] == 'assistant']
-        if not assistant_messages:
-            return jsonify({'error': 'No AI response found to generate TTS for'})
-        
-        latest_response = assistant_messages[-1]['content']
-        print(f"🔍 Debug: Generating TTS on-demand for response length: {len(latest_response)}")
+        # If no specific message content provided, fall back to most recent AI response
+        if not message_content:
+            if 'history' not in session:
+                return jsonify({'error': 'No conversation history found'})
+            
+            # Find the most recent assistant message
+            assistant_messages = [msg for msg in session['history'] if msg['role'] == 'assistant']
+            if not assistant_messages:
+                return jsonify({'error': 'No AI response found to generate TTS for'})
+            
+            message_content = assistant_messages[-1]['content']
+            print(f"🔍 Debug: No specific message provided, using most recent AI response (length: {len(message_content)})")
+        else:
+            print(f"🔍 Debug: Generating TTS for specific message content (length: {len(message_content)})")
         
         # Ensure voice ID is loaded fresh from file before generating TTS
         print(f"🔍 Debug: Ensuring voice ID is loaded from file before TTS generation")
@@ -2201,9 +2208,9 @@ def generate_tts_on_demand():
         print(f"🔍 Debug: Using voice ID: {tts.voice_id}")
         
         # Generate TTS for the response
-        if len(latest_response) < 2000:  # Short responses - generate immediately
+        if len(message_content) < 2000:  # Short responses - generate immediately
             print(f"🔍 Debug: Short response - using immediate TTS")
-            audio_file = tts.speak(latest_response, save_audio=True)
+            audio_file = tts.speak(message_content, save_audio=True)
             if audio_file:
                 print(f"🔍 Debug: TTS generated immediately: {audio_file}")
                 return jsonify({
@@ -2216,8 +2223,8 @@ def generate_tts_on_demand():
         else:  # Long responses - generate asynchronously
             print(f"🔍 Debug: Long response - using async TTS")
             # Create a simple request ID for TTS generation
-            request_id = hashlib.md5(f"tts_on_demand:{len(latest_response)}:{time.time()}".encode()).hexdigest()[:8]
-            audio_file = generate_tts_async(latest_response, save_audio=True, request_id=request_id)
+            request_id = hashlib.md5(f"tts_on_demand:{len(message_content)}:{time.time()}".encode()).hexdigest()[:8]
+            audio_file = generate_tts_async(message_content, save_audio=True, request_id=request_id)
             if audio_file == "generating":
                 print(f"🔍 Debug: Async TTS started for on-demand request")
                 return jsonify({

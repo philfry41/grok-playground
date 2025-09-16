@@ -898,7 +898,7 @@
                     ttsButton.className = 'btn btn-primary';
                     ttsButton.style.marginTop = '10px';
                     ttsButton.style.fontSize = '12px';
-                    ttsButton.onclick = () => generateTTSOnDemand();
+                    ttsButton.onclick = () => generateTTSOnDemand(content);
                     messageDiv.appendChild(ttsButton);
                 }
                 
@@ -925,8 +925,8 @@
             }
         }
 
-        // Generate TTS on demand for the most recent AI response
-        async function generateTTSOnDemand() {
+        // Generate TTS on demand for a specific message
+        async function generateTTSOnDemand(messageContent) {
             try {
                 addMessage('🎵 Generating TTS...', 'system');
                 
@@ -934,7 +934,10 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    }
+                    },
+                    body: JSON.stringify({
+                        message_content: messageContent
+                    })
                 });
                 
                 const data = await response.json();
