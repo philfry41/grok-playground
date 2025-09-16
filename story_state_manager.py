@@ -31,8 +31,33 @@ class StoryStateManager:
             # Create a focused prompt for state extraction
             recent_messages = messages[-4:] if len(messages) > 4 else messages
             
-            # Build context from recent messages
-            context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
+            # Deduplicate messages to prevent repeated context
+            seen_content = set()
+            deduplicated_messages = []
+            for msg in recent_messages:
+                content_key = f"{msg['role']}:{msg['content'][:100]}"  # Use first 100 chars as key
+                if content_key not in seen_content:
+                    seen_content.add(content_key)
+                    deduplicated_messages.append(msg)
+            
+            # Build context from deduplicated messages, but limit total length to prevent overwhelming the AI
+            context_parts = []
+            total_length = 0
+            max_context_length = 3000  # Limit context to prevent token overflow and confusion
+            
+            for msg in deduplicated_messages:
+                msg_text = f"{msg['role']}: {msg['content']}"
+                if total_length + len(msg_text) > max_context_length:
+                    # Truncate the last message if needed
+                    remaining_space = max_context_length - total_length
+                    if remaining_space > 100:  # Only include if there's meaningful space
+                        truncated_msg = f"{msg['role']}: {msg['content'][:remaining_space-50]}..."
+                        context_parts.append(truncated_msg)
+                    break
+                context_parts.append(msg_text)
+                total_length += len(msg_text)
+            
+            context = "\n".join(context_parts)
             
             extraction_prompt = f"""
 You are a detailed story state analyzer for erotic fiction. Extract the current story state from this conversation and return ONLY a JSON object.
@@ -291,6 +316,8 @@ ANTI-REPETITION RULES:
 11. MAINTAIN MOMENTUM: If momentum is "building", continue building tension; if "peak", maintain intensity; if "resolution", wind down naturally
 12. FRESH DESCRIPTIONS: Vary your language and focus on new aspects of the same elements
 13. FORWARD MOVEMENT: Always advance the scene - new actions, new sensations, new developments
+14. NO SCENE RESTARTS: Do not restart the scene or re-establish the setting - continue from where you left off
+15. AVOID REDUNDANT SETUP: Do not re-describe the same scene elements, locations, or character states
 
 VIOLATION EXAMPLES TO AVOID:
 - Character's shirt is off → next response has them "unbuttoning their shirt" (WRONG)
@@ -299,6 +326,8 @@ VIOLATION EXAMPLES TO AVOID:
 - Character's pants are around ankles → next response has them "pulling down their pants" (WRONG)
 - Repeating the same physical descriptions from "Last described elements" (WRONG - use fresh language)
 - Rehashing actions from "Recent actions" (WRONG - build upon them instead)
+- Restarting the scene setup (WRONG - continue the action)
+- Re-describing the same location or setting (WRONG - focus on new developments)
 
 Continue the story while maintaining accurate physical state tracking and avoiding repetition. Follow user instructions for changes and describe all physical changes as explicit actions. Always move the story forward with fresh developments.
 """
@@ -322,7 +351,8 @@ Continue the story while maintaining accurate physical state tracking and avoidi
             "last_scene_elements": [],
             "progression_milestones": [],
             "recent_actions": [],
-            "scene_momentum": "building"
+            "scene_momentum": "building",
+            "repetition_warning": False
         }
         self._save_state()
     
@@ -378,7 +408,8 @@ EXTRACT AND RETURN THIS JSON STRUCTURE:
     "new_milestones": ["new story progression milestones reached in this response"],
     "new_actions": ["new actions that happened in this response"],
     "scene_elements": ["key scene elements described in this response"],
-    "momentum_change": "how the scene momentum changed (building/peak/resolution)"
+    "momentum_change": "how the scene momentum changed (building/peak/resolution)",
+    "repetition_detected": "true/false - whether this response repeats previous content"
 }}
 
 RULES:
@@ -386,6 +417,8 @@ RULES:
 - Do not repeat elements that were already established
 - Focus on progression points: first contact, clothing removal, new positions, new sensations, climax, etc.
 - Track momentum changes: building (tension increasing), peak (climactic), resolution (winding down)
+- Detect if this response is repeating previous content (rehashing same scene elements, restarting scene setup, etc.)
+- If repetition is detected, mark "repetition_detected": true
 - Return ONLY the JSON object, no other text
 """
             
@@ -431,6 +464,14 @@ RULES:
                 
                 if "momentum_change" in progression_data:
                     self.current_state["scene_momentum"] = progression_data["momentum_change"]
+                
+                # Handle repetition detection
+                if progression_data.get("repetition_detected") == "true":
+                    print(f"🔍 Debug: REPETITION DETECTED in AI response - this may indicate back-skipping issue")
+                    # Add a flag to the state to help identify problematic responses
+                    self.current_state["repetition_warning"] = True
+                else:
+                    self.current_state["repetition_warning"] = False
                 
                 # Save updated state
                 self._save_state()
