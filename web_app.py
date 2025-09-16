@@ -1327,15 +1327,29 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     {"role": "user", "content": f"Continue this story from where it left off:\n\n{opener}"}
                 ]
                 
-                reply = chat_with_grok(
+                ai_response = chat_with_grok(
                     opener_context,
                     model=model_env,
                     temperature=0.7,
                     max_tokens=500,  # Slightly increased for better continuity
                     top_p=0.8,
                     hide_thinking=True,
+                    return_usage=True
                 )
+                
+                # Extract response text and usage info
+                if isinstance(ai_response, dict):
+                    reply = ai_response['text']
+                    usage = ai_response['usage']
+                    finish_reason = ai_response['finish_reason']
+                else:
+                    reply = ai_response
+                    usage = {}
+                    finish_reason = 'unknown'
                 print(f"🔍 Debug: AI response generated, length={len(reply)}")
+                
+                # Store payload for debugging
+                store_ai_payload('story_generation', opener_context, reply, usage, finish_reason)
                 
                 # Add response to history
                 session['history'].append({"role": "assistant", "content": reply})
@@ -1902,14 +1916,25 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error getting story temperature, using default: {e}")
             
-            reply = chat_with_grok(
+            ai_response = chat_with_grok(
                 context_messages,
                 model=model_env,
                 temperature=story_temperature,
                 max_tokens=max_tokens_for_call,
                 top_p=0.8,
                 hide_thinking=True,
+                return_usage=True
             )
+            
+            # Extract response text and usage info
+            if isinstance(ai_response, dict):
+                reply = ai_response['text']
+                usage = ai_response['usage']
+                finish_reason = ai_response['finish_reason']
+            else:
+                reply = ai_response
+                usage = {}
+                finish_reason = 'unknown'
             
             # Update the stored payload with the response and usage info
             try:
