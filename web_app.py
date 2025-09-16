@@ -1285,7 +1285,8 @@ def chat():
             
             # Get AI-powered scene state reminder (create locally to avoid session serialization issues)
             try:
-                state_manager = StoryStateManager()
+                google_id = session.get('user_id', 'default')
+                state_manager = StoryStateManager(session_id=google_id)
                 scene_state_reminder = state_manager.get_state_as_prompt()
             except Exception as e:
                 print(f"🔍 Debug: State manager error, using fallback: {e}")
@@ -1366,7 +1367,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 
                 # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
                 try:
-                    state_manager = StoryStateManager()
+                    google_id = session.get('user_id', 'default')
+                    state_manager = StoryStateManager(session_id=google_id)
                     # Add the AI response to history for state extraction
                     temp_history = session['history'] + [{"role": "assistant", "content": reply}]
                     
@@ -1658,7 +1660,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     
                     # Update scene state with AI response
                     try:
-                        state_manager = StoryStateManager()
+                        google_id = session.get('user_id', 'default')
+                        state_manager = StoryStateManager(session_id=google_id)
                         state_manager.update_state_from_response(reply)
                         print(f"🔍 Debug: Updated scene state from AI response")
                     except Exception as e:
@@ -1825,7 +1828,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             
             # 3. Scene state (always included) - "What's happening now"
             try:
-                state_manager = StoryStateManager()
+                google_id = session.get('user_id', 'default')
+                state_manager = StoryStateManager(session_id=google_id)
                 
                 # Extract current state from PRIOR conversation (excluding the new user message)
                 # This provides context for generating a response to the new message
@@ -2002,7 +2006,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         
         # Update scene state with the new AI response for next iteration
         try:
-            state_manager = StoryStateManager()
+            google_id = session.get('user_id', 'default')
+            state_manager = StoryStateManager(session_id=google_id)
             # Add the AI response to history for next state extraction
             temp_history = session['history'] + [{"role": "assistant", "content": reply}]
             
@@ -2704,7 +2709,8 @@ def clear_active_scene():
             
             # Reset the story state manager to clear old state
             try:
-                state_manager = StoryStateManager()
+                google_id = session.get('user_id', 'default')
+                state_manager = StoryStateManager(session_id=google_id)
                 state_manager.reset_state()
                 print(f"🔍 Debug: Reset story state manager to clear old state")
             except Exception as e:
@@ -2858,7 +2864,8 @@ def export_debug_data():
         
         # Get current story state
         try:
-            state_manager = StoryStateManager()
+            google_id = session.get('user_id', 'default')
+            state_manager = StoryStateManager(session_id=google_id)
             current_state = state_manager.get_current_state()
         except Exception as e:
             current_state = {"error": f"Could not load state: {e}"}

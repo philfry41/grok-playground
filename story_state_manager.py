@@ -5,7 +5,8 @@ from typing import Dict, List, Any
 from grok_remote import chat_with_grok
 
 class StoryStateManager:
-    def __init__(self):
+    def __init__(self, session_id=None):
+        self.session_id = session_id or 'default'
         self.current_state = {
             "characters": {},
             "location": "unknown",
@@ -374,28 +375,34 @@ Continue the story while maintaining accurate physical state tracking and avoidi
     
     def _save_state(self):
         """
-        Save current state to file for persistence
+        Save current state to file for persistence (session-specific)
         """
         try:
-            with open("scene_state.json", "w") as f:
+            # Use session-specific filename to prevent cross-session contamination
+            session_id = getattr(self, 'session_id', 'default')
+            filename = f"scene_state_{session_id}.json"
+            with open(filename, "w") as f:
                 json.dump(self.current_state, f, indent=2)
-            print(f"🔍 Debug: Scene state saved to file")
+            print(f"🔍 Debug: Scene state saved to file: {filename}")
         except Exception as e:
             print(f"🔍 Debug: Error saving scene state: {e}")
     
     def _load_state(self):
         """
-        Load state from file if it exists
+        Load state from file if it exists (session-specific)
         """
         try:
-            if os.path.exists("scene_state.json"):
-                with open("scene_state.json", "r") as f:
+            # Use session-specific filename to prevent cross-session contamination
+            session_id = getattr(self, 'session_id', 'default')
+            filename = f"scene_state_{session_id}.json"
+            if os.path.exists(filename):
+                with open(filename, "r") as f:
                     loaded_state = json.load(f)
                     self.current_state = loaded_state
-                print(f"🔍 Debug: Scene state loaded from file")
+                print(f"🔍 Debug: Scene state loaded from file: {filename}")
                 print(f"🔍 Debug: Loaded characters: {list(self.current_state['characters'].keys())}")
             else:
-                print(f"🔍 Debug: No scene state file found, using default state")
+                print(f"🔍 Debug: No scene state file found for session {session_id}, using default state")
         except Exception as e:
             print(f"🔍 Debug: Error loading scene state: {e}")
     
