@@ -228,6 +228,16 @@
             font-weight: bold;
         }
         
+        .usage-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #495057;
+        }
+        
         .no-data {
             text-align: center;
             padding: 40px;
@@ -345,6 +355,15 @@
                                         AI Response (Output)
                                         <button class="btn btn-secondary copy-btn" onclick="copyToClipboard('${exchangeType.key}-response')">📋 Copy</button>
                                     </div>
+                                    ${payload.usage && Object.keys(payload.usage).length > 0 ? `
+                                        <div class="usage-info">
+                                            <strong>Token Usage:</strong>
+                                            ${payload.usage.completion_tokens ? `Output: ${payload.usage.completion_tokens} tokens` : ''}
+                                            ${payload.usage.prompt_tokens ? ` | Input: ${payload.usage.prompt_tokens} tokens` : ''}
+                                            ${payload.usage.total_tokens ? ` | Total: ${payload.usage.total_tokens} tokens` : ''}
+                                            ${payload.finish_reason ? ` | Finish: ${payload.finish_reason}` : ''}
+                                        </div>
+                                    ` : ''}
                                     <div class="payload-content" id="${exchangeType.key}-response">${payload.response}</div>
                                 </div>
                             ` : ''}

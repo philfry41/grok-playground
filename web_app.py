@@ -210,7 +210,7 @@ tts_generation_tracker = {}  # Track TTS generations to prevent duplicates
 last_ai_payloads = {}  # Store last AI payloads for debugging
 story_points_cache = {}  # Store story points for incremental updates
 
-def store_ai_payload(exchange_type, payload, response=None):
+def store_ai_payload(exchange_type, payload, response=None, usage=None, finish_reason=None):
     """Store AI payload for debugging"""
     try:
         google_id = session.get('user_id')
@@ -220,9 +220,18 @@ def store_ai_payload(exchange_type, payload, response=None):
         if google_id not in last_ai_payloads:
             last_ai_payloads[google_id] = {}
 
+        # Handle both string responses and dict responses with usage info
+        response_text = response
+        if isinstance(response, dict):
+            response_text = response.get('text', str(response))
+            usage = response.get('usage', usage)
+            finish_reason = response.get('finish_reason', finish_reason)
+
         last_ai_payloads[google_id][exchange_type] = {
             'payload': payload,
-            'response': response,
+            'response': response_text,
+            'usage': usage or {},
+            'finish_reason': finish_reason or 'unknown',
             'timestamp': datetime.utcnow().isoformat(),
             'payload_size': len(str(payload))
         }
@@ -624,16 +633,27 @@ RULES:
         story_points_payload = [{"role": "user", "content": extraction_prompt}]
         
         # Call AI to extract story points
-        response = chat_with_grok(
+        ai_response = chat_with_grok(
             story_points_payload,
             model="grok-3",
             temperature=0.1,  # Low temperature for consistent extraction
             max_tokens=300,
-            hide_thinking=True
+            hide_thinking=True,
+            return_usage=True
         )
         
+        # Extract response text and usage info
+        if isinstance(ai_response, dict):
+            response = ai_response['text']
+            usage = ai_response['usage']
+            finish_reason = ai_response['finish_reason']
+        else:
+            response = ai_response
+            usage = {}
+            finish_reason = 'unknown'
+        
         # Store payload for debugging
-        store_ai_payload('story_points', story_points_payload, response)
+        store_ai_payload('story_points', story_points_payload, response, usage, finish_reason)
         
         # Clean and parse the response
         response = response.strip()
@@ -716,16 +736,27 @@ RULES:
         story_points_payload = [{"role": "user", "content": extraction_prompt}]
         
         # Call AI to extract story points
-        response = chat_with_grok(
+        ai_response = chat_with_grok(
             story_points_payload,
             model="grok-3",
             temperature=0.1,  # Low temperature for consistent extraction
             max_tokens=300,
-            hide_thinking=True
+            hide_thinking=True,
+            return_usage=True
         )
         
+        # Extract response text and usage info
+        if isinstance(ai_response, dict):
+            response = ai_response['text']
+            usage = ai_response['usage']
+            finish_reason = ai_response['finish_reason']
+        else:
+            response = ai_response
+            usage = {}
+            finish_reason = 'unknown'
+        
         # Store payload for debugging
-        store_ai_payload('story_points', story_points_payload, response)
+        store_ai_payload('story_points', story_points_payload, response, usage, finish_reason)
         
         # Parse the JSON response
         try:
@@ -1584,12 +1615,23 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 for i, msg in enumerate(context_messages):
                     print(f"🔍 Debug: AI context {i}: {msg['role']} - {msg['content'][:200]}...")
                 
-                reply = chat_with_grok(
+                ai_response = chat_with_grok(
                     context_messages,
                     model=model_env,
                     temperature=0.7,
-                    max_tokens=session.get('max_tokens', 1200)
+                    max_tokens=session.get('max_tokens', 1200),
+                    return_usage=True
                 )
+                
+                # Extract response text and usage info
+                if isinstance(ai_response, dict):
+                    reply = ai_response['text']
+                    usage = ai_response['usage']
+                    finish_reason = ai_response['finish_reason']
+                else:
+                    reply = ai_response
+                    usage = {}
+                    finish_reason = 'unknown'
                 
                 if reply and reply.strip():
                     initial_response['ai_response'] = reply
@@ -1686,10 +1728,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                             # Limit history length for memory management
         if len(session['history']) > 12:  # Increased for paid tier
             print(f"🔍 Debug: Truncating history from {len(session['history'])} to 12 messages")
-            # Keep system messages and last 12 messages
-            system_messages = [m for m in session['history'] if m['role'] == 'system']
-            recent_messages = session['history'][-12:]
-            session['history'] = system_messages + recent_messages
+            # Keep the most recent 12 messages to preserve chronological order
+            # This avoids duplicates and maintains proper message sequence
+            session['history'] = session['history'][-12:]
             print(f"🔍 Debug: History truncated to {len(session['history'])} messages")
             
             # Force garbage collection after history cleanup
@@ -1717,13 +1758,14 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- Maintain story continuity and character development\n\n"
                     "PHYSICAL CONTINUITY REQUIREMENTS:\n"
                     "- NEVER have clothes magically reappear once removed\n"
-                    "- NEVER have characters change positions without explicit movement\n"
+                    "- ALWAYS describe character movement when positions change (e.g., 'she shifted closer', 'he moved to sit beside her')\n"
                     "- NEVER have exposed body parts become covered without explicit action\n"
                     "- ALWAYS track and maintain physical state changes accurately\n"
                     "- ALWAYS describe any physical changes as explicit actions when they occur\n"
                     "- Reference current clothing/position state when it enriches the story\n"
                     "- FOLLOW user instructions for physical changes (removing clothes, changing positions, etc.)\n"
-                    "- UPDATE physical state tracking when changes are explicitly described\n\n"
+                    "- UPDATE physical state tracking when changes are explicitly described\n"
+                    "- Allow natural character movement and interaction - just describe it when it happens\n\n"
                     "PHYSICAL DESCRIPTION VARIATION:\n"
                     "- Vary your physical descriptions - don't repeat the same phrases verbatim\n"
                     "- Use synonyms, different angles, and creative language while maintaining accuracy\n"
@@ -1869,11 +1911,13 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 hide_thinking=True,
             )
             
-            # Update the stored payload with the response
+            # Update the stored payload with the response and usage info
             try:
                 google_id = session.get('user_id')
                 if google_id and google_id in last_ai_payloads and 'story_generation' in last_ai_payloads[google_id]:
                     last_ai_payloads[google_id]['story_generation']['response'] = reply
+                    last_ai_payloads[google_id]['story_generation']['usage'] = usage
+                    last_ai_payloads[google_id]['story_generation']['finish_reason'] = finish_reason
             except:
                 pass
             
@@ -1928,10 +1972,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         # Clean up session if it gets too large
         if len(session['history']) > 12:  # Increased for paid tier
             print(f"🔍 Debug: Session cleanup - history has {len(session['history'])} messages")
-            # Keep system messages and last 12 messages
-            system_messages = [m for m in session['history'] if m['role'] == 'system']
-            recent_messages = session['history'][-12:]
-            session['history'] = system_messages + recent_messages
+            # Keep the most recent 12 messages to preserve chronological order
+            # This avoids duplicates and maintains proper message sequence
+            session['history'] = session['history'][-12:]
             print(f"🔍 Debug: Session cleaned up to {len(session['history'])} messages")
         
         # TTS will be generated on-demand via button, not automatically

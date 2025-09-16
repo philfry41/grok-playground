@@ -79,18 +79,29 @@ RULES:
             extraction_payload = [{"role": "user", "content": extraction_prompt}]
             
             # Call AI to extract state
-            response = chat_with_grok(
+            ai_response = chat_with_grok(
                 extraction_payload,
                 model="grok-3",
                 temperature=0.1,  # Low temperature for consistent extraction
                 max_tokens=800,  # Increased to prevent JSON truncation
-                hide_thinking=True
+                hide_thinking=True,
+                return_usage=True
             )
+            
+            # Extract response text and usage info
+            if isinstance(ai_response, dict):
+                response = ai_response['text']
+                usage = ai_response['usage']
+                finish_reason = ai_response['finish_reason']
+            else:
+                response = ai_response
+                usage = {}
+                finish_reason = 'unknown'
             
             # Store payload for debugging
             try:
                 from web_app import store_ai_payload
-                store_ai_payload('state_extraction', extraction_payload, response)
+                store_ai_payload('state_extraction', extraction_payload, response, usage, finish_reason)
             except:
                 pass  # Ignore if web_app not available
             
@@ -237,7 +248,7 @@ CURRENT SCENE STATE (TRACK CHANGES ACCURATELY):
 
 MANDATORY CONTINUITY RULES:
 1. CLOTHING: If clothing is removed/partially removed, it STAYS that way until explicitly put back on
-2. POSITIONS: Characters maintain their exact positions unless they explicitly move
+2. POSITIONS: Characters can move naturally, but describe the movement when it happens
 3. BODY PARTS: Exposed body parts remain exposed until explicitly covered
 4. PHYSICAL STATE: Current physical conditions (sweating, trembling, etc.) continue unless explicitly changed
 5. OBJECTS: Items remain where they are unless explicitly moved
@@ -247,7 +258,7 @@ MANDATORY CONTINUITY RULES:
 VIOLATION EXAMPLES TO AVOID:
 - Character's shirt is off → next response has them "unbuttoning their shirt" (WRONG)
 - Character is naked → next response mentions "removing their dress" (WRONG)  
-- Character is sitting → next response has them "standing up" without mentioning the movement (WRONG)
+- Character is sitting → next response has them "standing up" without describing how they moved (WRONG - should describe the movement)
 - Character's pants are around ankles → next response has them "pulling down their pants" (WRONG)
 
 Continue the story while maintaining accurate physical state tracking. Follow user instructions for changes and describe all physical changes as explicit actions.

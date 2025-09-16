@@ -24,6 +24,7 @@ def chat_with_grok(
     top_p=0.9,
     hide_thinking=True,
     stop=None,
+    return_usage=False,
 ):
     if not API_KEY:
         raise RuntimeError("Missing XAI_API_KEY environment variable.")
@@ -88,20 +89,38 @@ def chat_with_grok(
                 )
             else:
                 text2 = r2.json()["choices"][0]["message"]["content"]
-                return _clean_thinking(text2) if hide_thinking else text2
+                cleaned_text2 = _clean_thinking(text2) if hide_thinking else text2
+                if return_usage:
+                    # For retry case, we don't have usage info, so return minimal structure
+                    return {
+                        "text": cleaned_text2,
+                        "usage": {},
+                        "finish_reason": "unknown"
+                    }
+                else:
+                    return cleaned_text2
 
         raise requests.HTTPError(f"{http_err} — Response: {detail}")
 
     response_json = r.json()
     text = response_json["choices"][0]["message"]["content"]
+    usage = response_json.get("usage", {})
+    finish_reason = response_json["choices"][0].get("finish_reason", "unknown")
     
     # Debug: check if response was truncated
     if os.getenv("XAI_DEBUG"):
-        finish_reason = response_json["choices"][0].get("finish_reason", "unknown")
-        usage = response_json.get("usage", {})
         print(f"[xai-debug] finish_reason={finish_reason}")
         print(f"[xai-debug] usage={usage}")
         if finish_reason == "length":
             print(f"[xai-debug] Response was truncated due to max_tokens limit")
     
-    return _clean_thinking(text) if hide_thinking else text
+    # Return both text and usage information if requested
+    cleaned_text = _clean_thinking(text) if hide_thinking else text
+    if return_usage:
+        return {
+            "text": cleaned_text,
+            "usage": usage,
+            "finish_reason": finish_reason
+        }
+    else:
+        return cleaned_text
