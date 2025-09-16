@@ -234,6 +234,24 @@
             border-color: #667eea;
         }
 
+        .input-group textarea {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+            resize: vertical;
+            min-height: 50px;
+            max-height: 150px;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .input-group button {
             padding: 12px 20px;
             background: #667eea;
@@ -527,7 +545,7 @@
             
             <div class="chat-input">
                 <div class="input-group">
-                    <input type="text" id="messageInput" placeholder="Type your message or story prompt..." />
+                    <textarea id="messageInput" placeholder="Type your message or story prompt... (Shift+Enter for new line, Enter to send)" rows="3"></textarea>
                     <button onclick="sendMessage()" id="sendButton">Send</button>
                 </div>
             </div>
@@ -824,11 +842,13 @@
             const messageInput = document.getElementById('messageInput');
             const sendButton = document.getElementById('sendButton');
             
-            // Handle Enter key
-            messageInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
+            // Handle Enter key (send) and Shift+Enter (new line)
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault(); // Prevent default newline behavior
                     sendMessage();
                 }
+                // Shift+Enter allows default newline behavior
             });
             
             // Handle input changes to enable/disable send button
