@@ -1323,7 +1323,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 model_env = os.getenv('XAI_MODEL', 'grok-3')
                 # AI call for loadopener with proper continuity
                 opener_context = [
-                    {"role": "system", "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development.\n\nIMPORTANT: Always end your response at a natural stopping point (end of sentence, paragraph, or scene). Never cut off mid-sentence or mid-thought. Complete your thoughts and actions before ending."},
+                    {"role": "system", "content": "You are an explicit erotic storyteller. Write with vivid, sensual language that captures the intensity and passion of intimate moments. Use descriptive, evocative terms for physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development.\n\nIMPORTANT: Always end your response at a natural stopping point (end of sentence, paragraph, or scene). Never cut off mid-sentence or mid-thought. Complete your thoughts and actions before ending.\n\nEFFICIENCY: Avoid repeating descriptions, memories, or events already established in the conversation history. Only reference past events if they directly impact the current scene. Focus on NEW actions, thoughts, and developments rather than rehashing what's already been described."},
                     {"role": "user", "content": f"Continue this story from where it left off:\n\n{opener}"}
                 ]
                 
@@ -1786,6 +1786,12 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- NEVER cut off mid-sentence or mid-thought\n"
                     "- Complete your thoughts and actions before ending\n"
                     "- If approaching token limit, wrap up the current scene or action naturally\n\n"
+                    "CONTENT EFFICIENCY REQUIREMENTS:\n"
+                    "- AVOID repeating descriptions, memories, or events already established in the conversation history\n"
+                    "- Only reference past events if they directly impact the current scene or character development\n"
+                    "- Focus on NEW actions, thoughts, and developments rather than rehashing what's already been described\n"
+                    "- Build upon existing context rather than restating it\n"
+                    "- Use fresh, varied language for ongoing actions rather than repeating the same phrases\n\n"
                     "PHYSICAL DESCRIPTION VARIATION:\n"
                     "- Vary your physical descriptions - don't repeat the same phrases verbatim\n"
                     "- Use synonyms, different angles, and creative language while maintaining accuracy\n"
