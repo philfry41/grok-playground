@@ -581,7 +581,7 @@
                     
                     <div class="word-count-input">
                         <label>Tokens:</label>
-                        <input type="number" id="wordCount" value="800" min="200" max="2000" />
+                        <input type="number" id="wordCount" value="1500" min="200" max="2000" />
                         <button class="btn btn-primary" onclick="sendContinuation()">📝 Continue</button>
                     </div>
                     
@@ -1019,7 +1019,7 @@
                     body: JSON.stringify({
                         message: message,
                         command: '',
-                        word_count: parseInt(document.getElementById('wordCount').value) || 800
+                        word_count: parseInt(document.getElementById('wordCount').value) || 1500
                     })
                 });
                 
@@ -1156,7 +1156,7 @@
         }
 
         async function sendContinuation() {
-            const wordCount = parseInt(document.getElementById('wordCount').value) || 800;
+            const wordCount = parseInt(document.getElementById('wordCount').value) || 1500;
             
             showLoading();
             
