@@ -1164,7 +1164,7 @@ def chat():
         print(f"🔍 Debug: Request data: {data}")
         user_input = data.get('message', '').strip()
         command = data.get('command', '')
-        token_count = data.get('word_count', 800)  # Now represents tokens, not words
+        token_count = data.get('word_count', 1500)  # Now represents tokens, not words
         
         # Parse commands from user input if they start with /
         if user_input.startswith('/'):
