@@ -250,6 +250,240 @@ def update_story_points(google_id, new_story_points):
     story_points_cache[google_id] = new_story_points
     print(f"🔍 Debug: Updated story points cache for user {google_id} with {len(new_story_points)} points")
 
+# === Continuity helpers (lightweight ledger, preflight, cutoff handling, critic) ===
+
+def get_continuity_ledger():
+    """Return a per-session continuity ledger stored in Flask session (JSON-serializable)."""
+    try:
+        ledger = session.get('continuity_ledger')
+        if not ledger:
+            ledger = {
+                'scene_step': 0,
+                'summaries': [],            # short bullet summaries per step
+                'anchor_tail': '',          # last ~400 chars of prior assistant reply
+                'ban_phrases': [],          # phrases to avoid repeating verbatim
+                'last_two_replies': []      # lowercased bodies of last 2 assistant replies
+            }
+            session['continuity_ledger'] = ledger
+        return ledger
+    except Exception:
+        # Fallback to stateless ledger if session access fails
+        return {
+            'scene_step': 0,
+            'summaries': [],
+            'anchor_tail': '',
+            'ban_phrases': [],
+            'last_two_replies': []
+        }
+
+def _safe_text(text):
+    return (text or '').strip()
+
+def _split_sentences(text):
+    # Simple sentence split that avoids heavy NLP
+    try:
+        parts = re.split(r'(?:\.|\?|!)(?:\s+|$)', text)
+        return [p.strip() for p in parts if p and p.strip()]
+    except Exception:
+        return [text]
+
+def _extract_ngrams(text, n=4, max_phrases=8):
+    text = re.sub(r'\s+', ' ', text or '').strip().lower()
+    words = [w for w in re.findall(r"[a-zA-Z']+", text) if w]
+    ngrams = set()
+    for i in range(0, max(0, len(words) - n + 1)):
+        ngram = ' '.join(words[i:i+n])
+        ngrams.add(ngram)
+        if len(ngrams) >= max_phrases:
+            break
+    return list(ngrams)
+
+def _extract_ban_phrases_from_reply(reply):
+    # Use 3-4 gram phrases from the reply as verbatim ban targets
+    phrases = set(_extract_ngrams(reply, n=4, max_phrases=6))
+    if len(phrases) < 4:
+        phrases.update(_extract_ngrams(reply, n=3, max_phrases=6))
+    # Truncate phrases to at most 10 words for prompt brevity (should already be 3-4)
+    trimmed = []
+    for p in phrases:
+        words = p.split()
+        trimmed.append(' '.join(words[:10]))
+    return trimmed[:6]
+
+def build_prompt_from_ledger(ledger):
+    """Build a short system instruction enforcing continuity based on the ledger."""
+    try:
+        summaries = ledger.get('summaries', [])[-5:]
+        anchor_tail = ledger.get('anchor_tail', '')[-400:]
+        ban_phrases = ledger.get('ban_phrases', [])[:6]
+
+        parts = []
+        parts.append("CONTINUITY GUARDRAILS:")
+        if summaries:
+            parts.append("Previous beats (most recent first):")
+            for s in reversed(summaries):
+                parts.append(f"- {s}")
+        if anchor_tail:
+            parts.append("Recent anchor (continue forward, do not rehash):")
+            parts.append(anchor_tail)
+        if ban_phrases:
+            joined = '; '.join([f'"{bp}"' for bp in ban_phrases])
+            parts.append("Avoid repeating these exact phrases:")
+            parts.append(joined)
+        parts.append("Move the scene forward with new actions. Do not restate setup already shown.")
+        parts.append("If you must refer back, keep it in 1 short clause and then advance.")
+        return '\n'.join(parts)
+    except Exception as e:
+        print(f"🔍 Debug: build_prompt_from_ledger error: {e}")
+        return ""
+
+def _looks_cutoff(reply):
+    reply = _safe_text(reply)
+    if not reply:
+        return False
+    if not re.search(r'[\.!?]$|"$|\)$', reply):
+        return True
+    # mid-thought heuristics
+    tail = reply[-40:].lower()
+    incomplete_tails = [
+        ' and', ' as', ' to', ' with', ' his', ' her', ' their', ' he', ' she', ' they',
+        "'s", '—', '...', ' because', ' while', ' when', ' if '
+    ]
+    return any(tail.endswith(t) for t in incomplete_tails)
+
+def auto_complete_if_cutoff(context_messages, reply, finish_reason, model, temperature):
+    """If reply is cut off or looks incomplete, ask model to continue exactly where it left off."""
+    try:
+        if finish_reason == 'length' or _looks_cutoff(reply):
+            continuation_instruction = (
+                "Continue the previous assistant reply from the exact point it stopped. "
+                "Do not repeat any already-written text. Finish the thought and end at a natural stopping point."
+            )
+            continuation_messages = list(context_messages)
+            continuation_messages.append({"role": "assistant", "content": reply})
+            continuation_messages.append({"role": "system", "content": continuation_instruction})
+
+            cont_response = chat_with_grok(
+                continuation_messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=400,
+                top_p=0.8,
+                hide_thinking=True,
+                return_usage=True,
+                stop=["\n\n\n", "---", "***", "END OF SCENE"]
+            )
+
+            if isinstance(cont_response, dict):
+                cont_text = cont_response.get('text', '')
+                cont_usage = cont_response.get('usage', {})
+                cont_finish_reason = cont_response.get('finish_reason', 'unknown')
+            else:
+                cont_text = str(cont_response)
+                cont_usage = {}
+                cont_finish_reason = 'unknown'
+
+            store_ai_payload('continuation_generation', continuation_messages, cont_text, cont_usage, cont_finish_reason)
+
+            new_reply = (reply + ' ' + cont_text).strip()
+            return new_reply, True
+        return reply, False
+    except Exception as e:
+        print(f"🔍 Debug: auto_complete_if_cutoff error: {e}")
+        return reply, False
+
+def continuity_critic(context_messages, reply, ledger, model, temperature):
+    """Detect obvious rehash; if detected, request a single corrective rewrite that advances the scene."""
+    try:
+        anchor_tail = ledger.get('anchor_tail', '').lower()
+        last_two = ' '.join(ledger.get('last_two_replies', [])).lower()
+        reply_lc = (reply or '').lower()
+
+        # n-gram overlap heuristic
+        prev_ngrams = set(_extract_ngrams(last_two, n=4, max_phrases=20))
+        curr_ngrams = set(_extract_ngrams(reply_lc, n=4, max_phrases=20))
+        overlap = len(prev_ngrams & curr_ngrams)
+
+        rehash_detected = False
+        if anchor_tail and anchor_tail[:120] in reply_lc:
+            rehash_detected = True
+        if overlap >= 3:
+            rehash_detected = True
+
+        if not rehash_detected:
+            return reply, False
+
+        critic_instruction = (
+            "Revise the last assistant reply to remove repeated setup and back-skips. "
+            "Keep all good content but cut restatements. Advance the scene with 1-2 new concrete actions. "
+            "Output only the revised story text (no commentary)."
+        )
+
+        critic_messages = list(context_messages)
+        critic_messages.append({"role": "assistant", "content": reply})
+        critic_messages.append({"role": "system", "content": critic_instruction})
+
+        critic_response = chat_with_grok(
+            critic_messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=min(800, session.get('max_tokens', 1500)),
+            top_p=0.8,
+            hide_thinking=True,
+            return_usage=True,
+            stop=["\n\n\n", "---", "***", "END OF SCENE"]
+        )
+
+        if isinstance(critic_response, dict):
+            revised = critic_response.get('text', '')
+            critic_usage = critic_response.get('usage', {})
+            critic_finish_reason = critic_response.get('finish_reason', 'unknown')
+        else:
+            revised = str(critic_response)
+            critic_usage = {}
+            critic_finish_reason = 'unknown'
+
+        if revised and revised.strip():
+            store_ai_payload('continuity_critic', critic_messages, revised, critic_usage, critic_finish_reason)
+            return revised, True
+        return reply, False
+    except Exception as e:
+        print(f"🔍 Debug: continuity_critic error: {e}")
+        return reply, False
+
+def update_ledger_after_reply(ledger, reply):
+    """Update ledger fields after a final reply is accepted."""
+    try:
+        reply = _safe_text(reply)
+        ledger['scene_step'] = int(ledger.get('scene_step', 0)) + 1
+
+        # Cheap summary: first sentence trimmed
+        sentences = _split_sentences(reply)
+        if sentences:
+            summary = sentences[0]
+            if len(summary) > 140:
+                summary = summary[:137] + '...'
+            summaries = ledger.get('summaries', [])
+            summaries.append(summary)
+            ledger['summaries'] = summaries[-12:]
+
+        # Anchor tail is last 400 chars
+        ledger['anchor_tail'] = reply[-400:]
+
+        # Ban phrases from this reply
+        ban_list = ledger.get('ban_phrases', [])
+        ban_list = (ban_list + _extract_ban_phrases_from_reply(reply))[:12]
+        ledger['ban_phrases'] = ban_list
+
+        # Maintain last two replies (lowercased)
+        last_two = ledger.get('last_two_replies', [])
+        last_two.append(reply.lower())
+        ledger['last_two_replies'] = last_two[-2:]
+
+        session['continuity_ledger'] = ledger
+    except Exception as e:
+        print(f"🔍 Debug: update_ledger_after_reply error: {e}")
+
 # Resource cleanup functions
 def cleanup_resources():
     """Clean up resources to prevent memory leaks"""
@@ -1210,6 +1444,12 @@ def chat():
     # Handle commands
     if command == 'new':
         session['history'] = session['history'][:2]
+        # Reset continuity ledger for a fresh scene
+        try:
+            session['continuity_ledger'] = {}
+            print("🔍 Debug: Continuity ledger reset for /new command")
+        except Exception:
+            pass
         if request_id:
             untrack_request(request_id)
         return jsonify({'message': '🧹 New scene. Priming kept.', 'type': 'system'})
@@ -1799,6 +2039,19 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error getting core story context: {e}")
             
+            # 2b. Continuity guardrails (preflight) from lightweight ledger
+            try:
+                ledger = get_continuity_ledger()
+                guardrails = build_prompt_from_ledger(ledger)
+                if guardrails:
+                    context_messages.append({
+                        "role": "system",
+                        "content": guardrails
+                    })
+                    print(f"🔍 Debug: Added continuity guardrails to AI context")
+            except Exception as e:
+                print(f"🔍 Debug: Error adding continuity guardrails: {e}")
+
             # 3. Scene state (DISABLED - was causing back-skipping issues)
             # Simple approach: just use the conversation history without complex state tracking
             print(f"🔍 Debug: Scene state tracking disabled to prevent back-skipping")
@@ -1911,6 +2164,46 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Return a simple fallback response
             reply = "I'm having trouble connecting right now. Please try again in a moment."
         
+        # Postflight: auto-complete cutoffs, run continuity critic, update ledger
+        try:
+            final_reply = reply
+            # Auto-complete if cutoff
+            final_reply, did_cont = auto_complete_if_cutoff(
+                context_messages,
+                final_reply,
+                locals().get('finish_reason', 'unknown'),
+                model_env,
+                story_temperature
+            )
+            if did_cont:
+                print("🔍 Debug: Applied auto-continuation to complete cutoff response")
+
+            # Continuity critic revision
+            final_reply, did_revise = continuity_critic(
+                context_messages,
+                final_reply,
+                get_continuity_ledger(),
+                model_env,
+                story_temperature
+            )
+            if did_revise:
+                print("🔍 Debug: Applied continuity critic revision to reduce back-skipping")
+
+            # Update ledger after final reply
+            update_ledger_after_reply(get_continuity_ledger(), final_reply)
+
+            # Ensure debug payload reflects final reply
+            try:
+                google_id = session.get('user_id')
+                if google_id and google_id in last_ai_payloads and 'story_generation' in last_ai_payloads[google_id]:
+                    last_ai_payloads[google_id]['story_generation']['response'] = final_reply
+            except Exception:
+                pass
+
+            reply = final_reply
+        except Exception as post_e:
+            print(f"🔍 Debug: Postflight continuity handlers error: {post_e}")
+
         # Add response to history with overflow protection
         session['history'].append({"role": "assistant", "content": reply})
         print(f"🔍 Debug: Added AI response to session history - now has {len(session['history'])} messages")
@@ -2858,6 +3151,18 @@ def export_debug_data():
         else:
             export_content.append("No AI payloads found.")
         export_content.append("")
+
+        # Continuity Ledger
+        try:
+            export_content.append("=" * 80)
+            export_content.append("CONTINUITY LEDGER")
+            export_content.append("=" * 80)
+            ledger = session.get('continuity_ledger', {})
+            export_content.append(json.dumps(ledger, indent=2))
+            export_content.append("")
+        except Exception as le:
+            export_content.append(f"(Could not include continuity ledger: {le})")
+            export_content.append("")
         
         # Server Info
         export_content.append("=" * 80)
