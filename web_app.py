@@ -484,6 +484,48 @@ def update_ledger_after_reply(ledger, reply):
     except Exception as e:
         print(f"🔍 Debug: update_ledger_after_reply error: {e}")
 
+def build_cast_location_constraints_from_history(history_messages):
+    """Derive simple cast and location constraints from recent history to prevent teleportation/back-skips."""
+    try:
+        recent = history_messages[-6:] if history_messages else []
+        text = ' '.join([_safe_text(m.get('content')) for m in recent]).lower()
+        constraints = []
+
+        # Location cues
+        is_pontoon = ('pontoon' in text) or ('boat' in text and 'lake' in text)
+        is_lake = 'lake' in text
+        if is_pontoon or is_lake:
+            constraints.append("- Location: pontoon boat at the South Dakota lake by her parents' cabin.")
+
+        # Solitude cues
+        is_alone = 'alone' in text or 'anonymity' in text or 'by herself' in text
+        if is_alone:
+            constraints.append("- Stephanie is alone until others are explicitly introduced by the user.")
+
+        # Phil absent cue
+        if ('phil' in text and 'iowa' in text) or ('phil' in text and 'back in iowa' in text):
+            constraints.append("- Phil is in Iowa and NOT present in this scene unless the user explicitly brings him on stage now.")
+
+        # Arrival cues
+        men_arrive = ('guys board' in text) or ('party boat' in text) or ('board her pontoon' in text) or ('board the pontoon' in text)
+        if men_arrive:
+            constraints.append("- If men arrive, treat them as new unnamed arrivals unless the user names them.")
+            constraints.append("- Do NOT introduce Phil unless the last user message explicitly named him.")
+        else:
+            constraints.append("- Do NOT introduce new named characters unless the last user message explicitly named them.")
+
+        # Consent/resistance cues
+        if 'resists' in text or 'resist' in text or 'no' in text:
+            constraints.append("- Respect her resistance; no non-consensual actions. Back off if she says no.")
+
+        if not constraints:
+            return ''
+        header = "CAST/LOCATION CONSTRAINTS:"
+        return header + "\n" + "\n".join(constraints)
+    except Exception as e:
+        print(f"🔍 Debug: build_cast_location_constraints_from_history error: {e}")
+        return ''
+
 # Resource cleanup functions
 def cleanup_resources():
     """Clean up resources to prevent memory leaks"""
@@ -2051,6 +2093,18 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: Added continuity guardrails to AI context")
             except Exception as e:
                 print(f"🔍 Debug: Error adding continuity guardrails: {e}")
+
+            # 2c. Cast/Location constraints derived from recent history (preflight)
+            try:
+                constraints = build_cast_location_constraints_from_history(session.get('history', []))
+                if constraints:
+                    context_messages.append({
+                        "role": "system",
+                        "content": constraints
+                    })
+                    print(f"🔍 Debug: Added cast/location constraints to AI context")
+            except Exception as e:
+                print(f"🔍 Debug: Error adding cast/location constraints: {e}")
 
             # 3. Scene state (DISABLED - was causing back-skipping issues)
             # Simple approach: just use the conversation history without complex state tracking
