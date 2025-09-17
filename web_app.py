@@ -434,11 +434,16 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
         if not rehash_detected:
             return reply, False
 
+        # Respect user-configured beats when asking the critic to revise
+        try:
+            beats = int(session.get('beats', 1))
+        except Exception:
+            beats = 1
         critic_instruction = (
             "Revise the last assistant reply to remove recap and back-skips. "
             "Start with action or dialogue tied to the current event. "
             "Keep good content; cut re-description of already established state (naked, pontoon, sun, anatomy). "
-            "Deliver at most 1 concrete new action, then end at a natural beat. Output only story text."
+            + f"Deliver at most {beats} concrete new action{'s' if beats != 1 else ''}, then end at a natural beat. Output only story text."
         )
 
         critic_messages = list(context_messages)
@@ -554,7 +559,11 @@ def build_event_focus_from_last_user(history_messages):
         for c in cues[1:3]:
             lines.append(f"- Also: {c}.")
         lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
-        lines.append("- Deliver at most 1 concrete new action and then pause at a clear beat.")
+        try:
+            beats = int(session.get('beats', 1))
+        except Exception:
+            beats = 1
+        lines.append(f"- Deliver at most {beats} concrete new action{'s' if beats != 1 else ''} and then pause at a clear beat.")
         return '\n'.join(lines)
     except Exception as e:
         print(f"🔍 Debug: build_event_focus_from_last_user error: {e}")
