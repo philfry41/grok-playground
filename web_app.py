@@ -344,7 +344,11 @@ def build_prompt_from_ledger(ledger):
             beats = int(session.get('beats', 1))
         except Exception:
             beats = 1
-        parts.append(f"At most {beats} concrete action{'s' if beats != 1 else ''} this turn; then stop at a natural beat.")
+        parts.append(
+            f"At most {beats} beat{'s' if beats != 1 else ''} this turn. "
+            "Each beat may include the action plus 1–2 short sentences of sensory or emotional detail. "
+            "Stop at a natural beat."
+        )
         parts.append("Move the scene forward with new actions. Do not restate setup already shown.")
         parts.append("If you must refer back, keep it in 1 short clause and then advance.")
         return '\n'.join(parts)
@@ -442,8 +446,8 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
         critic_instruction = (
             "Revise the last assistant reply to remove recap and back-skips. "
             "Start with action or dialogue tied to the current event. "
-            "Keep good content; cut re-description of already established state (naked, pontoon, sun, anatomy). "
-            + f"Deliver at most {beats} concrete new action{'s' if beats != 1 else ''}, then end at a natural beat. Output only story text."
+            "Keep vivid sensory detail; do not over-prune texture. Cut only true recap of already established state (naked, pontoon, sun, anatomy). "
+            + f"Deliver at most {beats} beat{'s' if beats != 1 else ''} (each beat = action + 1–2 short sentences of texture), then end at a natural beat. Output only story text."
         )
 
         critic_messages = list(context_messages)
@@ -563,7 +567,11 @@ def build_event_focus_from_last_user(history_messages):
             beats = int(session.get('beats', 1))
         except Exception:
             beats = 1
-        lines.append(f"- Deliver at most {beats} concrete new action{'s' if beats != 1 else ''} and then pause at a clear beat.")
+        lines.append(
+            f"- Deliver at most {beats} beat{'s' if beats != 1 else ''}. "
+            "Each beat may include the action plus 1–2 short sentences of sensory or emotional detail. "
+            "Pause at a clear beat."
+        )
         return '\n'.join(lines)
     except Exception as e:
         print(f"🔍 Debug: build_event_focus_from_last_user error: {e}")
