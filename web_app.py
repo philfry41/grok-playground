@@ -3137,6 +3137,12 @@ def clear_active_scene():
         if opener_text:
             # Clear session history and add opener content
             session['history'] = []
+            # Reset continuity ledger so no prior guardrails leak into the new scene
+            try:
+                session['continuity_ledger'] = {}
+                print("🔍 Debug: Continuity ledger reset for clear-active-scene")
+            except Exception:
+                pass
             session['history'].append({"role": "user", "content": opener_text})
             print(f"🔍 Debug: Added opener content to session for cleared scene")
             
