@@ -339,6 +339,7 @@ def build_prompt_from_ledger(ledger):
         except Exception as _e:
             pass
         parts.append("Start with action or dialogue tied to the current event; do not open with recap.")
+        parts.append("At most 1 concrete action this turn; then stop at a natural beat.")
         parts.append("Move the scene forward with new actions. Do not restate setup already shown.")
         parts.append("If you must refer back, keep it in 1 short clause and then advance.")
         return '\n'.join(parts)
@@ -432,7 +433,7 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
             "Revise the last assistant reply to remove recap and back-skips. "
             "Start with action or dialogue tied to the current event. "
             "Keep good content; cut re-description of already established state (naked, pontoon, sun, anatomy). "
-            "Advance the scene with 2-3 concrete new actions. Output only story text."
+            "Deliver at most 1 concrete new action, then end at a natural beat. Output only story text."
         )
 
         critic_messages = list(context_messages)
@@ -548,7 +549,7 @@ def build_event_focus_from_last_user(history_messages):
         for c in cues[1:3]:
             lines.append(f"- Also: {c}.")
         lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
-        lines.append("- Deliver at least 3 concrete new actions and a clear beat for this event.")
+        lines.append("- Deliver at most 1 concrete new action and then pause at a clear beat.")
         return '\n'.join(lines)
     except Exception as e:
         print(f"🔍 Debug: build_event_focus_from_last_user error: {e}")
