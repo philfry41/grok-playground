@@ -1790,22 +1790,10 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- Complete your thoughts and actions before ending\n"
                     "- If approaching token limit, wrap up the current scene or action naturally\n\n"
                     "CONTENT EFFICIENCY REQUIREMENTS:\n"
-                    "- AVOID repeating descriptions, memories, or events already established in the conversation history\n"
-                    "- Only reference past events if they directly impact the current scene or character development\n"
-                    "- Focus on NEW actions, thoughts, and developments rather than rehashing what's already been described\n"
+                    "- Focus on NEW actions, thoughts, and developments\n"
                     "- Build upon existing context rather than restating it\n"
-                    "- Use fresh, varied language for ongoing actions rather than repeating the same phrases\n"
-                    "- NEVER rehash the same scene elements or physical descriptions from recent responses\n"
-                    "- ALWAYS move the story forward with new developments, sensations, or actions\n"
-                    "- Vary your descriptive language - use synonyms and different angles for the same elements\n"
-                    "- Focus on progression and momentum rather than static descriptions\n\n"
-                    "PHYSICAL DESCRIPTION VARIATION:\n"
-                    "- Vary your physical descriptions - don't repeat the same phrases verbatim\n"
-                    "- Use synonyms, different angles, and creative language while maintaining accuracy\n"
-                    "- Describe the same features in fresh ways: 'thick shaft' → 'impressive length' → 'massive cock'\n"
-                    "- Focus on different aspects: size, texture, appearance, sensation, movement\n"
-                    "- Keep descriptions natural and flowing, not clinical or repetitive\n"
-                    "- Maintain character consistency while using varied language"
+                    "- Always move the story forward with new developments\n"
+                    "- Use fresh, varied language for ongoing actions"
                 )
             })
             
@@ -1826,48 +1814,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error getting core story context: {e}")
             
-            # 3. Scene state (always included) - "What's happening now"
-            try:
-                google_id = session.get('user_id', 'default')
-                state_manager = StoryStateManager(session_id=google_id)
-                
-                # Extract current state from PRIOR conversation (excluding the new user message)
-                # This provides context for generating a response to the new message
-                prior_history = session['history'][:-1] if len(session['history']) > 1 else []
-                if len(prior_history) > 0:
-                    print(f"🔍 Debug: Extracting state from {len(prior_history)} prior messages (excluding new user message)")
-                    current_state = state_manager.extract_state_from_messages(prior_history)
-                else:
-                    # If no prior history, use default empty state instead of corrupted persisted state
-                    current_state = {
-                        "characters": {},
-                        "location": "unknown",
-                        "positions": "unknown",
-                        "physical_contact": "none",
-                        "mood_atmosphere": "neutral",
-                        "key_objects": [],
-                        "story_progress": [],
-                        "arousal_levels": {},
-                        "clothing_removed": [],
-                        "body_positions": {},
-                        "last_scene_elements": [],
-                        "progression_milestones": [],
-                        "recent_actions": [],
-                        "scene_momentum": "building",
-                        "repetition_warning": False
-                    }
-                
-                if current_state.get("characters"):
-                    scene_state_prompt = state_manager.get_state_as_prompt()
-                    context_messages.append({
-                        "role": "system", 
-                        "content": f"SCENE STATE TO MAINTAIN:\n{scene_state_prompt}"
-                    })
-                    print(f"🔍 Debug: Added scene state to AI context ({len(scene_state_prompt)} chars)")
-                else:
-                    print(f"🔍 Debug: No scene state available, skipping scene state injection")
-            except Exception as e:
-                print(f"🔍 Debug: State manager error in main chat: {e}")
+            # 3. Scene state (DISABLED - was causing back-skipping issues)
+            # Simple approach: just use the conversation history without complex state tracking
+            print(f"🔍 Debug: Scene state tracking disabled to prevent back-skipping")
             
             # 4. Key story points (memory) - "What led to this moment"
             try:
@@ -2021,24 +1970,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             session['history'] = session['history'][-12:]
             session.modified = True
         
-        # Update scene state with the new AI response for next iteration
-        try:
-            google_id = session.get('user_id', 'default')
-            state_manager = StoryStateManager(session_id=google_id)
-            # Add the AI response to history for next state extraction
-            temp_history = session['history'] + [{"role": "assistant", "content": reply}]
-            
-            # Extract state including the new response for next time
-            updated_state = state_manager.extract_state_from_messages(temp_history)
-            
-            # Track progression to prevent repetition
-            state_manager.track_progression(reply)
-            
-            print(f"🔍 Debug: Updated state with new AI response for next iteration")
-            print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
-        except Exception as e:
-            print(f"🔍 Debug: State update failed: {e}")
-            # Continue without state update if extraction fails
+        # State tracking disabled to prevent back-skipping issues
+        print(f"🔍 Debug: State tracking disabled to prevent back-skipping")
         
         # Clean up session if it gets too large
         if len(session['history']) > 12:  # Increased for paid tier
