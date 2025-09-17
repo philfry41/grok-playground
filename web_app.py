@@ -338,6 +338,7 @@ def build_prompt_from_ledger(ledger):
                 parts.append(', '.join(dnrs))
         except Exception as _e:
             pass
+        parts.append("Start with action or dialogue tied to the current event; do not open with recap.")
         parts.append("Move the scene forward with new actions. Do not restate setup already shown.")
         parts.append("If you must refer back, keep it in 1 short clause and then advance.")
         return '\n'.join(parts)
@@ -408,14 +409,14 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
         reply_lc = (reply or '').lower()
 
         # n-gram overlap heuristic
-        prev_ngrams = set(_extract_ngrams(last_two, n=4, max_phrases=20))
-        curr_ngrams = set(_extract_ngrams(reply_lc, n=4, max_phrases=20))
+        prev_ngrams = set(_extract_ngrams(last_two, n=3, max_phrases=32))
+        curr_ngrams = set(_extract_ngrams(reply_lc, n=3, max_phrases=32))
         overlap = len(prev_ngrams & curr_ngrams)
 
         rehash_detected = False
         if anchor_tail and anchor_tail[:120] in reply_lc:
             rehash_detected = True
-        if overlap >= 3:
+        if overlap >= 4:
             rehash_detected = True
 
         # Clothing redo: if already naked and reply contains undressing
@@ -428,9 +429,10 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
             return reply, False
 
         critic_instruction = (
-            "Revise the last assistant reply to remove repeated setup and back-skips. "
-            "Keep all good content but cut restatements. Advance the scene with 1-2 new concrete actions. "
-            "Output only the revised story text (no commentary)."
+            "Revise the last assistant reply to remove recap and back-skips. "
+            "Start with action or dialogue tied to the current event. "
+            "Keep good content; cut re-description of already established state (naked, pontoon, sun, anatomy). "
+            "Advance the scene with 2-3 concrete new actions. Output only story text."
         )
 
         critic_messages = list(context_messages)
