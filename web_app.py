@@ -1652,6 +1652,12 @@ def chat():
             
             # Clear old history and add the opener content as a fresh start
             session['history'] = []  # Clear old history completely
+            # Reset continuity ledger on scene reset
+            try:
+                session['continuity_ledger'] = {}
+                print("🔍 Debug: Continuity ledger reset for loadopener")
+            except Exception:
+                pass
             session['history'].append({"role": "user", "content": opener})
             print(f"🔍 Debug: Cleared old history and added opener content")
             
@@ -1937,10 +1943,22 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             if existing_history:
                 # Use existing conversation history
                 session['history'] = existing_history
+                # Reset continuity ledger when switching stories/scenes
+                try:
+                    session['continuity_ledger'] = {}
+                    print("🔍 Debug: Continuity ledger reset for loadstory (existing history)")
+                except Exception:
+                    pass
                 print(f"🔍 Debug: Loaded existing conversation history ({len(existing_history)} messages)")
             else:
                 # Start fresh with the story setup
                 session['history'] = []
+                # Reset continuity ledger for fresh story setup
+                try:
+                    session['continuity_ledger'] = {}
+                    print("🔍 Debug: Continuity ledger reset for loadstory (fresh)")
+                except Exception:
+                    pass
                 
                 # Add comprehensive system prompt
                 if comprehensive_system_prompt:
