@@ -1803,34 +1803,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Simple approach: just use the conversation history without complex state tracking
             print(f"🔍 Debug: Scene state tracking disabled to prevent back-skipping")
             
-            # 4. Key story points (memory) - "What led to this moment"
-            try:
-                # Get existing story points and immediate prior history for incremental updates
-                google_id = session.get('user_id')
-                existing_story_points = get_story_points(google_id) if google_id else []
-                
-                # Get immediate prior history (last exchange: user message + AI response)
-                if len(session['history']) >= 2:
-                    immediate_history = session['history'][-2:]  # Last 2 messages (user + AI)
-                else:
-                    immediate_history = session['history']
-                
-                key_memories = extract_key_story_points_incremental(existing_story_points, immediate_history)
-                if key_memories:
-                    # Update the story points cache with new points
-                    if google_id:
-                        update_story_points(google_id, key_memories)
-                    
-                    memories_prompt = "\n".join([f"- {memory}" for memory in key_memories])
-                    context_messages.append({
-                        "role": "system", 
-                        "content": f"KEY STORY POINTS:\n{memories_prompt}"
-                    })
-                    print(f"🔍 Debug: Added {len(key_memories)} key story points to AI context")
-                else:
-                    print(f"🔍 Debug: No key story points extracted")
-            except Exception as e:
-                print(f"🔍 Debug: Error extracting key story points: {e}")
+            # 4. Key story points (DISABLED - was causing back-skipping issues)
+            # Story points system disabled to prevent conflicting information
+            print(f"🔍 Debug: Story points system disabled to prevent back-skipping")
             
             # 5. Recent conversation (last 2-3 messages) - "What just happened"
             if len(session['history']) > 0:
@@ -2794,8 +2769,8 @@ def export_debug_data():
         # Get user payloads
         user_payloads = last_ai_payloads.get(google_id, {})
         
-        # Get story points if available
-        story_points = get_story_points(google_id) if google_id else []
+        # Story points disabled to prevent back-skipping
+        story_points = ["Story points system disabled to prevent back-skipping issues"]
         
         # Get current story state (extract from current conversation, not from persisted file)
         # State extraction disabled to prevent back-skipping
