@@ -2839,10 +2839,18 @@ def clear_scene():
     try:
         # Clear session history
         session['history'] = []
+        # Reset continuity ledger to avoid stale preflight context
+        try:
+            session['continuity_ledger'] = {}
+            print("🔍 Debug: Continuity ledger reset for clear-scene")
+        except Exception:
+            pass
         
         # Clear any story state
         if 'current_story_id' in session:
             del session['current_story_id']
+        if 'story_id' in session:
+            del session['story_id']
         
         print("🔍 Debug: Cleared scene from session")
         
