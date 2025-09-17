@@ -1365,23 +1365,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: Reply length: {len(reply)}")
                 print(f"🔍 Debug: TTS will be generated on-demand when user clicks 'Play TTS' button")
                 
-                # Update scene state using AI-powered extraction (create locally to avoid session serialization issues)
-                try:
-                    google_id = session.get('user_id', 'default')
-                    state_manager = StoryStateManager(session_id=google_id)
-                    # Add the AI response to history for state extraction
-                    temp_history = session['history'] + [{"role": "assistant", "content": reply}]
-                    
-                    # Use AI to intelligently extract current state
-                    updated_state = state_manager.extract_state_from_messages(temp_history)
-                    
-                    print(f"🔍 Debug: AI-powered state extraction completed")
-                    print(f"🔍 Debug: Current characters: {list(updated_state['characters'].keys())}")
-                    for char_name, char_data in updated_state['characters'].items():
-                        print(f"🔍 Debug: {char_name}: {char_data['clothing']}, {char_data['position']}, {char_data['mood']}")
-                except Exception as e:
-                    print(f"🔍 Debug: State extraction failed, continuing without update: {e}")
-                    print(f"🔍 Debug: Error type: {type(e)}")
+                # State extraction disabled to prevent back-skipping
+                print(f"🔍 Debug: State extraction disabled to prevent back-skipping")
                 
                 # Update initial response with AI response (no audio file yet)
                 initial_response['ai_response'] = reply
@@ -2813,13 +2798,8 @@ def export_debug_data():
         story_points = get_story_points(google_id) if google_id else []
         
         # Get current story state (extract from current conversation, not from persisted file)
-        try:
-            google_id = session.get('user_id', 'default')
-            state_manager = StoryStateManager(session_id=google_id)
-            # Extract current state from the actual conversation history, not from persisted file
-            current_state = state_manager.extract_state_from_messages(session_history)
-        except Exception as e:
-            current_state = {"error": f"Could not extract state: {e}"}
+        # State extraction disabled to prevent back-skipping
+        current_state = {"message": "State extraction disabled to prevent back-skipping issues"}
         
         # Generate timestamp for filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
