@@ -418,6 +418,12 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
         if overlap >= 3:
             rehash_detected = True
 
+        # Clothing redo: if already naked and reply contains undressing
+        already_naked = ('already naked' in anchor_tail) or ('naked' in last_two)
+        clothing_redo = any(k in reply_lc for k in ['remove her bikini', 'sliding the fabric', 'tugs at the strings', 'peeling the bikini', 'kicking them aside'])
+        if already_naked and clothing_redo:
+            rehash_detected = True
+
         if not rehash_detected:
             return reply, False
 
@@ -586,6 +592,26 @@ def build_cast_location_constraints_from_history(history_messages):
         return header + "\n" + "\n".join(constraints)
     except Exception as e:
         print(f"🔍 Debug: build_cast_location_constraints_from_history error: {e}")
+        return ''
+
+def build_physical_state_assertions_from_history(history_messages):
+    """Assert current physical state (e.g., already naked) to prevent redo of transitions like undressing."""
+    try:
+        recent = history_messages[-6:] if history_messages else []
+        text = ' '.join([_safe_text(m.get('content')) for m in recent]).lower()
+        assertions = []
+        # Detect naked state
+        if 'sunbathe naked' in text or 'sunbathing naked' in text or 'naked' in text or 'completely naked' in text:
+            assertions.append("- Physical State: She is already naked. Do NOT narrate removing clothing. Start from this state.")
+        # If bikini explicitly mentioned earlier, avoid re-description of it
+        if 'bikini' in text:
+            assertions.append("- Do NOT describe bikini removal or re-list her breasts/nipples/landing strip again.")
+        if not assertions:
+            return ''
+        header = "PHYSICAL STATE ASSERTIONS:"
+        return header + "\n" + "\n".join(assertions)
+    except Exception as e:
+        print(f"🔍 Debug: build_physical_state_assertions_from_history error: {e}")
         return ''
 
 # Resource cleanup functions
@@ -2168,6 +2194,18 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error adding cast/location constraints: {e}")
 
+            # 2c.1 Physical state assertions (prevent redo of undressing)
+            try:
+                phys_state = build_physical_state_assertions_from_history(session.get('history', []))
+                if phys_state:
+                    context_messages.append({
+                        "role": "system",
+                        "content": phys_state
+                    })
+                    print(f"🔍 Debug: Added physical state assertions to AI context")
+            except Exception as e:
+                print(f"🔍 Debug: Error adding physical state assertions: {e}")
+
             # 2d. Event focus from last user message
             try:
                 event_focus = build_event_focus_from_last_user(session.get('history', []))
@@ -2316,6 +2354,19 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             )
             if did_revise:
                 print("🔍 Debug: Applied continuity critic revision to reduce back-skipping")
+
+            # Final sanitize: trim leading recap paragraph if it re-describes established setup
+            try:
+                first_para_end = final_reply.find('\n\n')
+                lead = final_reply if first_para_end == -1 else final_reply[:first_para_end]
+                dnrs = set(_extract_do_not_restate_keywords(get_continuity_ledger()))
+                if dnrs and any(tok in lead.lower() for tok in dnrs):
+                    # Drop the first paragraph if it looks like recap
+                    if first_para_end != -1:
+                        final_reply = final_reply[first_para_end+2:]
+                        print("🔍 Debug: Removed recap first paragraph")
+            except Exception as _se:
+                pass
 
             # Update ledger after final reply
             update_ledger_after_reply(get_continuity_ledger(), final_reply)
