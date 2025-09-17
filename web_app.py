@@ -330,6 +330,14 @@ def build_prompt_from_ledger(ledger):
             joined = '; '.join([f'"{bp}"' for bp in ban_phrases])
             parts.append("Avoid repeating these exact phrases:")
             parts.append(joined)
+        # Add do-not-restate keywords derived from recent replies
+        try:
+            dnrs = _extract_do_not_restate_keywords(ledger)
+            if dnrs:
+                parts.append("Do NOT restate these already-established facts unless they change:")
+                parts.append(', '.join(dnrs))
+        except Exception as _e:
+            pass
         parts.append("Move the scene forward with new actions. Do not restate setup already shown.")
         parts.append("If you must refer back, keep it in 1 short clause and then advance.")
         return '\n'.join(parts)
@@ -483,6 +491,60 @@ def update_ledger_after_reply(ledger, reply):
         session['continuity_ledger'] = ledger
     except Exception as e:
         print(f"🔍 Debug: update_ledger_after_reply error: {e}")
+    
+def _extract_do_not_restate_keywords(ledger):
+    """Return short keywords that we don't want re-described every turn."""
+    baseline_tokens = [
+        'naked', 'bikini', 'sun-warmed cushion', 'pontoon', 'lake', 'south dakota',
+        'gorgeous pink nipples', 'landing strip', 'long inner labia', 'narrow ass',
+        'breeze', 'warmth', 'cabin'
+    ]
+    combined = (ledger.get('anchor_tail', '') + ' ' + ' '.join(ledger.get('last_two_replies', []))).lower()
+    present = []
+    for tok in baseline_tokens:
+        if tok in combined:
+            present.append(tok)
+    # Return up to 8 for brevity
+    return present[:8]
+
+def build_event_focus_from_last_user(history_messages):
+    """Create a system instruction to start at the user-specified event and minimize recap."""
+    try:
+        if not history_messages:
+            return ''
+        # Find last user message
+        last_user = ''
+        for m in reversed(history_messages):
+            if m.get('role') == 'user':
+                last_user = _safe_text(m.get('content'))
+                break
+        if not last_user:
+            return ''
+        lu_lc = last_user.lower()
+        # Extract naive cues
+        cues = []
+        if 'board' in lu_lc:
+            cues.append('men board her pontoon')
+        if 'tie off' in lu_lc or 'tie-off' in lu_lc or 'tie  off' in lu_lc:
+            cues.append('they tie off their boat')
+        if 'resist' in lu_lc or 'resists' in lu_lc or 'no' in lu_lc:
+            cues.append('she resists; back off on refusal')
+        if 'masturbat' in lu_lc:
+            cues.append('her masturbation state continues until the interruption')
+        if 'gang bang' in lu_lc or 'gangbang' in lu_lc:
+            cues.append('do not frame it as consent; clarify rejection if resisting')
+        if not cues:
+            # Fallback: use the raw last user ask as the event focus
+            cues.append(last_user[:180])
+        lines = ["EVENT FOCUS (start here):", f"- Begin immediately with: {cues[0]}."]
+        for c in cues[1:3]:
+            lines.append(f"- Also: {c}.")
+        lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
+        lines.append("- Deliver at least 3 concrete new actions and a clear beat for this event.")
+        return '\n'.join(lines)
+    except Exception as e:
+        print(f"🔍 Debug: build_event_focus_from_last_user error: {e}")
+        return ''
 
 def build_cast_location_constraints_from_history(history_messages):
     """Derive simple cast and location constraints from recent history to prevent teleportation/back-skips."""
@@ -2105,6 +2167,18 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     print(f"🔍 Debug: Added cast/location constraints to AI context")
             except Exception as e:
                 print(f"🔍 Debug: Error adding cast/location constraints: {e}")
+
+            # 2d. Event focus from last user message
+            try:
+                event_focus = build_event_focus_from_last_user(session.get('history', []))
+                if event_focus:
+                    context_messages.append({
+                        "role": "system",
+                        "content": event_focus
+                    })
+                    print(f"🔍 Debug: Added event focus to AI context")
+            except Exception as e:
+                print(f"🔍 Debug: Error adding event focus: {e}")
 
             # 3. Scene state (DISABLED - was causing back-skipping issues)
             # Simple approach: just use the conversation history without complex state tracking
