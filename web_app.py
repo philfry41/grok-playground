@@ -339,7 +339,12 @@ def build_prompt_from_ledger(ledger):
         except Exception as _e:
             pass
         parts.append("Start with action or dialogue tied to the current event; do not open with recap.")
-        parts.append("At most 1 concrete action this turn; then stop at a natural beat.")
+        try:
+            # Use user-configured beats from session when available
+            beats = int(session.get('beats', 1))
+        except Exception:
+            beats = 1
+        parts.append(f"At most {beats} concrete action{'s' if beats != 1 else ''} this turn; then stop at a natural beat.")
         parts.append("Move the scene forward with new actions. Do not restate setup already shown.")
         parts.append("If you must refer back, keep it in 1 short clause and then advance.")
         return '\n'.join(parts)
@@ -1532,6 +1537,14 @@ def chat():
         user_input = data.get('message', '').strip()
         command = data.get('command', '')
         token_count = data.get('word_count', 1500)  # Now represents tokens, not words
+        beats = int(data.get('beats', session.get('beats', 1))) if isinstance(data.get('beats', None), (int, str)) else session.get('beats', 1)
+        # Clamp beats to a small range to avoid odd prompts
+        try:
+            beats = max(1, min(5, int(beats)))
+        except Exception:
+            beats = 1
+        session['beats'] = beats
+        print(f"🔍 Debug: Parsed beats from request: {beats}")
         
         # Parse commands from user input if they start with /
         if user_input.startswith('/'):

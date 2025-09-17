@@ -584,6 +584,10 @@
                         <input type="number" id="wordCount" value="1500" min="200" max="2000" />
                         <button class="btn btn-primary" onclick="sendContinuation()">📝 Continue</button>
                     </div>
+                    <div class="word-count-input" style="margin-top: 6px;">
+                        <label>Beats:</label>
+                        <input type="number" id="beatsCount" value="1" min="1" max="5" />
+                    </div>
                     
                     <div class="word-count-input">
                         <button class="btn btn-secondary" onclick="openOpenerModal()">📄 Select Opener</button>
@@ -1019,7 +1023,8 @@
                     body: JSON.stringify({
                         message: message,
                         command: '',
-                        word_count: parseInt(document.getElementById('wordCount').value) || 1500
+                        word_count: parseInt(document.getElementById('wordCount').value) || 1500,
+                        beats: parseInt(document.getElementById('beatsCount').value) || 1
                     })
                 });
                 
@@ -1135,7 +1140,9 @@
                     },
                     body: JSON.stringify({
                         message: '',
-                        command: command
+                        command: command,
+                        word_count: parseInt(document.getElementById('wordCount').value) || 1500,
+                        beats: parseInt(document.getElementById('beatsCount').value) || 1
                     })
                 });
                 
@@ -1157,6 +1164,7 @@
 
         async function sendContinuation() {
             const wordCount = parseInt(document.getElementById('wordCount').value) || 1500;
+            const beatsCount = parseInt(document.getElementById('beatsCount').value) || 1;
             
             showLoading();
             
@@ -1169,7 +1177,8 @@
                     body: JSON.stringify({
                         message: '',
                         command: 'cont',
-                        word_count: wordCount
+                        word_count: wordCount,
+                        beats: beatsCount
                     }),
                     signal: AbortSignal.timeout(120000) // 2 minute timeout
                 });
