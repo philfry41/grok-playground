@@ -1201,7 +1201,7 @@ def chat():
         session['history'] = []
         session['allow_female'] = True
         session['allow_male'] = False
-        session['max_tokens'] = 1200
+        session['max_tokens'] = 1500
         # Initialize AI-powered story state manager (not stored in session to avoid JSON serialization issues)
         if 'state_manager' not in session:
             # Create a new state manager but don't store it in session
@@ -1333,7 +1333,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     opener_context,
                     model=model_env,
                     temperature=0.7,
-                    max_tokens=800,  # Increased to prevent cutoffs
+                    max_tokens=1500,  # Increased to prevent cutoffs and back-skipping
                     top_p=0.8,
                     hide_thinking=True,
                     return_usage=True,
