@@ -20,6 +20,8 @@ HEADERS = {
 }
 if TEST_API_KEY:
     HEADERS["Authorization"] = f"Bearer {TEST_API_KEY}"
+    # Also send via X-Test-Api-Key in case upstream strips Authorization
+    HEADERS["X-Test-Api-Key"] = TEST_API_KEY
 
 
 def post(path: str, payload: Dict[str, Any]) -> requests.Response:
@@ -68,7 +70,9 @@ def summarize_reply(text: str) -> Dict[str, Any]:
 
 def run_suite(prompts: List[str], beats_values: List[int], max_tokens: int, 
               min_sentences_factor: float = 1.2,
-              min_chars_per_beat: int = 60) -> List[Dict[str, Any]]:
+              min_chars_per_beat: int = 60,
+              story_id: str = "automation",
+              scene_title: str = "Live Test Output") -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     for p in prompts:
         # start fresh
@@ -106,6 +110,20 @@ def run_suite(prompts: List[str], beats_values: List[int], max_tokens: int,
             print(f"[beats={b}] sentences={summary['sentences']} chars={summary['chars']} :: {summary['preview']}")
             # small pause to avoid rate limits
             time.sleep(1.0)
+    # Persist final combined output as a scene (overwrites by title)
+    try:
+        save_payload = {
+            "title": scene_title,
+            "overwrite": True,
+            "history": [
+                {"role": "system", "content": f"Live test: beats={beats_values}, max_tokens={max_tokens}"},
+                {"role": "assistant", "content": json.dumps(results, ensure_ascii=False)}
+            ]
+        }
+        resp = post(f"/api/scenes/{story_id}", save_payload)
+        print("[save-scene]", resp.status_code, resp.text[:300])
+    except Exception as e:
+        print(f"[save-scene] failed: {e}")
     return results
 
 
@@ -171,6 +189,8 @@ def main():
     parser.add_argument("--out-json", help="Write full JSON results to path")
     parser.add_argument("--out-csv", help="Write CSV summary to path")
     parser.add_argument("--out-junit", help="Write JUnit XML report to path")
+    parser.add_argument("--story-id", default=os.getenv("TEST_STORY_ID", "automation"), help="Story ID to save scene under")
+    parser.add_argument("--scene-title", default=os.getenv("TEST_SCENE_TITLE", "Live Test Output"), help="Scene title to overwrite")
     args = parser.parse_args()
 
     if not RENDER_URL:
@@ -195,6 +215,8 @@ def main():
         prompts, args.beats, args.max_tokens,
         min_sentences_factor=args.min_sentences_factor,
         min_chars_per_beat=args.min_chars_per_beat,
+        story_id=args.story_id,
+        scene_title=args.scene_title,
     )
 
     # Print JSON to stdout for quick inspection

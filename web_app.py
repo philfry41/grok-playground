@@ -3268,27 +3268,49 @@ def save_story_scene(story_id):
         
         history = data['history']
         title = data.get('title', f'Scene {datetime.now().strftime("%Y-%m-%d %H:%M")}')
-        
-        # Create new scene
-        new_scene = Scene(
-            story_id=story_id,
-            user_id=google_id,
-            title=title,
-            history=history,
-            message_count=len(history)
-        )
-        
-        db.session.add(new_scene)
-        db.session.commit()
-        
-        print(f"🔍 Debug: Saved scene for story '{story_id}' with {len(history)} messages (user: {google_id})")
-        print(f"🔍 Debug: Scene ID: {new_scene.id}, Title: '{title}'")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Scene saved successfully',
-            'scene_id': new_scene.id
-        })
+        overwrite = bool(data.get('overwrite', True))
+
+        # Upsert by (user_id, story_id, title)
+        existing = None
+        if overwrite:
+            try:
+                existing = Scene.query.filter(
+                    Scene.user_id == google_id,
+                    Scene.story_id == story_id,
+                    Scene.title == title
+                ).first()
+            except Exception:
+                existing = None
+
+        if existing:
+            existing.history = history
+            existing.message_count = len(history)
+            existing.updated_at = datetime.utcnow()
+            db.session.commit()
+            print(f"🔍 Debug: Overwrote scene '{title}' (id={existing.id}) for story '{story_id}' with {len(history)} messages")
+            return jsonify({
+                'success': True,
+                'message': 'Scene updated successfully',
+                'scene_id': existing.id,
+                'overwrote': True
+            })
+        else:
+            new_scene = Scene(
+                story_id=story_id,
+                user_id=google_id,
+                title=title,
+                history=history,
+                message_count=len(history)
+            )
+            db.session.add(new_scene)
+            db.session.commit()
+            print(f"🔍 Debug: Created scene '{title}' (id={new_scene.id}) for story '{story_id}' with {len(history)} messages")
+            return jsonify({
+                'success': True,
+                'message': 'Scene created successfully',
+                'scene_id': new_scene.id,
+                'overwrote': False
+            })
         
     except Exception as e:
         print(f"🔍 Debug: Error saving scene: {e}")
