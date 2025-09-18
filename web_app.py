@@ -9,6 +9,7 @@ import atexit
 import threading
 import time
 import hashlib
+import secrets
 from flask import Flask, render_template, request, jsonify, session, send_from_directory, redirect, url_for
 from grok_remote import chat_with_grok
 from story_state_manager import StoryStateManager
@@ -1360,6 +1361,28 @@ def get_core_story_context(story_id):
 def require_auth(f):
     """Decorator to require authentication for protected routes"""
     def decorated_function(*args, **kwargs):
+        # Test automation bypass: allow API key auth for CI/scripts without Google OAuth.
+        # Enabled only when TEST_API_KEY is set in the environment.
+        try:
+            test_api_key = os.getenv('TEST_API_KEY')
+            if test_api_key:
+                auth_header = request.headers.get('Authorization', '')
+                test_header = request.headers.get('X-Test-Api-Key', '')
+                provided = ''
+                if auth_header.startswith('Bearer '):
+                    provided = auth_header[len('Bearer '):].strip()
+                elif test_header:
+                    provided = test_header.strip()
+                if provided and secrets.compare_digest(provided, test_api_key):
+                    # Minimal session priming for routes that expect a user
+                    session['logged_in'] = True
+                    session.setdefault('user_id', 'test_automation')
+                    session.setdefault('user_email', 'automation@example.com')
+                    session.setdefault('user_name', 'Automation Harness')
+                    session.setdefault('user_avatar', '')
+                    return f(*args, **kwargs)
+        except Exception as _e:
+            pass
         if not session.get('logged_in'):
             return jsonify({'error': 'Authentication required', 'login_url': '/auth/google'}), 401
         return f(*args, **kwargs)
