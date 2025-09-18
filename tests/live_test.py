@@ -5,6 +5,9 @@ import time
 import json
 import textwrap
 import argparse
+import csv
+import math
+from xml.sax.saxutils import escape as xml_escape
 from typing import List, Dict, Any
 
 import requests
@@ -63,7 +66,9 @@ def summarize_reply(text: str) -> Dict[str, Any]:
     }
 
 
-def run_suite(prompts: List[str], beats_values: List[int], max_tokens: int) -> None:
+def run_suite(prompts: List[str], beats_values: List[int], max_tokens: int, 
+              min_sentences_factor: float = 1.2,
+              min_chars_per_beat: int = 60) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     for p in prompts:
         # start fresh
@@ -73,17 +78,84 @@ def run_suite(prompts: List[str], beats_values: List[int], max_tokens: int) -> N
             data = send_chat(p, beats=b, max_tokens=max_tokens)
             ai_text = data.get("ai_response") or data.get("message") or ""
             summary = summarize_reply(ai_text)
-            results.append({
+            # Assertions
+            expected_min_sentences = max(1, math.ceil(b * min_sentences_factor))
+            expected_min_chars = b * min_chars_per_beat
+            passed = True
+            fail_reasons = []
+            if summary["sentences"] < expected_min_sentences:
+                passed = False
+                fail_reasons.append(f"sentences {summary['sentences']} < min {expected_min_sentences}")
+            if summary["chars"] < expected_min_chars:
+                passed = False
+                fail_reasons.append(f"chars {summary['chars']} < min {expected_min_chars}")
+
+            case = {
                 "prompt": p,
                 "beats": b,
+                "max_tokens": max_tokens,
                 "ai_summary": summary,
                 "raw_sample": ai_text[:400],
-            })
+                "passed": passed,
+                "fail_reasons": ", ".join(fail_reasons),
+                "finish_reason": data.get("finish_reason"),
+                "usage": data.get("usage"),
+                "status_code": data.get("status_code"),
+            }
+            results.append(case)
             print(f"[beats={b}] sentences={summary['sentences']} chars={summary['chars']} :: {summary['preview']}")
             # small pause to avoid rate limits
             time.sleep(1.0)
-    print("\n=== JSON RESULTS ===")
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    return results
+
+
+def write_json(results: List[Dict[str, Any]], path: str) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=2)
+
+
+def write_csv(results: List[Dict[str, Any]], path: str) -> None:
+    fieldnames = [
+        "prompt", "beats", "max_tokens", "sentences", "chars", "passed", "fail_reasons",
+        "finish_reason", "status_code"
+    ]
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        for r in results:
+            row = {
+                "prompt": r["prompt"],
+                "beats": r["beats"],
+                "max_tokens": r.get("max_tokens"),
+                "sentences": r["ai_summary"]["sentences"],
+                "chars": r["ai_summary"]["chars"],
+                "passed": r["passed"],
+                "fail_reasons": r.get("fail_reasons", ""),
+                "finish_reason": r.get("finish_reason"),
+                "status_code": r.get("status_code"),
+            }
+            w.writerow(row)
+
+
+def write_junit(results: List[Dict[str, Any]], path: str) -> None:
+    # Minimal JUnit XML
+    total = len(results)
+    failures = sum(1 for r in results if not r.get("passed", True))
+    testsuite_attrs = f'tests="{total}" failures="{failures}" name="live_beats_tests"'
+    parts = [f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite {testsuite_attrs}>"]
+    for i, r in enumerate(results, 1):
+        name = f"beats={r['beats']} tokens={r.get('max_tokens')}"
+        prompt_excerpt = (r["prompt"][:60] + "…") if len(r["prompt"]) > 60 else r["prompt"]
+        tc_open = f"  <testcase classname=\"live\" name=\"{xml_escape(name)}\" time=\"0\">"
+        parts.append(tc_open)
+        if not r.get("passed", True):
+            msg = r.get("fail_reasons", "failed")
+            cdata = xml_escape(msg)
+            parts.append(f"    <failure message=\"{cdata}\"><![CDATA[{prompt_excerpt}]]></failure>")
+        parts.append("  </testcase>")
+    parts.append("</testsuite>\n")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(parts))
 
 
 def main():
@@ -92,6 +164,13 @@ def main():
     parser.add_argument("--prompt", action="append", help="Add a prompt directly (may be repeated)")
     parser.add_argument("--beats", type=int, nargs="+", default=[1, 2, 4], help="Beats to test, e.g. --beats 1 2 4")
     parser.add_argument("--max-tokens", type=int, default=int(os.getenv("MAX_TOKENS", "1200")), help="Token budget per turn")
+    parser.add_argument("--min-sentences-factor", type=float, default=float(os.getenv("MIN_SENTENCES_FACTOR", "1.2")),
+                        help="Minimum sentences = ceil(beats * factor)")
+    parser.add_argument("--min-chars-per-beat", type=int, default=int(os.getenv("MIN_CHARS_PER_BEAT", "60")),
+                        help="Minimum characters required = beats * this value")
+    parser.add_argument("--out-json", help="Write full JSON results to path")
+    parser.add_argument("--out-csv", help="Write CSV summary to path")
+    parser.add_argument("--out-junit", help="Write JUnit XML report to path")
     args = parser.parse_args()
 
     if not RENDER_URL:
@@ -112,7 +191,27 @@ def main():
     if not prompts:
         prompts = ["Continue the story naturally."]
 
-    run_suite(prompts, args.beats, args.max_tokens)
+    results = run_suite(
+        prompts, args.beats, args.max_tokens,
+        min_sentences_factor=args.min_sentences_factor,
+        min_chars_per_beat=args.min_chars_per_beat,
+    )
+
+    # Print JSON to stdout for quick inspection
+    print("\n=== JSON RESULTS ===")
+    print(json.dumps(results, ensure_ascii=False, indent=2))
+
+    # Exports
+    if args.out_json:
+        write_json(results, args.out_json)
+    if args.out_csv:
+        write_csv(results, args.out_csv)
+    if args.out_junit:
+        write_junit(results, args.out_junit)
+
+    # Exit non-zero if any failures
+    if any(not r.get("passed", True) for r in results):
+        sys.exit(2)
 
 
 if __name__ == "__main__":
