@@ -31,3 +31,5 @@ edge_triggers.log
 # OS
 .DS_Store
 Thumbs.db
+
+/out/
