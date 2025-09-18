@@ -340,6 +340,7 @@ def build_prompt_from_ledger(ledger):
         except Exception as _e:
             pass
         parts.append("Start with action or dialogue tied to the current event; do not open with recap.")
+        parts.append("Explicitly enact the last user instruction on-screen before advancing; do not skip past it.")
         try:
             # Use user-configured beats from session when available
             beats = int(session.get('beats', 1))
@@ -447,6 +448,7 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
         critic_instruction = (
             "Revise the last assistant reply to remove recap and back-skips. "
             "Start with action or dialogue tied to the current event. "
+            "Explicitly enact the user's most recent instruction on-screen before moving forward; do not assume it already happened unless stated. "
             "Keep vivid sensory detail; do not over-prune texture. Cut only true recap of already established state (naked, pontoon, sun, anatomy). "
             + f"Deliver at most {beats} beat{'s' if beats != 1 else ''} (each beat = action + 1–2 short sentences of texture), then end at a natural beat. Output only story text."
         )
@@ -564,6 +566,7 @@ def build_event_focus_from_last_user(history_messages):
         for c in cues[1:3]:
             lines.append(f"- Also: {c}.")
         lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
+        lines.append("- Treat the last user message as an instruction to enact now on-screen; do not skip past it.")
         try:
             beats = int(session.get('beats', 1))
         except Exception:
