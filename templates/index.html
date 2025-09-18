@@ -11,6 +11,61 @@
             box-sizing: border-box;
         }
 
+        async function oocPreview() {
+            const txt = (document.getElementById('oocText').value || '').trim();
+            if (!txt) { addMessage('Enter an OOC rewrite instruction first.', 'system'); return; }
+            showLoading();
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: `/ooc rewrite ${txt}`,
+                        command: '',
+                        word_count: parseInt(document.getElementById('wordCount').value) || 1500,
+                        beats: parseInt(document.getElementById('beatsCount').value) || 1
+                    })
+                });
+                const data = await response.json();
+                if (data.error) {
+                    addMessage(`OOC error: ${data.error}`, 'system');
+                } else if (data.preview) {
+                    addOpenerMessage('📝 OOC Preview generated.', 'system');
+                    addOpenerMessage(data.preview, 'assistant');
+                } else {
+                    addMessage('No preview received.', 'system');
+                }
+            } catch (e) {
+                addMessage(`OOC error: ${e.message}`, 'system');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function oocApply() {
+            showLoading();
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: '/ooc apply',
+                        command: ''
+                    })
+                });
+                const data = await response.json();
+                if (data.error) {
+                    addMessage(`OOC apply error: ${data.error}`, 'system');
+                } else {
+                    addMessage(data.message || '✅ Applied OOC rewrite.', 'system');
+                }
+            } catch (e) {
+                addMessage(`OOC apply error: ${e.message}`, 'system');
+            } finally {
+                hideLoading();
+            }
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -599,6 +654,12 @@
                             <button class="btn btn-secondary" onclick="openDebugPayload()">🔍 Debug AI Payload</button>
                         </div>
                     </div>
+                    <div class="word-count-input" style="margin-top: 6px;">
+                        <label>OOC:</label>
+                        <input type="text" id="oocText" placeholder="rewrite instruction..." style="width: 60%;" />
+                        <button class="btn btn-secondary" onclick="oocPreview()">📝 Preview OOC</button>
+                        <button class="btn btn-warning" onclick="oocApply()">✅ Apply OOC</button>
+                    </div>
                 </div>
             </div>
             
@@ -1024,7 +1085,7 @@
                         message: message,
                         command: '',
                         word_count: parseInt(document.getElementById('wordCount').value) || 1500,
-                        beats: parseInt(document.getElementById('beatsCount').value) || 10
+                        beats: parseInt(document.getElementById('beatsCount').value) || 1
                     })
                 });
                 
@@ -1067,6 +1128,14 @@
                     debugLog('Response contains error: ' + data.error);
                     addMessage(`Error: ${data.error}`, 'system');
                 } else {
+                    // OOC preview handling
+                    if (data.response_type === 'ooc' || data.type === 'ooc') {
+                        addOpenerMessage('📝 OOC Preview generated. Use "/ooc apply" or click Apply OOC.', 'system');
+                        if (data.preview) {
+                            addOpenerMessage(data.preview, 'assistant');
+                        }
+                        return;
+                    }
                     debugLog('Response successful, message length: ' + (data.message ? data.message.length : 0));
                     
                     // Check if this was a command response
@@ -1151,6 +1220,13 @@
                 if (data.error) {
                     addMessage(`Error: ${data.error}`, 'system');
                 } else {
+                    if (data.response_type === 'ooc' || data.type === 'ooc') {
+                        addOpenerMessage('📝 OOC Preview generated. Use "/ooc apply" or click Apply OOC.', 'system');
+                        if (data.preview) {
+                            addOpenerMessage(data.preview, 'assistant');
+                        }
+                        return;
+                    }
                     addMessage(data.message, data.type);
                     if (command === 'edge') currentMode = 'edge';
                     if (command === 'payoff') currentMode = 'payoff';
@@ -1164,7 +1240,7 @@
 
         async function sendContinuation() {
             const wordCount = parseInt(document.getElementById('wordCount').value) || 1500;
-            const beatsCount = parseInt(document.getElementById('beatsCount').value) || 10;
+            const beatsCount = parseInt(document.getElementById('beatsCount').value) || 1;
             
             showLoading();
             
@@ -1188,6 +1264,13 @@
                 if (data.error) {
                     addMessage(`Error: ${data.error}`, 'system');
                 } else {
+                    if (data.response_type === 'ooc' || data.type === 'ooc') {
+                        addOpenerMessage('📝 OOC Preview generated. Use "/ooc apply" or click Apply OOC.', 'system');
+                        if (data.preview) {
+                            addOpenerMessage(data.preview, 'assistant');
+                        }
+                        return;
+                    }
                     addMessage(data.message, data.type, data.edge_triggered);
                     if (data.audio_file) {
                         addMessage(`💾 Audio saved: ${data.audio_file}`, 'system');

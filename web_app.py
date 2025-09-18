@@ -1596,6 +1596,95 @@ def chat():
             if len(parts) > 1:
                 # Add the rest as additional data
                 data[command] = parts[1]
+
+        # Handle OOC preview/apply early without altering history unless applying
+        if command.startswith('ooc'):
+            # Supported formats:
+            # /ooc rewrite <instructions>
+            # /ooc apply
+            try:
+                sub = (data.get('ooc') or '').strip() if 'ooc' in data else (user_input[4:].strip() if len(user_input) > 4 else '')
+                # If user typed "/ooc rewrite ..." as a single command, sub will start with 'rewrite'
+                tokens = sub.split(' ', 1)
+                action = tokens[0].lower() if tokens and tokens[0] else ''
+                arg = tokens[1].strip() if len(tokens) > 1 else ''
+
+                # Find last assistant reply as rewrite target
+                last_assistant = None
+                for msg in reversed(session.get('history', [])):
+                    if msg.get('role') == 'assistant':
+                        last_assistant = msg.get('content', '')
+                        break
+
+                if action == 'rewrite':
+                    if not last_assistant:
+                        if request_id: untrack_request(request_id)
+                        return jsonify({'type': 'ooc', 'message': 'No assistant reply to rewrite yet.', 'error': None, 'preview': ''})
+
+                    # Build rewrite prompt
+                    rewrite_system = (
+                        "You are revising the last assistant reply strictly OUT OF CHARACTER (OOC). "
+                        "Rewrite the text according to the user's instruction while preserving continuity, consent, and tone constraints. "
+                        "Do NOT add new plot points; only rewrite phrasing. Keep a similar length. "
+                        "Return ONLY the rewritten prose, no commentary."
+                    )
+                    rewrite_messages = [
+                        {"role": "system", "content": rewrite_system},
+                        {"role": "user", "content": f"Instruction: {arg}\n\nOriginal:\n{last_assistant}"}
+                    ]
+
+                    model_env = os.getenv('XAI_MODEL', 'grok-3')
+                    ai_response = chat_with_grok(
+                        rewrite_messages,
+                        model=model_env,
+                        temperature=0.7,
+                        max_tokens=min(1800, session.get('max_tokens', 1200)),
+                        top_p=0.8,
+                        hide_thinking=True,
+                        return_usage=True,
+                        stop=["\n\n\n", "---", "***", "END OF SCENE"]
+                    )
+
+                    preview_text = ai_response['text'] if isinstance(ai_response, dict) else str(ai_response)
+                    # Store preview transiently in session (not in history)
+                    session['ooc_preview'] = preview_text
+                    session.modified = True
+                    if request_id: untrack_request(request_id)
+                    return jsonify({'type': 'ooc', 'response_type': 'ooc', 'preview': preview_text})
+
+                elif action == 'apply' or command == 'ooc apply':
+                    preview_text = session.get('ooc_preview')
+                    if not preview_text:
+                        if request_id: untrack_request(request_id)
+                        return jsonify({'type': 'ooc', 'message': 'No OOC preview to apply. Run /ooc rewrite first.'})
+
+                    # Replace the last assistant reply in-place
+                    hist = session.get('history', [])
+                    for i in range(len(hist) - 1, -1, -1):
+                        if hist[i].get('role') == 'assistant':
+                            hist[i]['content'] = preview_text
+                            break
+                    session['history'] = hist
+                    session.pop('ooc_preview', None)
+                    session.modified = True
+
+                    # Update ledger and persist active scene
+                    try:
+                        update_ledger_after_reply(get_continuity_ledger(), preview_text)
+                    except Exception:
+                        pass
+                    current_story_id = get_current_story_id()
+                    update_active_scene(session['history'], current_story_id)
+
+                    if request_id: untrack_request(request_id)
+                    return jsonify({'type': 'system', 'message': '✅ Applied OOC rewrite to last assistant reply.'})
+
+                else:
+                    if request_id: untrack_request(request_id)
+                    return jsonify({'type': 'ooc', 'message': 'Usage: /ooc rewrite <instructions> or /ooc apply'})
+            except Exception as e:
+                if request_id: untrack_request(request_id)
+                return jsonify({'type': 'ooc', 'error': f'OOC handler failed: {e}'})
         
         print(f"🔍 Debug: user_input='{user_input}', command='{command}', token_count={token_count}")
         
