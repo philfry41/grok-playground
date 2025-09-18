@@ -180,7 +180,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run live beats tests against Render deployment")
     parser.add_argument("--prompts-file", help="Path to a text file with one prompt per line")
     parser.add_argument("--prompt", action="append", help="Add a prompt directly (may be repeated)")
-    parser.add_argument("--beats", type=int, nargs="+", default=[1, 2, 4], help="Beats to test, e.g. --beats 1 2 4")
+    parser.add_argument("--beats", type=int, nargs="+", default=[1, 5, 10], help="Beats to test, e.g. --beats 1 5 10")
     parser.add_argument("--max-tokens", type=int, default=int(os.getenv("MAX_TOKENS", "1200")), help="Token budget per turn")
     parser.add_argument("--min-sentences-factor", type=float, default=float(os.getenv("MIN_SENTENCES_FACTOR", "1.2")),
                         help="Minimum sentences = ceil(beats * factor)")

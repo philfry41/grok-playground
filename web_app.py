@@ -343,7 +343,7 @@ def build_prompt_from_ledger(ledger):
         parts.append("Explicitly enact the last user instruction on-screen before advancing; do not skip past it.")
         try:
             # Use user-configured beats from session when available
-            beats = int(session.get('beats', 1))
+            beats = int(session.get('beats', 10))
         except Exception:
             beats = 1
         parts.append(
@@ -442,7 +442,7 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
 
         # Respect user-configured beats when asking the critic to revise
         try:
-            beats = int(session.get('beats', 1))
+            beats = int(session.get('beats', 10))
         except Exception:
             beats = 1
         critic_instruction = (
@@ -568,7 +568,7 @@ def build_event_focus_from_last_user(history_messages):
         lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
         lines.append("- Treat the last user message as an instruction to enact now on-screen; do not skip past it.")
         try:
-            beats = int(session.get('beats', 1))
+            beats = int(session.get('beats', 10))
         except Exception:
             beats = 1
         lines.append(
@@ -1580,10 +1580,10 @@ def chat():
         user_input = data.get('message', '').strip()
         command = data.get('command', '')
         token_count = data.get('word_count', 1500)  # Now represents tokens, not words
-        beats = int(data.get('beats', session.get('beats', 1))) if isinstance(data.get('beats', None), (int, str)) else session.get('beats', 1)
+        beats = int(data.get('beats', session.get('beats', 10))) if isinstance(data.get('beats', None), (int, str)) else session.get('beats', 10)
         # Clamp beats to a small range to avoid odd prompts
         try:
-            beats = max(1, min(5, int(beats)))
+            beats = max(1, min(10, int(beats)))
         except Exception:
             beats = 1
         session['beats'] = beats

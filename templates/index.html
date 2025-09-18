@@ -586,7 +586,7 @@
                     </div>
                     <div class="word-count-input" style="margin-top: 6px;">
                         <label>Beats:</label>
-                        <input type="number" id="beatsCount" value="1" min="1" max="5" />
+                        <input type="number" id="beatsCount" value="10" min="1" max="10" />
                     </div>
                     
                     <div class="word-count-input">
@@ -1024,7 +1024,7 @@
                         message: message,
                         command: '',
                         word_count: parseInt(document.getElementById('wordCount').value) || 1500,
-                        beats: parseInt(document.getElementById('beatsCount').value) || 1
+                        beats: parseInt(document.getElementById('beatsCount').value) || 10
                     })
                 });
                 
@@ -1142,7 +1142,7 @@
                         message: '',
                         command: command,
                         word_count: parseInt(document.getElementById('wordCount').value) || 1500,
-                        beats: parseInt(document.getElementById('beatsCount').value) || 1
+                        beats: parseInt(document.getElementById('beatsCount').value) || 10
                     })
                 });
                 
@@ -1164,7 +1164,7 @@
 
         async function sendContinuation() {
             const wordCount = parseInt(document.getElementById('wordCount').value) || 1500;
-            const beatsCount = parseInt(document.getElementById('beatsCount').value) || 1;
+            const beatsCount = parseInt(document.getElementById('beatsCount').value) || 10;
             
             showLoading();
             

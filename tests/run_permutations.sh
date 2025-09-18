@@ -17,7 +17,7 @@ if [[ ! -f "$PROMPTS_FILE" ]]; then
 fi
 
 # Defaults; can override via env
-BEATS_LIST=${BEATS_LIST:-"1 2 4 5"}
+BEATS_LIST=${BEATS_LIST:-"1 5 10"}
 TOKENS_LIST=${TOKENS_LIST:-"800 1200 1600"}
 
 for TOK in $TOKENS_LIST; do
@@ -29,3 +29,5 @@ for TOK in $TOKENS_LIST; do
     sleep 1
   done
 done
+
+
