@@ -567,8 +567,11 @@ def build_event_focus_from_last_user(history_messages):
             lines.append(f"- Also: {c}.")
         lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
         lines.append("- Treat the last user message as an instruction to enact now on-screen; do not skip past it.")
+        lines.append("- Begin by enacting the user's requested action; the action has not happened yet.")
+        lines.append("- Do NOT write meta-acknowledgements (e.g., 'as requested', 'per your request', 'you asked').")
+        lines.append("- Do NOT reply to the user; write only in-story narration and dialogue.")
         try:
-            beats = int(session.get('beats', 10))
+            beats = int(session.get('beats', 1))
         except Exception:
             beats = 1
         lines.append(
@@ -1621,23 +1624,28 @@ def chat():
                         if request_id: untrack_request(request_id)
                         return jsonify({'type': 'ooc', 'message': 'No assistant reply to rewrite yet.', 'error': None, 'preview': ''})
 
-                    # Build rewrite prompt
+                    # Build rewrite prompt (force rewrite of given text, not continuation)
                     rewrite_system = (
-                        "You are revising the last assistant reply strictly OUT OF CHARACTER (OOC). "
-                        "Rewrite the text according to the user's instruction while preserving continuity, consent, and tone constraints. "
-                        "Do NOT add new plot points; only rewrite phrasing. Keep a similar length. "
-                        "Return ONLY the rewritten prose, no commentary."
+                        "You are revising the PREVIOUS assistant reply strictly OUT OF CHARACTER (OOC).\n"
+                        "Task: Rewrite the provided assistant text to comply with the user's instruction.\n"
+                        "Rules:\n"
+                        "- Rewrite the same content; do not add new events or advance the scene.\n"
+                        "- Preserve continuity, consent boundaries, and tone.\n"
+                        "- Keep roughly similar length.\n"
+                        "- Output ONLY the rewritten prose; no commentary, no labels.\n"
                     )
                     rewrite_messages = [
                         {"role": "system", "content": rewrite_system},
-                        {"role": "user", "content": f"Instruction: {arg}\n\nOriginal:\n{last_assistant}"}
+                        {"role": "user", "content": f"Instruction: {arg}"},
+                        # Provide the original as assistant to bias toward editing it
+                        {"role": "assistant", "content": last_assistant}
                     ]
 
                     model_env = os.getenv('XAI_MODEL', 'grok-3')
                     ai_response = chat_with_grok(
                         rewrite_messages,
                         model=model_env,
-                        temperature=0.7,
+                        temperature=0.5,
                         max_tokens=min(1800, session.get('max_tokens', 1200)),
                         top_p=0.8,
                         hide_thinking=True,
@@ -1646,6 +1654,12 @@ def chat():
                     )
 
                     preview_text = ai_response['text'] if isinstance(ai_response, dict) else str(ai_response)
+                    # Store payload for debugging
+                    try:
+                        store_ai_payload('ooc_rewrite_preview', rewrite_messages, preview_text, ai_response.get('usage') if isinstance(ai_response, dict) else None, ai_response.get('finish_reason') if isinstance(ai_response, dict) else None)
+                    except Exception:
+                        pass
+
                     # Store preview transiently in session (not in history)
                     session['ooc_preview'] = preview_text
                     session.modified = True
@@ -1728,6 +1742,9 @@ def chat():
             print("🔍 Debug: Continuity ledger reset for /new command")
         except Exception:
             pass
+        # Reset beats to default (1) for tight enactment
+        session['beats'] = 1
+        print("🔍 Debug: Beats reset to 1 for new scene")
         if request_id:
             untrack_request(request_id)
         return jsonify({'message': '🧹 New scene. Priming kept.', 'type': 'system'})
@@ -2402,12 +2419,21 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 recent_history = session['history'][-3:]  # Use last 3 messages for all commands
                 print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
+
+                # Ensure the current user_input is present as the last user message in context
+                try:
+                    if not recent_history or recent_history[-1].get('role') != 'user' or _safe_text(recent_history[-1].get('content')) != _safe_text(user_input):
+                        context_messages.append({"role": "user", "content": user_input})
+                        print("🔍 Debug: Appended current user_input explicitly to context to prevent mismatch")
+                except Exception as _e:
+                    # On any error, still append user_input to be safe
+                    context_messages.append({"role": "user", "content": user_input})
+                    print("🔍 Debug: Fallback - appended current user_input to context")
                 
                 # Store payload for debugging (after history is added)
                 store_ai_payload('story_generation', context_messages)
             
-            # 6. Current user input (already included in recent_history above)
-            # No need to add again - it's already in session['history'] and recent_history
+            # 6. Current user input is already ensured present above
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
             for i, msg in enumerate(context_messages):
@@ -2531,6 +2557,26 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     if first_para_end != -1:
                         final_reply = final_reply[first_para_end+2:]
                         print("🔍 Debug: Removed recap first paragraph")
+                # Remove meta-acknowledgements like "as requested"
+                meta_prefixes = [
+                    'as requested,', 'as requested', 'per your request,', 'per your request',
+                    'you asked', 'as you asked', 'as you requested', 'as the user said'
+                ]
+                trimmed = final_reply.lstrip()
+                for mp in meta_prefixes:
+                    if trimmed.lower().startswith(mp):
+                        # remove the first sentence/line containing the meta prefix
+                        cut = trimmed.find('.')
+                        if cut == -1:
+                            cut = trimmed.find('\n')
+                        if cut != -1:
+                            trimmed = trimmed[cut+1:].lstrip()
+                        else:
+                            trimmed = ''
+                        print("🔍 Debug: Stripped meta-acknowledgement prefix")
+                        break
+                if trimmed:
+                    final_reply = trimmed
             except Exception as _se:
                 pass
 
