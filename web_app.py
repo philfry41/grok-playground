@@ -553,6 +553,10 @@ def build_event_focus_from_last_user(history_messages):
             cues.append('men board her pontoon')
         if 'tie off' in lu_lc or 'tie-off' in lu_lc or 'tie  off' in lu_lc:
             cues.append('they tie off their boat')
+        if ('pin' in lu_lc and 'down' in lu_lc) or 'pin her down' in lu_lc:
+            cues.append('they pin her down')
+        if 'uninvited' in lu_lc:
+            cues.append('they board uninvited')
         if 'resist' in lu_lc or 'resists' in lu_lc or 'no' in lu_lc:
             cues.append('she resists; back off on refusal')
         if 'masturbat' in lu_lc:
@@ -565,6 +569,17 @@ def build_event_focus_from_last_user(history_messages):
         lines = ["EVENT FOCUS (start here):", f"- Begin immediately with: {cues[0]}."]
         for c in cues[1:3]:
             lines.append(f"- Also: {c}.")
+        # Add an explicit opening directive that enumerates concrete action(s)
+        try:
+            opening_actions = []
+            for c in cues:
+                # keep only action-like cues for the opening directive
+                if c.startswith('men ') or c.startswith('they '):
+                    opening_actions.append(c)
+            if opening_actions:
+                lines.append(f"- Open with: {', then '.join(opening_actions[:3])}.")
+        except Exception:
+            pass
         lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
         lines.append("- Treat the last user message as an instruction to enact now on-screen; do not skip past it.")
         lines.append("- Begin by enacting the user's requested action; the action has not happened yet.")
@@ -2454,6 +2469,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: Command: {command}")
             print(f"🔍 Debug: Max tokens: {max_tokens_for_call}")
             print(f"🔍 Debug: Is /cont command? {command == 'cont'}")
+            try:
+                last_ctx_user = next((m for m in reversed(context_messages) if m.get('role') == 'user'), None)
+                print(f"🔍 Debug: Last context user message: {(_safe_text(last_ctx_user.get('content'))[:120] if last_ctx_user else 'None')}")
+            except Exception:
+                pass
             
             # Add timeout handling for /cont commands
             if command == 'cont':
