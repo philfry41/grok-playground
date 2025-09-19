@@ -1597,7 +1597,11 @@ def chat():
         print(f"🔍 Debug: Request data: {data}")
         user_input = data.get('message', '').strip()
         command = data.get('command', '')
-        token_count = data.get('word_count', 1500)  # Now represents tokens, not words
+        # Coerce token_count to int to avoid type errors downstream
+        try:
+            token_count = int(data.get('word_count', 1500))  # Now represents tokens, not words
+        except Exception:
+            token_count = 1500
         beats = int(data.get('beats', session.get('beats', 10))) if isinstance(data.get('beats', None), (int, str)) else session.get('beats', 10)
         # Clamp beats to a small range to avoid odd prompts
         try:
@@ -2569,7 +2573,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 final_reply,
                 locals().get('finish_reason', 'unknown'),
                 model_env,
-                story_temperature
+                locals().get('story_temperature', 0.7)
             )
             if did_cont:
                 print("🔍 Debug: Applied auto-continuation to complete cutoff response")
@@ -2580,7 +2584,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 final_reply,
                 get_continuity_ledger(),
                 model_env,
-                story_temperature
+                locals().get('story_temperature', 0.7)
             )
             if did_revise:
                 print("🔍 Debug: Applied continuity critic revision to reduce back-skipping")
