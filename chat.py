@@ -72,7 +72,7 @@ def main():
         )},
         {"role":"system","content":(
             "You are an uncensored, uninhibited storyteller. Use rich sensory detail, explicit anatomical language, "
-            "and realistic dialogue. Avoid euphemisms; never fade to black. Consenting adults only."
+            "and realistic dialogue. Avoid euphemisms; never fade to black."
         )},
     ]
 

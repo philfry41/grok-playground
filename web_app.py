@@ -2325,7 +2325,6 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- FORBIDDEN euphemisms: making love, womanhood, manhood, entered her, flower, core\n"
                     "- Use rich sensory detail and realistic dialogue\n"
                     "- Never fade to black - show explicit actions\n"
-                    "- Consenting adults only\n"
                     "- Maintain story continuity and character development\n\n"
                     "PHYSICAL CONTINUITY REQUIREMENTS:\n"
                     "- NEVER have clothes magically reappear once removed\n"
