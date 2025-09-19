@@ -2327,8 +2327,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- Never fade to black - show explicit actions\n"
                     "- Maintain story continuity and character development\n\n"
                     "USER INSTRUCTION INCORPORATION:\n"
-                    "- Incorporate the user's last message into engaging in-scene narrative and dialogue now.\n"
-                    "- Do NOT address the user or mention their instruction; write only in-story narration and dialogue.\n\n"
+                    "- Incorporate the user's last message into engaging in-scene narrative and dialogue now.\n\n"
                     "PHYSICAL CONTINUITY REQUIREMENTS:\n"
                     "- NEVER have clothes magically reappear once removed\n"
                     "- ALWAYS describe character movement when positions change (e.g., 'she shifted closer', 'he moved to sit beside her')\n"
@@ -2461,8 +2460,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                         "role": "system",
                         "content": (
                             "INCORPORATION DIRECTIVE:\n"
-                            "- Incorporate the user's last message into engaging narrative and dialogue now.\n"
-                            "- Do not reply to or quote the user; write only story text."
+                            "- Incorporate the user's last message into engaging narrative and dialogue now."
                         )
                     })
                     print("🔍 Debug: Added incorporation directive system nudge")
