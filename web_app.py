@@ -2406,15 +2406,18 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error adding physical state assertions: {e}")
 
-            # 2d. Event focus from last user message
+            # 2d. Event focus from last user message (include the current user_input explicitly)
             try:
-                event_focus = build_event_focus_from_last_user(session.get('history', []))
+                history_for_focus = list(session.get('history', []))
+                if user_input:
+                    history_for_focus.append({"role": "user", "content": user_input})
+                event_focus = build_event_focus_from_last_user(history_for_focus)
                 if event_focus:
                     context_messages.append({
                         "role": "system",
                         "content": event_focus
                     })
-                    print(f"🔍 Debug: Added event focus to AI context")
+                    print(f"🔍 Debug: Added event focus to AI context (built from current user message)")
             except Exception as e:
                 print(f"🔍 Debug: Error adding event focus: {e}")
 
@@ -2432,8 +2435,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 for i, msg in enumerate(session['history']):
                     print(f"🔍 Debug: Message {i}: {msg['role']} - {msg['content'][:100]}...")
                 
-                # Use full history for better story continuity
-                recent_history = session['history'][-3:]  # Use last 3 messages for all commands
+                # Use last two messages (assistant then user) to bias immediate enactment
+                recent_history = session['history'][-2:]
                 print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
                 context_messages.extend(recent_history)
 
