@@ -2517,13 +2517,27 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error getting story temperature, using default: {e}")
             
-            print(f"🔍 Debug: Calling AI with max_tokens={max_tokens_for_call}")
+            # Coerce AI params to correct numeric types and guard against bad values
+            try:
+                coerced_temperature = float(story_temperature if story_temperature is not None else 0.7)
+            except Exception:
+                coerced_temperature = 0.7
+            try:
+                coerced_top_p = float(0.8)
+            except Exception:
+                coerced_top_p = 0.8
+            try:
+                coerced_max_tokens = int(max_tokens_for_call)
+            except Exception:
+                coerced_max_tokens = 1200
+
+            print(f"🔍 Debug: Calling AI with max_tokens={coerced_max_tokens} temperature={coerced_temperature} top_p={coerced_top_p}")
             ai_response = chat_with_grok(
                 context_messages,
                 model=model_env,
-                temperature=story_temperature,
-                max_tokens=max_tokens_for_call,
-                top_p=0.8,
+                temperature=coerced_temperature,
+                max_tokens=coerced_max_tokens,
+                top_p=coerced_top_p,
                 hide_thinking=True,
                 return_usage=True,
                 stop=["\n\n\n", "---", "***", "END OF SCENE"]  # Stop at natural break points
@@ -2557,6 +2571,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
         except Exception as ai_error:
             print(f"🔍 Debug: AI call failed: {ai_error}")
             print(f"🔍 Debug: Error type: {type(ai_error)}")
+            try:
+                import traceback as _tb
+                print(f"🔍 Debug: Traceback:\n{_tb.format_exc()}")
+            except Exception:
+                pass
             
             # Force cleanup after failure
             cleanup_resources()
