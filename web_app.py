@@ -2326,6 +2326,9 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- Use rich sensory detail and realistic dialogue\n"
                     "- Never fade to black - show explicit actions\n"
                     "- Maintain story continuity and character development\n\n"
+                    "USER INSTRUCTION INCORPORATION:\n"
+                    "- Incorporate the user's last message directly as in-scene action and dialogue.\n"
+                    "- Do NOT address the user or mention their instruction; write only in-story narration and dialogue.\n\n"
                     "PHYSICAL CONTINUITY REQUIREMENTS:\n"
                     "- NEVER have clothes magically reappear once removed\n"
                     "- ALWAYS describe character movement when positions change (e.g., 'she shifted closer', 'he moved to sit beside her')\n"
@@ -2448,6 +2451,20 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 store_ai_payload('story_generation', context_messages)
             
             # 6. Current user input is already ensured present above
+            # 6b. Add a final system nudge to incorporate the last user message as action
+            try:
+                if user_input:
+                    context_messages.append({
+                        "role": "system",
+                        "content": (
+                            "INCORPORATION DIRECTIVE:\n"
+                            "- Enact the user's last message now as in-story action/dialogue.\n"
+                            "- Do not reply to or quote the user; write only story text."
+                        )
+                    })
+                    print("🔍 Debug: Added incorporation directive system nudge")
+            except Exception:
+                pass
             
             print(f"🔍 Debug: Using {len(context_messages)} messages for context")
             for i, msg in enumerate(context_messages):
