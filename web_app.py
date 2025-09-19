@@ -577,7 +577,7 @@ def build_event_focus_from_last_user(history_messages):
                 if c.startswith('men ') or c.startswith('they '):
                     opening_actions.append(c)
             if opening_actions:
-                lines.append(f"- Open with: {', then '.join(opening_actions[:3])}.")
+                lines.append(f"- Open by incorporating: {', then '.join(opening_actions[:3])} into engaging narrative.")
         except Exception:
             pass
         lines.append("- Keep any recap to <= 1 short clause. Use actions and dialogue.")
@@ -2327,7 +2327,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     "- Never fade to black - show explicit actions\n"
                     "- Maintain story continuity and character development\n\n"
                     "USER INSTRUCTION INCORPORATION:\n"
-                    "- Incorporate the user's last message directly as in-scene action and dialogue.\n"
+                    "- Incorporate the user's last message into engaging in-scene narrative and dialogue now.\n"
                     "- Do NOT address the user or mention their instruction; write only in-story narration and dialogue.\n\n"
                     "PHYSICAL CONTINUITY REQUIREMENTS:\n"
                     "- NEVER have clothes magically reappear once removed\n"
@@ -2461,7 +2461,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                         "role": "system",
                         "content": (
                             "INCORPORATION DIRECTIVE:\n"
-                            "- Enact the user's last message now as in-story action/dialogue.\n"
+                            "- Incorporate the user's last message into engaging narrative and dialogue now.\n"
                             "- Do not reply to or quote the user; write only story text."
                         )
                     })
