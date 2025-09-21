@@ -2533,7 +2533,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                     'model': model_env,
                     # story_temperature may be set later; default here
                     'temperature': locals().get('story_temperature', 0.7),
-                    'max_tokens': max_tokens_for_call,
+                    # max_tokens_for_call is computed later; use safe default here from token_count
+                    'max_tokens': locals().get('max_tokens_for_call', max(200, min(2000, token_count))),
                 }
             })
             
