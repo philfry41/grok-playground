@@ -2474,26 +2474,24 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Story points system disabled to prevent conflicting information
             print(f"🔍 Debug: Story points system disabled to prevent back-skipping")
             
-            # 5. Recent conversation (last 2-3 messages) - "What just happened"
+            # 5. Anchor with last assistant → then current user (deterministic)
             if len(session['history']) > 0:
                 print(f"🔍 Debug: Session history has {len(session['history'])} messages")
                 for i, msg in enumerate(session['history']):
                     print(f"🔍 Debug: Message {i}: {msg['role']} - {msg['content'][:100]}...")
                 
-                # Use last two messages (assistant then user) to bias immediate enactment
-                recent_history = session['history'][-2:]
-                print(f"🔍 Debug: Using last {len(recent_history)} messages for continuity")
-                context_messages.extend(recent_history)
-
-                # Ensure the current user_input is present as the last user message in context
-                try:
-                    if not recent_history or recent_history[-1].get('role') != 'user' or _safe_text(recent_history[-1].get('content')) != _safe_text(user_input):
-                        context_messages.append({"role": "user", "content": user_input})
-                        print("🔍 Debug: Appended current user_input explicitly to context to prevent mismatch")
-                except Exception as _e:
-                    # On any error, still append user_input to be safe
-                    context_messages.append({"role": "user", "content": user_input})
-                    print("🔍 Debug: Fallback - appended current user_input to context")
+                # Find the most recent assistant reply explicitly
+                last_assistant_msg = None
+                for _m in reversed(session['history']):
+                    if _m.get('role') == 'assistant':
+                        last_assistant_msg = _m
+                        break
+                if last_assistant_msg:
+                    context_messages.append(last_assistant_msg)
+                    print("🔍 Debug: Added last assistant message to context anchor")
+                # Always place current user input last
+                context_messages.append({"role": "user", "content": user_input})
+                print("🔍 Debug: Appended current user_input as final context message")
                 
                 # Store payload for debugging (after history is added)
                 store_ai_payload('story_generation', context_messages)
