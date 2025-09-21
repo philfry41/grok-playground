@@ -2531,7 +2531,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 'context_preview': [{'role': m.get('role'), 'content': _safe_preview(m.get('content'))} for m in context_messages[-6:]],
                 'ai_params': {
                     'model': model_env,
-                    'temperature': story_temperature,
+                    # story_temperature may be set later; default here
+                    'temperature': locals().get('story_temperature', 0.7),
                     'max_tokens': max_tokens_for_call,
                 }
             })
@@ -2556,8 +2557,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 # Force cleanup before AI call
                 cleanup_resources()
             
-            # Get story-specific temperature (always define)
-            story_temperature = 0.7  # Default
+            # Get story-specific temperature (always define before any use)
+            story_temperature = 0.7
             try:
                 current_story_id = get_current_story_id()
                 if current_story_id:
