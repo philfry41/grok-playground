@@ -16,6 +16,7 @@ from story_state_manager import StoryStateManager
 from tts_helper import tts
 import re
 from datetime import datetime
+import json as _json
 
 # Try to import database packages, but don't fail if they're not available
 try:
@@ -45,6 +46,25 @@ app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HT
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
+
+# Optional audit logging
+DEBUG_AUDIT = os.getenv('DEBUG_AUDIT', '0') == '1'
+AUDIT_PATH = os.path.join('instance', 'audit.jsonl')
+
+def _safe_preview(text, limit=120):
+    t = _safe_text(text)
+    return t if len(t) <= limit else (t[:limit] + '…')
+
+def _audit_write(entry: dict):
+    if not DEBUG_AUDIT:
+        return
+    try:
+        entry['ts'] = datetime.utcnow().isoformat()
+        os.makedirs(os.path.dirname(AUDIT_PATH), exist_ok=True)
+        with open(AUDIT_PATH, 'a', encoding='utf-8') as f:
+            f.write(_json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"🔍 Debug: audit write failed: {e}")
 
 # Database configuration (only if database packages are available)
 if DATABASE_AVAILABLE:
@@ -1733,6 +1753,28 @@ def chat():
         # Track this request
         track_request(request_id)
         print(f"🔍 Debug: Request tracked: {request_id}")
+        # Audit: before snapshot
+        try:
+            ledger_before = dict(get_continuity_ledger())
+        except Exception:
+            ledger_before = {}
+        history_before = list(session.get('history', []))[-5:]
+        _audit_write({
+            'event': 'request_start',
+            'request_id': request_id,
+            'user_id': session.get('user_id'),
+            'command': command,
+            'beats': session.get('beats'),
+            'token_count': token_count,
+            'history_before': [{'role': m.get('role'), 'content': _safe_preview(m.get('content'))} for m in history_before],
+            'ledger_before': {
+                'scene_step': ledger_before.get('scene_step'),
+                'summaries': ledger_before.get('summaries', [])[-3:],
+                'anchor_tail': _safe_preview(ledger_before.get('anchor_tail', ''), 160),
+                'ban_phrases': ledger_before.get('ban_phrases', [])[:6],
+                'last_two_replies': ledger_before.get('last_two_replies', [])[-2:],
+            }
+        })
         
     except Exception as e:
         print(f"🔍 Debug: Error parsing request data: {e}")
@@ -2481,6 +2523,18 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 print(f"🔍 Debug: Message {i} ({msg['role']}):")
                 print(f"🔍 Debug: {msg['content']}")
                 print(f"🔍 Debug: ---")
+            # Audit: context summary
+            _audit_write({
+                'event': 'ai_payload',
+                'request_id': request_id,
+                'context_messages_count': len(context_messages),
+                'context_preview': [{'role': m.get('role'), 'content': _safe_preview(m.get('content'))} for m in context_messages[-6:]],
+                'ai_params': {
+                    'model': model_env,
+                    'temperature': story_temperature,
+                    'max_tokens': max_tokens_for_call,
+                }
+            })
             
             # Use user-specified token count for story generation
             max_tokens_for_call = max(200, min(2000, token_count))  # Use user-specified token count
@@ -2502,7 +2556,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
                 # Force cleanup before AI call
                 cleanup_resources()
             
-            # Get story-specific temperature
+            # Get story-specific temperature (always define)
             story_temperature = 0.7  # Default
             try:
                 current_story_id = get_current_story_id()
@@ -2569,6 +2623,7 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: AI call successful, reply length={len(reply)}")
         except Exception as ai_error:
             print(f"🔍 Debug: AI call failed: {ai_error}")
+            _audit_write({'event': 'ai_error', 'request_id': request_id, 'error': str(ai_error)})
             print(f"🔍 Debug: Error type: {type(ai_error)}")
             try:
                 import traceback as _tb
@@ -2697,6 +2752,27 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             print(f"🔍 Debug: Final session history {i}: {msg['role']} - {msg['content'][:50]}...")
         print(f"🔍 Debug: Session modified: {session.modified}")
         
+        # Audit: after snapshot
+        try:
+            ledger_after = dict(get_continuity_ledger())
+        except Exception:
+            ledger_after = {}
+        history_after = list(session.get('history', []))[-5:]
+        _audit_write({
+            'event': 'request_end',
+            'request_id': request_id,
+            'response_preview': _safe_preview(reply, 800),
+            'finish_reason': locals().get('finish_reason', 'unknown'),
+            'usage': locals().get('usage', {}),
+            'history_after': [{'role': m.get('role'), 'content': _safe_preview(m.get('content'))} for m in history_after],
+            'ledger_after': {
+                'scene_step': ledger_after.get('scene_step'),
+                'summaries': ledger_after.get('summaries', [])[-3:],
+                'anchor_tail': _safe_preview(ledger_after.get('anchor_tail', ''), 160),
+                'ban_phrases': ledger_after.get('ban_phrases', [])[:6],
+                'last_two_replies': ledger_after.get('last_two_replies', [])[-2:],
+            }
+        })
         # Clean up before sending response
         cleanup_resources()
         
@@ -2813,6 +2889,27 @@ def tts_status():
         'has_api_key': bool(tts.api_key),
         'available_voices': tts.get_available_voices()
     })
+
+@app.route('/api/audit-tail')
+def audit_tail():
+    """Return the last N audit entries (parsed) when DEBUG_AUDIT=1"""
+    try:
+        limit = int(request.args.get('limit', '50'))
+        if not DEBUG_AUDIT:
+            return jsonify({'error': 'Audit disabled'}), 403
+        if not os.path.exists(AUDIT_PATH):
+            return jsonify({'entries': []})
+        with open(AUDIT_PATH, 'r', encoding='utf-8') as f:
+            lines = f.readlines()[-max(1, min(500, limit)):]  # cap at 500
+        entries = []
+        for ln in lines:
+            try:
+                entries.append(_json.loads(ln))
+            except Exception:
+                continue
+        return jsonify({'entries': entries})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/tts-voice', methods=['POST'])
 def set_tts_voice():
