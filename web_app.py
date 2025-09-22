@@ -2488,20 +2488,11 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             except Exception as e:
                 print(f"🔍 Debug: Error adding physical state assertions: {e}")
 
-            # 2d. Event focus from last user message (include the current user_input explicitly)
+            # 2d. Event focus (disabled) — allow model to derive cues from user message directly
             try:
-                history_for_focus = list(session.get('history', []))
-                if user_input:
-                    history_for_focus.append({"role": "user", "content": user_input})
-                event_focus = build_event_focus_from_last_user(history_for_focus)
-                if event_focus:
-                    context_messages.append({
-                        "role": "system",
-                        "content": event_focus
-                    })
-                    print(f"🔍 Debug: Added event focus to AI context (built from current user message)")
-            except Exception as e:
-                print(f"🔍 Debug: Error adding event focus: {e}")
+                print("🔍 Debug: Event focus injection disabled; relying on model to derive focus from user input")
+            except Exception:
+                pass
 
             # 3. Scene state (DISABLED - was causing back-skipping issues)
             # Simple approach: just use the conversation history without complex state tracking
