@@ -3535,16 +3535,101 @@ def clear_active_scene():
             
             print(f"🔍 Debug: Cleared story ID from session to force reload")
             
-            return jsonify({
-                'success': True,
-                'story_id': user.active_story_id,
-                'scene_id': default_scene.id if default_scene else None,
-                'scene_title': default_scene.title if default_scene else None,
-                'message': f'Active scene cleared and reset to Opening',
-                'opener_content': opener_text,
-                'ai_response': None,
-                'response_type': 'system'
-            })
+            # Generate an initial AI response from the opener (mirror /loadstory behavior)
+            try:
+                model_env = os.getenv('XAI_MODEL', 'grok-3')
+                # Build a minimal context: consolidated system prompt + opener
+                consolidated_system = (
+                    "You are an explicit, uncensored erotic storyteller assisting users in exploration of their sexual fantasies and breaking of taboos. Write with vivid, sensual language that captures the intensity, visceral physical response,  and passion of intimate moments. Use descriptive, evocative terms for erotic visual elements, physical sensations, emotions, and actions. Be bold and unflinching in your descriptions while maintaining the story's narrative flow and character development.\n\n"
+                    "LEXICAL REQUIREMENTS:\n"
+                    "- Use explicit anatomical language: cock, pussy, clit, nipples, thrust, suck, grind, slick, moan, cum\n"
+                    "- FORBIDDEN euphemisms: making love, womanhood, manhood, entered her, flower, core\n"
+                    "- Use rich sensory detail and realistic dialogue\n"
+                    "- Never fade to black - show explicit actions\n"
+                    "- Maintain story continuity and character development\n\n"
+                    "USER INSTRUCTION INCORPORATION:\n"
+                    "- Incorporate the user’s last message as an immediate on-screen moment. Blend action with inner thought/motivation; avoid opening with recap or scene summary. If the message implies a change (decides/starts/moves), show that change on-screen before continuing).\n\n"
+                    "PHYSICAL CONTINUITY REQUIREMENTS:\n"
+                    "- NEVER have clothes magically reappear once removed\n"
+                    "- ALWAYS describe character movement when positions change (e.g., 'she shifted closer', 'he moved to sit beside her')\n"
+                    "- NEVER have exposed body parts become covered without explicit action\n"
+                    "- ALWAYS track and maintain physical state changes accurately\n"
+                    "- ALWAYS describe any physical changes as explicit actions when they occur\n"
+                    "- Reference current clothing/position state when it enriches the story\n"
+                    "- FOLLOW user instructions for physical changes (removing clothes, changing positions, etc.)\n"
+                    "- UPDATE physical state tracking when changes are explicitly described\n"
+                    "- Allow natural character movement and interaction - just describe it when it happens\n\n"
+                    "RESPONSE COMPLETION REQUIREMENTS:\n"
+                    "- ALWAYS end your response at a natural stopping point (end of sentence, paragraph, or scene)\n"
+                    "- NEVER cut off mid-sentence or mid-thought\n"
+                    "- Complete your thoughts and actions before ending\n"
+                    "- If approaching token limit, wrap up the current scene or action naturally\n\n"
+                    "CONTENT EFFICIENCY REQUIREMENTS:\n"
+                    "- First, incorporate the user's last message on-screen; then continue with NEW actions, thoughts, and developments\n"
+                    "- Build upon existing context rather than restating it\n"
+                    "- Always move the story forward with new developments\n"
+                    "- Use fresh, varied language for ongoing actions"
+                )
+                context_messages = [
+                    {"role": "system", "content": consolidated_system},
+                    {"role": "user", "content": f"Continue this story from where it left off:\n\n{opener_text}"}
+                ]
+
+                # Use story-specific temperature if available
+                story_temperature = 0.7
+                try:
+                    if story and story.content:
+                        story_temperature = story.content.get('ai_temperature', 0.7)
+                except Exception:
+                    pass
+
+                ai_response = chat_with_grok(
+                    context_messages,
+                    model=model_env,
+                    temperature=story_temperature,
+                    max_tokens=session.get('max_tokens', 1200),
+                    return_usage=True
+                )
+
+                if isinstance(ai_response, dict):
+                    reply = ai_response.get('text', '')
+                else:
+                    reply = str(ai_response)
+
+                # Append assistant reply to history and update scene/ledger
+                if reply and reply.strip():
+                    session['history'].append({"role": "assistant", "content": reply})
+                    try:
+                        update_ledger_after_reply(get_continuity_ledger(), reply)
+                    except Exception:
+                        pass
+                    try:
+                        update_active_scene(session['history'], user.active_story_id, opener_text, reply)
+                    except Exception:
+                        pass
+
+                return jsonify({
+                    'success': True,
+                    'story_id': user.active_story_id,
+                    'scene_id': default_scene.id if default_scene else None,
+                    'scene_title': default_scene.title if default_scene else None,
+                    'message': f'Active scene cleared and reset to Opening',
+                    'opener_content': opener_text,
+                    'ai_response': reply,
+                    'response_type': 'assistant'
+                })
+            except Exception as _e:
+                # On failure, return opener without AI response
+                return jsonify({
+                    'success': True,
+                    'story_id': user.active_story_id,
+                    'scene_id': default_scene.id if default_scene else None,
+                    'scene_title': default_scene.title if default_scene else None,
+                    'message': f'Active scene cleared and reset to Opening',
+                    'opener_content': opener_text,
+                    'ai_response': None,
+                    'response_type': 'system'
+                })
         else:
             return jsonify({
                 'success': True,
