@@ -508,6 +508,10 @@ def continuity_critic(context_messages, reply, ledger, model, temperature):
 def update_ledger_after_reply(ledger, reply):
     """Update ledger fields after a final reply is accepted."""
     try:
+        # Skip ledger updates for fallback/system errors
+        if (reply or '').startswith("I'm having trouble connecting right now."):
+            print("🔍 Debug: Skipping ledger update for fallback reply")
+            return
         reply = _safe_text(reply)
         ledger['scene_step'] = int(ledger.get('scene_step', 0)) + 1
 
@@ -2500,14 +2504,8 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # 6b. Add a final system nudge to incorporate the last user message as action
             try:
                 if user_input:
-                    context_messages.append({
-                        "role": "system",
-                        "content": (
-                            "INCORPORATION DIRECTIVE:\n"
-                            "- Incorporate the user's last message into engaging narrative and dialogue now."
-                        )
-                    })
-                    print("🔍 Debug: Added incorporation directive system nudge")
+                    # No post-user directive; guidance lives in consolidated system blocks
+                    print("🔍 Debug: Skipped post-user incorporation directive to keep user last")
             except Exception:
                 pass
             
@@ -2637,6 +2635,21 @@ Continue the story while maintaining this physical state. Do not have clothes ma
             # Return a simple fallback response
             reply = "I'm having trouble connecting right now. Please try again in a moment."
         
+        # If reply is fallback error, do NOT update ledger/history/scene
+        FALLBACK_PREFIX = "I'm having trouble connecting right now."
+        if reply.startswith(FALLBACK_PREFIX):
+            _audit_write({'event': 'fallback_reply', 'request_id': request_id, 'message': reply})
+            # Clean up before sending response
+            cleanup_resources()
+            if request_id:
+                untrack_request(request_id)
+            return jsonify({
+                'message': reply,
+                'type': 'system',
+                'edge_triggered': False,
+                'audio_file': None
+            })
+
         # Postflight: auto-complete cutoffs, run continuity critic, update ledger
         try:
             final_reply = reply
