@@ -581,7 +581,8 @@ def build_event_focus_from_last_user(history_messages):
             cues.append('they pin her down')
         if 'uninvited' in lu_lc:
             cues.append('they board uninvited')
-        if 'resist' in lu_lc or 'resists' in lu_lc or 'no' in lu_lc:
+        # Resistance cue: only if explicit refusal words, not substrings (e.g., 'anonymity')
+        if re.search(r'\bno\b|\bnope\b|\bnot now\b|\bback off\b|\bstop\b', lu_lc) or 'resist' in lu_lc or 'resists' in lu_lc:
             cues.append('she resists; back off on refusal')
         if 'masturbat' in lu_lc:
             cues.append('her masturbation state continues until the interruption')
@@ -666,17 +667,49 @@ def build_cast_location_constraints_from_history(history_messages):
         return ''
 
 def build_physical_state_assertions_from_history(history_messages):
-    """Assert current physical state (e.g., already naked) to prevent redo of transitions like undressing."""
+    """Assert prior physical state using ONLY prior assistant text (or ledger), never the current user ask."""
     try:
-        recent = history_messages[-6:] if history_messages else []
-        text = ' '.join([_safe_text(m.get('content')) for m in recent]).lower()
         assertions = []
-        # Detect naked state
-        if 'sunbathe naked' in text or 'sunbathing naked' in text or 'naked' in text or 'completely naked' in text:
+
+        # Prefer continuity ledger (prior assistant-only material)
+        try:
+            ledger = get_continuity_ledger()
+        except Exception:
+            ledger = {}
+
+        ledger_text = (ledger.get('anchor_tail', '') + ' ' + ' '.join(ledger.get('last_two_replies', []))).lower().strip()
+
+        if ledger_text:
+            source_text = ledger_text
+        else:
+            # Fallback: assistant-only from recent history (exclude all user messages)
+            assistant_texts = [
+                _safe_text(m.get('content')) for m in (history_messages or [])[-8:]
+                if (m or {}).get('role') == 'assistant'
+            ]
+            source_text = ' '.join(assistant_texts).lower()
+
+        source_text = source_text or ''
+
+        # Already naked only if explicitly asserted previously by assistant
+        naked_patterns = [
+            'already naked',
+            'completely naked',
+            'totally naked',
+            'she is naked',
+            'nothing on',
+        ]
+        if any(pat in source_text for pat in naked_patterns):
             assertions.append("- Physical State: She is already naked. Do NOT narrate removing clothing. Start from this state.")
-        # If bikini explicitly mentioned earlier, avoid re-description of it
-        if 'bikini' in text:
-            assertions.append("- Do NOT describe bikini removal or re-list her breasts/nipples/landing strip again.")
+
+        # Bikini removed previously (avoid redoing removal) — require removal verbs around bikini
+        bikini_removed_phrases = [
+            'removed her bikini', 'took off her bikini', 'took her bikini off', 'slid her bikini off',
+            'untied her bikini', 'kicked her bikini aside', 'bikini top fell', 'bikini bottoms off'
+        ]
+        if any(p in source_text for p in bikini_removed_phrases):
+            assertions.append("- Clothing: Bikini already removed. Do NOT narrate removing it again.")
+
         if not assertions:
             return ''
         header = "PHYSICAL STATE ASSERTIONS:"
